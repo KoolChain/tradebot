@@ -1,0 +1,2 @@
+@find_package@(cpr)
+@find_package@(jsonformoderncpp)

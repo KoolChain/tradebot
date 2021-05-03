@@ -23,12 +23,16 @@ class TradebotConan(ConanFile):
         "visibility": "hidden"
     }
 
-    #requires = ()
+    requires = (
+        ("cpr/1.6.0",),
+        ("jsonformoderncpp/3.7.0",),
+    )
+
 
     build_requires = ("cmake/3.16.9",)
 
     build_policy = "missing"
-    generators = "cmake_paths", "cmake"
+    generators = "cmake_paths", "cmake", "cmake_find_package"
     revision_mode = "scm"
 
     scm = {
@@ -37,6 +41,10 @@ class TradebotConan(ConanFile):
         "revision": "auto",
         "submodule": "recursive",
     }
+
+    def configure(self):
+        if tools.is_apple_os(self.settings.os):
+            self.options["cpr"].with_openssl = False
 
 
     def _configure_cmake(self):

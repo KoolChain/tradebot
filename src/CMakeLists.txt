@@ -1,5 +1,7 @@
+add_subdirectory(libs/binanceapi/binanceapi)
 add_subdirectory(libs/tradebot/tradebot)
 
+add_subdirectory(apps/dogebot)
 option (BUILD_tests "Build 'tests' application" true)
 if(BUILD_tests)
     add_subdirectory(apps/tests)
