@@ -1,2 +1,4 @@
-@find_package@(cpr)
-@find_package@(jsonformoderncpp)
+@find_package@(Boost REQUIRED)
+@find_package@(cpr REQUIRED)
+@find_package@(jsonformoderncpp REQUIRED)
+@find_package@(OpenSSL REQUIRED)

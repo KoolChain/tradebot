@@ -1,5 +1,7 @@
 #include "Api.h"
 
+#include "Cryptography.h"
+
 #include <cpr/cpr.h>
 
 // TODO remove
@@ -14,7 +16,6 @@ namespace binanceapi {
 static const cpr::Url gBaseUrl{"https://testnet.binance.vision"};
 
 namespace {
-
 
     template <class T_map>
     std::ostream & printMap(std::ostream & aOut, const T_map & aMaplike)
@@ -60,22 +61,38 @@ namespace {
     }
 
 
-    template <class... VT_aRequestExtra>
-    Response makeRequest_impl(const cpr::Url & aEndpoint, const VT_aRequestExtra &... aExtras)
+    cpr::Parameters & sign(const std::string & aSecretKey, cpr::Parameters & aParameters)
     {
-        cpr::Response response = cpr::Get(gBaseUrl + aEndpoint, aExtras...);
 
-        std::cout << response;
+        aParameters.Add({
+            "signature",
+            crypto::encodeHexadecimal(
+                crypto::hashMacSha256(aSecretKey, aParameters.GetContent(cpr::CurlHolder{})))
+        });
+        return aParameters;
+    }
 
-        if (response.status_code == 404)
+
+    auto getTimestamp()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+
+    Response analyzeResponse(const cpr::Response & aResponse)
+    {
+        std::cout << aResponse;
+
+        if (aResponse.status_code == 404)
         {
-            std::cerr << "HTTP Response " << response.status_line;
+            std::cerr << "HTTP Response " << aResponse.status_line;
             return Response {std::nullopt};
         }
-        else if (response.status_code >= 400 && response.status_code < 500)
+        else if (aResponse.status_code >= 400 && aResponse.status_code < 500)
         {
-            Json binanceError = Json::parse(response.text);
-            std::cerr << "HTTP Response " << response.status_line
+            Json binanceError = Json::parse(aResponse.text);
+            std::cerr << "HTTP Response " << aResponse.status_line
                       << ". Client error " << binanceError["code"] << ": "
                       << binanceError["msg"] << "\n"
                       ;
@@ -83,32 +100,15 @@ namespace {
 
         try {
             return Response{
-                Json::parse(response.text)
+                Json::parse(aResponse.text)
             };
         }
         catch (const nlohmann::detail::parse_error &)
         {
             std::cerr << "Error: cannot parse response as json: '"
-                << response.text << "'\n";
+                << aResponse.text << "'\n";
             return Response {std::nullopt};
         }
-    }
-
-
-    Response makeRequest(const cpr::Url & aEndpoint)
-    {
-        return makeRequest_impl(aEndpoint);
-    }
-
-
-    Response makeRequest(const cpr::Url & aEndpoint,
-                         const ApiKey & aApiKey,
-                         const SecretKey &aSecretKey)
-    {
-        return makeRequest_impl(aEndpoint,
-                                cpr::Header{
-                                    {"X-MBX-APIKEY", aApiKey},
-                                });
     }
 
 
@@ -145,13 +145,35 @@ Response Api::getExchangeInformation()
 
 Response Api::getAllCoinsInformation()
 {
-    return makeRequest({"/sapi/v1/capital/config/getall"}, mApiKey, mSecretKey);
+    return makeSignedRequest({"/sapi/v1/capital/config/getall"});
 }
 
 
 Response Api::getAccountInformation()
 {
-    return makeRequest({"/api/v3/account"}, mApiKey, mSecretKey);
+    return makeSignedRequest({"/api/v3/account"});
+}
+
+
+Response Api::makeRequest(const std::string & aEndpoint)
+{
+    cpr::Response response = cpr::Get(gBaseUrl + cpr::Url{aEndpoint});
+    return analyzeResponse(response);
+}
+
+
+Response Api::makeSignedRequest(const std::string & aEndpoint)
+{
+    cpr::Parameters parameters{
+        {"timestamp", std::to_string(getTimestamp())},
+        {"recvWindow", std::to_string(mReceiveWindow.count())},
+    };
+    cpr::Response response = cpr::Get(gBaseUrl + cpr::Url{aEndpoint},
+                                       cpr::Header{
+                                            {"X-MBX-APIKEY", mApiKey},
+                                       },
+                                       sign(mSecretKey, parameters));
+    return analyzeResponse(response);
 }
 
 

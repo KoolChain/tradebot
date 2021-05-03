@@ -2,10 +2,12 @@ project(binanceapi VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
     Api.h
+    Cryptography.h
 )
 
 set(${PROJECT_NAME}_SOURCES
     Api.cpp
+    Cryptography.cpp
 )
 
 cmc_find_dependencies()
@@ -23,7 +25,9 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC
         jsonformoderncpp::jsonformoderncpp
     PRIVATE
+        Boost::boost
         cpr::cpr
+        OpenSSL::Crypto
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

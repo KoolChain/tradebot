@@ -24,8 +24,10 @@ class TradebotConan(ConanFile):
     }
 
     requires = (
+        ("boost/1.76.0",),
         ("cpr/1.6.0",),
         ("jsonformoderncpp/3.7.0",),
+        ("openssl/1.1.1j",),
     )
 
 

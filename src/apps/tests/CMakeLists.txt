@@ -6,6 +6,8 @@ set(${PROJECT_NAME}_HEADERS
 
 set(${PROJECT_NAME}_SOURCES
     main.cpp
+
+    Cryptography_tests.cpp
 )
 
 add_executable(${PROJECT_NAME}
@@ -15,6 +17,7 @@ add_executable(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
+        ad::binanceapi
         ad::tradebot
 )
 

@@ -2,8 +2,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include <string>
+#include <chrono>
 #include <optional>
+#include <string>
 
 
 namespace ad {
@@ -39,8 +40,13 @@ public:
     Response getAccountInformation();
 
 private:
+    static Response makeRequest(const std::string & aEndpoint);
+    Response makeSignedRequest(const std::string & aEndpoint);
+
+private:
     ApiKey mApiKey;
     SecretKey mSecretKey;
+    std::chrono::milliseconds mReceiveWindow{1000};
 };
 
 
