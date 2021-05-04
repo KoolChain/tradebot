@@ -8,6 +8,7 @@ set(${PROJECT_NAME}_SOURCES
     main.cpp
 
     Cryptography_tests.cpp
+    Websocket_tests.cpp
 )
 
 add_executable(${PROJECT_NAME}
@@ -15,10 +16,15 @@ add_executable(${PROJECT_NAME}
                ${${PROJECT_NAME}_SOURCES}
 )
 
+find_package(spdlog REQUIRED COMPONENTS libspdlog)
+
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         ad::binanceapi
         ad::tradebot
+        ad::websocket
+
+        spdlog::libspdlog
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
