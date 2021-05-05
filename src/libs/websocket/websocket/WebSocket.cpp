@@ -49,17 +49,37 @@ namespace net {
 
 struct WebSocket::impl
 {
-    ::net::io_context mIoc;
-    ::net::ssl::context mSslCtx{::net::ssl::context::tlsv12_client};
-    beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> mStream{mIoc, mSslCtx};
-    beast::flat_buffer mBuffer;
-
     void run(std::string aHost, const std::string & aPort);
 
     void onWrite(beast::error_code aErrorCode, std::size_t aBytesTransferred);
     void onRead(beast::error_code aErrorCode, std::size_t aBytesTransferred);
     void onClose(beast::error_code aErrorCode);
+
+    void writeImplementation();
+    void writeNext();
+
+    void readNext();
+
+    void async_send(const std::string & aMessage);
+    void async_close();
+
+    static const std::string gFifoGuard;
+
+    ::net::io_context mIoc;
+    ::net::ssl::context mSslCtx{::net::ssl::context::tlsv12_client};
+    beast::websocket::stream<beast::ssl_stream<beast::tcp_stream>> mStream{mIoc, mSslCtx};
+    beast::flat_buffer mBuffer;
+
+    std::mutex mWriteMutex;
+    // The initial value prevents call to async_send before connection is established
+    // from trying to send immediatly.
+    std::queue<std::string> mMessageFifo{{gFifoGuard}};
+
+    WebSocket::ReceiveCallback mReceiveCallback{[](const std::string &){}};
 };
+
+
+const std::string WebSocket::impl::gFifoGuard{"NOT-CONNECTED-GUARD"};
 
 
 void WebSocket::impl::run(std::string aHost, const std::string & aPort)
@@ -70,7 +90,6 @@ void WebSocket::impl::run(std::string aHost, const std::string & aPort)
     ::net::ip::tcp::endpoint endpoint =
         get_lowest_layer(mStream).connect(resolver.resolve(aHost, aPort));
     spdlog::debug("Connected to '{}' on port {}.", aHost, aPort);
-
 
     // Update the host string. This will provide the value of the
     // Host HTTP header during the WebSocket handshake.
@@ -111,15 +130,12 @@ void WebSocket::impl::run(std::string aHost, const std::string & aPort)
     );
     spdlog::trace("Websocket handshake complete.");
 
-    // TODO implement some usable API instead of hardcoded test
-    mStream.async_write(
-        ::net::buffer("I am the DOGE"),
-        std::bind(&impl::onWrite, this, std::placeholders::_1, std::placeholders::_2));
+    // Pop the initial guard from the message queue
+    // then tries to send if other were queued by client
+    writeNext();
 
     // Read a message into our buffer
-    mStream.async_read(
-        mBuffer,
-        std::bind(&impl::onRead, this, std::placeholders::_1, std::placeholders::_2));
+    readNext();
 
     spdlog::info("Websocket connection established.");
 }
@@ -127,19 +143,11 @@ void WebSocket::impl::run(std::string aHost, const std::string & aPort)
 
 void logFailure(beast::error_code aErrorCode, const std::string & aWhat)
 {
-    spdlog::error("{}: {}", aWhat, aErrorCode.message());
-}
-
-
-void WebSocket::impl::onWrite(beast::error_code aErrorCode, std::size_t aBytesTransferred)
-{
-    if(aErrorCode)
+    // The outstanding read (and potential write) will be aborted
+    // on close. This is normal.
+    if (aErrorCode != ::net::error::operation_aborted)
     {
-        logFailure(aErrorCode, "Websocket write error");
-    }
-    else
-    {
-        spdlog::debug("Successfully wrote {} bytes.", aBytesTransferred);
+        spdlog::error("{}: {}", aWhat, aErrorCode.message());
     }
 }
 
@@ -154,6 +162,9 @@ void WebSocket::impl::onClose(beast::error_code aErrorCode)
     {
         spdlog::info("Websocket closed.");
     }
+
+    // Clear the fifo and reset the guard for next connection.
+    mMessageFifo = decltype(mMessageFifo){{gFifoGuard}};
 }
 
 
@@ -165,14 +176,81 @@ void WebSocket::impl::onRead(beast::error_code aErrorCode, std::size_t aBytesTra
     }
     else
     {
-        spdlog::debug("Successfully read {} bytes: {}.",
+        spdlog::trace("Successfully read {} bytes: {}.",
                       aBytesTransferred,
                       beast::buffers_to_string(mBuffer.cdata()));
-        mStream.async_close(
-            beast::websocket::close_code::normal,
-            std::bind(&impl::onClose, this, std::placeholders::_1));
 
+        mReceiveCallback(beast::buffers_to_string(mBuffer.cdata()));
+        readNext();
     }
+}
+
+
+void WebSocket::impl::readNext()
+{
+    mStream.async_read(
+        mBuffer,
+        std::bind(&impl::onRead, this, std::placeholders::_1, std::placeholders::_2));
+}
+
+
+void WebSocket::impl::onWrite(beast::error_code aErrorCode, std::size_t aBytesTransferred)
+{
+    if(aErrorCode)
+    {
+        logFailure(aErrorCode, "Websocket write error");
+    }
+    else
+    {
+        spdlog::trace("Successfully wrote {} bytes.", aBytesTransferred);
+        writeNext();
+    }
+}
+
+
+void WebSocket::impl::writeNext()
+{
+    std::scoped_lock queueLock{mWriteMutex};
+    mMessageFifo.pop(); // pop the message corresponding to this completion handler
+    if (! mMessageFifo.empty())
+    {
+        writeImplementation();
+    }
+}
+
+
+void WebSocket::impl::async_send(const std::string & aMessage)
+{
+    {
+        std::scoped_lock queueLock{mWriteMutex};
+        mMessageFifo.push(aMessage);
+        // If the queue was empty, there is no async_write already going on
+        if (mMessageFifo.size() > 1)
+        {
+            return;
+        }
+
+        // Note: It might be possible to take this call out of the critical section
+        // **if** it is safe to read the front of a std::queue while pushing concurrently.
+        writeImplementation();
+    }
+}
+
+
+void WebSocket::impl::async_close()
+{
+    mStream.async_close(
+        beast::websocket::close_code::normal,
+        std::bind(&impl::onClose, this, std::placeholders::_1));
+}
+
+
+void WebSocket::impl::writeImplementation()
+{
+    // The message will be popped by the completion handler
+    mStream.async_write(
+            ::net::buffer(mMessageFifo.front()),
+            std::bind(&impl::onWrite, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 
@@ -189,6 +267,24 @@ void WebSocket::run(const std::string & aHost, const std::string & aPort)
 {
     mImpl->run(aHost, aPort);
     mImpl->mIoc.run();
+}
+
+
+void WebSocket::async_send(const std::string & aMessage)
+{
+    mImpl->async_send(aMessage);
+}
+
+
+void WebSocket::async_close()
+{
+    mImpl->async_close();
+}
+
+
+void WebSocket::setReceiveCallback(ReceiveCallback aOnReceive)
+{
+    mImpl->mReceiveCallback = std::move(aOnReceive);
 }
 
 

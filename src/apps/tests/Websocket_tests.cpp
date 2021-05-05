@@ -2,17 +2,29 @@
 
 #include <websocket/WebSocket.h>
 
+#include <thread>
 
-SCENARIO("Websocket communication")
+
+SCENARIO("Websocket simple communication")
 {
-    GIVEN("A websocket server")
+    GIVEN("An echo websocket server and a message")
     {
         const std::string host = "wss://echo.websocket.org";
-        THEN("A connection can be established")
+        const std::string message = "I am DOGE";
+
+        THEN("A connection can be established, and message repeated")
         {
-            ad::net::WebSocket ws{};
+            std::string received;
+            ad::net::WebSocket ws{
+                // on receive
+                [&ws, &received](const std::string & aMessage)
+                {
+                    received = aMessage;
+                    ws.async_close();
+                }};
+            ws.async_send(message);
             ws.run("echo.websocket.org", "443");
-            REQUIRE(true);
+            REQUIRE(received == message);
         }
     }
 }
