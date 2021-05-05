@@ -87,7 +87,7 @@ namespace {
         if (aResponse.status_code == 404)
         {
             std::cerr << "HTTP Response " << aResponse.status_line;
-            return Response {std::nullopt};
+            return Response {aResponse.status_code, std::nullopt};
         }
         else if (aResponse.status_code >= 400 && aResponse.status_code < 500)
         {
@@ -100,6 +100,7 @@ namespace {
 
         try {
             return Response{
+                aResponse.status_code,
                 Json::parse(aResponse.text)
             };
         }
@@ -107,7 +108,7 @@ namespace {
         {
             std::cerr << "Error: cannot parse response as json: '"
                 << aResponse.text << "'\n";
-            return Response {std::nullopt};
+            return Response {aResponse.status_code, std::nullopt};
         }
     }
 

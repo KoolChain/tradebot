@@ -20,6 +20,7 @@ using SecretKey=std::string;
 
 struct Response
 {
+    long status;
     std::optional<Json> json;
 };
 
