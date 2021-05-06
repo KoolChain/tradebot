@@ -14,6 +14,11 @@ namespace binance {
 using Decimal = double;
 
 
+// No intention to specialize that right now
+// but this way it will already be in place
+using Symbol = std::string;
+
+
 enum class Side
 {
     BUY,
@@ -52,28 +57,29 @@ inline const std::string & to_string(Type aType)
 }
 
 
-struct Order
-{
-    virtual Json json() const = 0;
-};
+//struct Order
+//{
+//    virtual ~Order() = default;
+//    virtual Json json() const = 0;
+//};
 
 
-struct MarketOrder : public Order
+struct MarketOrder
 {
-    std::string symbol;
+    Symbol symbol;
     Side side;
-    const Type type{Type::MARKET};
     Decimal quantity;
+    const Type type{Type::MARKET};
 
-    Json json() const override
-    {
-        return {
-            {"symbol", symbol},
-            {"side", to_string(side)},
-            {"type", to_string(type)},
-            {"quantity", std::to_string(quantity)},
-        };
-    }
+    //Json json() const override
+    //{
+    //    return {
+    //        {"symbol", symbol},
+    //        {"side", to_string(side)},
+    //        {"type", to_string(type)},
+    //        {"quantity", std::to_string(quantity)},
+    //    };
+    //}
 };
 
 

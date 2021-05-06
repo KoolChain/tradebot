@@ -5,6 +5,8 @@ set(${PROJECT_NAME}_HEADERS
     Cryptography.h
     Json.h
     Orders.h
+
+    detail/OrdersHelpers.h
 )
 
 set(${PROJECT_NAME}_SOURCES

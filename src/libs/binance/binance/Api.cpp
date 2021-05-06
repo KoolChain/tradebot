@@ -2,6 +2,8 @@
 
 #include "Cryptography.h"
 
+#include "detail/OrdersHelpers.h"
+
 #include <cpr/cpr.h>
 
 // TODO remove
@@ -10,6 +12,20 @@
 
 namespace ad {
 namespace binance {
+
+namespace detail {
+
+cpr::Parameters initParameters(const Api::NoBody &)
+{
+    return {};
+}
+
+cpr::Parameters initParameters(const cpr::Parameters & aBody)
+{
+    return aBody;
+}
+
+} // namespace detail
 
 
 //static const cpr::Url gBaseUrl{"https://api.binance.com"};
@@ -162,21 +178,40 @@ Response Api::getExchangeInformation()
 
 Response Api::getAllCoinsInformation()
 {
-    return makeSignedRequest({"/sapi/v1/capital/config/getall"}, Verb::GET);
+    return makeRequest(Verb::GET, {"/sapi/v1/capital/config/getall"}, Security::Signed);
 }
 
 
 Response Api::getAccountInformation()
 {
-    return makeSignedRequest({"/api/v3/account"}, Verb::GET);
+    return makeRequest(Verb::GET, {"/api/v3/account"}, Security::Signed);
 }
 
 
 Response Api::createSpotListenKey()
 {
-    return makeSignedRequest({"/api/v3/userDataStream"}, Verb::POST);
+    return makeRequest(Verb::POST, {"/api/v3/userDataStream"}, Security::ApiOnly);
 }
 
+
+Response Api::placeOrderTrade(const MarketOrder & aOrder)
+{
+    return makeRequest(Verb::POST, {"/api/v3/order"}, Security::Signed, aOrder);
+}
+
+
+Response Api::listOpenOrders(const Symbol & aSymbol)
+{
+    return makeRequest(Verb::GET, {"/api/v3/openOrders"}, Security::Signed,
+                       cpr::Parameters{{"symbol", aSymbol}});
+}
+
+
+Response Api::listAllOrders(const Symbol & aSymbol)
+{
+    return makeRequest(Verb::GET, {"/api/v3/allOrders"}, Security::Signed,
+                       cpr::Parameters{{"symbol", aSymbol}});
+}
 
 Response Api::makeRequest(const std::string & aEndpoint)
 {
@@ -185,39 +220,41 @@ Response Api::makeRequest(const std::string & aEndpoint)
 }
 
 
-// TODO currently hardcoded just what I need (POST is user_stream, which does not sign)
-// the makeXXXRequest methods should  be deeply refactored,
-// so there is less duplication, and easier combination of:
-// * Verb
-// * Signed or not
-// * API key or not
-Response Api::makeSignedRequest(const std::string & aEndpoint, Verb aVerb)
+template <class T_body>
+Response Api::makeRequest(Verb aVerb,
+                          const std::string & aEndpoint,
+                          Security aSecurity,
+                          const T_body & aBody)
 {
-    cpr::Parameters parameters{
-        {"timestamp", std::to_string(getTimestamp())},
-        {"recvWindow", std::to_string(mReceiveWindow.count())},
-    };
+    cpr::Session session;
+
+    session.SetUrl(cpr::Url{mEndpoints.restUrl} + cpr::Url{aEndpoint});
+
+    if (aSecurity == Security::ApiOnly || aSecurity == Security::Signed)
+    {
+        session.SetHeader({{"X-MBX-APIKEY", mApiKey}});
+    }
+
+    cpr::Parameters parameters = detail::initParameters(aBody);
+    if (aSecurity == Security::Signed)
+    {
+        parameters.Add({
+            {"timestamp", std::to_string(getTimestamp())},
+            {"recvWindow", std::to_string(mReceiveWindow.count())},
+        });
+        sign(mSecretKey, parameters);
+    }
+    session.SetParameters(parameters);
 
     cpr::Response response;
     switch (aVerb)
     {
         case Verb::GET:
-        {
-            response = cpr::Get(cpr::Url{mEndpoints.restUrl} + cpr::Url{aEndpoint},
-                                cpr::Header{
-                                     {"X-MBX-APIKEY", mApiKey},
-                                },
-                                sign(mSecretKey, parameters));
+            response = session.Get();
             break;
-        }
         case Verb::POST:
-        {
-            response = cpr::Post(cpr::Url{mEndpoints.restUrl} + cpr::Url{aEndpoint},
-                                 cpr::Header{
-                                      {"X-MBX-APIKEY", mApiKey},
-                                 });
+            response = session.Post();
             break;
-        }
     }
     return analyzeResponse(response);
 }

@@ -36,6 +36,10 @@ struct Response
 class Api
 {
 public:
+    /// \brief Tag to make a request without "body"
+    /// \note The body content is currently sent as request parameters
+    struct NoBody{};
+
     Api(const Json & aSecrets, Endpoints aEndpoints);
     Api(std::istream & aSecrets, Endpoints aEndpoints);
     Api(std::istream && aSecrets, Endpoints aEndpoints);
@@ -50,7 +54,11 @@ public:
 
     Response createSpotListenKey();
 
-    Response placeOrderTrade(const Order & aOrder);
+    Response placeOrderTrade(const MarketOrder & aOrder);
+
+    Response listOpenOrders(const Symbol & aSymbol);
+
+    Response listAllOrders(const Symbol & aSymbol);
 
     static const Endpoints gProduction;
     static const Endpoints gTestNet;
@@ -63,13 +71,26 @@ private:
     };
 
     Response makeRequest(const std::string & aEndpoint);
-    Response makeSignedRequest(const std::string & aEndpoint, Verb aVerb);
+
+    /// \brief Used to configure the request
+    enum class Security
+    {
+        None,
+        ApiOnly,
+        Signed,
+    };
+
+    template <class T_body = NoBody>
+    Response makeRequest(Verb aVerb,
+                         const std::string & aEndpoint,
+                         Security aSecurity,
+                         const T_body & aBody = NoBody{});
 
 private:
     Endpoints mEndpoints;
     ApiKey mApiKey;
     SecretKey mSecretKey;
-    std::chrono::milliseconds mReceiveWindow{1000};
+    std::chrono::milliseconds mReceiveWindow{3000};
 };
 
 
