@@ -68,6 +68,7 @@ struct WebSocket::impl
 {
     void run(std::string aHost, const std::string & aPort, const std::string & aTarget);
 
+    void onHandshake(beast::error_code aErrorCode);
     void onWrite(beast::error_code aErrorCode, std::size_t aBytesTransferred);
     void onRead(beast::error_code aErrorCode, std::size_t aBytesTransferred);
     void onClose(beast::error_code aErrorCode);
@@ -92,6 +93,9 @@ struct WebSocket::impl
     // from trying to send immediatly.
     std::queue<std::string> mMessageFifo{{gFifoGuard}};
 
+    std::atomic<bool> mClosing{false};
+
+    WebSocket::ConnectCallback mConnectCallback{[](){}};
     WebSocket::ReceiveCallback mReceiveCallback{[](const std::string &){}};
 };
 
@@ -141,20 +145,35 @@ void WebSocket::impl::run(std::string aHost, const std::string & aPort, const st
     // Do the websocket handshake in the client role, on the connected stream.
     // The implementation only uses the Host parameter to set the HTTP "Host" field,
     // it does not perform any DNS lookup. That must be done first, as shown above.
-    mStream.handshake(
+    mStream.async_handshake(
         aHost,  // The Host field
-        aTarget     // The request-target
+        aTarget,     // The request-target
+        std::bind(&impl::onHandshake, this, std::placeholders::_1)
     );
-    spdlog::trace("Websocket handshake complete.");
+}
 
-    // Pop the initial guard from the message queue
-    // then tries to send if other were queued by client
-    writeNext();
 
-    // Read a message into our buffer
-    readNext();
+void WebSocket::impl::onHandshake(beast::error_code aErrorCode)
+{
+    if(aErrorCode)
+    {
+        logFailure(aErrorCode, "Websocket handshake error");
+    }
+    else
+    {
+        spdlog::trace("Websocket handshake complete.");
 
-    spdlog::info("Websocket connection established.");
+        spdlog::info("Websocket connection established.");
+
+        // Start reading incoming messages
+        readNext();
+
+        mConnectCallback();
+
+        // Pop the initial guard from the message queue
+        // then tries to send if other were queued by client
+        writeNext();
+    }
 }
 
 
@@ -171,6 +190,7 @@ void WebSocket::impl::onClose(beast::error_code aErrorCode)
 
     // Clear the fifo and reset the guard for next connection.
     mMessageFifo = decltype(mMessageFifo){{gFifoGuard}};
+    mClosing = false;
 }
 
 
@@ -246,9 +266,16 @@ void WebSocket::impl::async_send(const std::string & aMessage)
 
 void WebSocket::impl::async_close()
 {
-    mStream.async_close(
-        beast::websocket::close_code::normal,
-        std::bind(&impl::onClose, this, std::placeholders::_1));
+    if (! mClosing.exchange(true))
+    {
+        mStream.async_close(
+            beast::websocket::close_code::normal,
+            std::bind(&impl::onClose, this, std::placeholders::_1));
+    }
+    else
+    {
+        spdlog::trace("Already closing the websocket.");
+    }
 }
 
 
@@ -286,6 +313,12 @@ void WebSocket::async_send(const std::string & aMessage)
 void WebSocket::async_close()
 {
     mImpl->async_close();
+}
+
+
+void WebSocket::setConnectCallback(ConnectCallback aOnConnect)
+{
+    mImpl->mConnectCallback = std::move(aOnConnect);
 }
 
 
