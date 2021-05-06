@@ -1,4 +1,4 @@
-add_subdirectory(libs/binanceapi/binanceapi)
+add_subdirectory(libs/binance/binance)
 add_subdirectory(libs/websocket/websocket)
 add_subdirectory(libs/tradebot/tradebot)
 

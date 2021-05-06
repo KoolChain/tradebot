@@ -12,9 +12,13 @@ add_executable(${PROJECT_NAME}
                ${${PROJECT_NAME}_SOURCES}
 )
 
+find_package(spdlog REQUIRED COMPONENTS libspdlog)
+
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        ad::binanceapi
+        ad::binance
+
+        spdlog::libspdlog
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

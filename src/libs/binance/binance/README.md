@@ -48,8 +48,14 @@ For `POST`, `PUT`, `DELETE`, can also be in the request body with content type `
 
 ## Signature
 
-HMAC SHA256 signature, with `secretKey` as key, and `totalParams` as the value.
+HMAC SHA256 signature, with `secretKey` as key, and `totalParams` as the value, encoded as hexadecimal string.
 
 * `totalParams`: the query string concatenated with the request body
 
 Signature is **not** case sensitive.
+
+
+## Websocket streams
+
+Base:
+* wss://stream.binance.com:9443

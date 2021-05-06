@@ -1,9 +1,12 @@
-#include <binanceapi/Api.h>
+#include <binance/Api.h>
 
 #include <fstream>
 #include <iostream>
 
 #include <cstdlib>
+
+#include <spdlog/spdlog.h>
+
 
 using namespace ad;
 

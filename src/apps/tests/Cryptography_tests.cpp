@@ -1,6 +1,6 @@
 #include "catch.hpp"
 
-#include <binanceapi/Cryptography.h>
+#include <binance/Cryptography.h>
 
 
 using namespace ad;

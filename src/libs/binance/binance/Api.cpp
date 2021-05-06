@@ -9,11 +9,26 @@
 
 
 namespace ad {
-namespace binanceapi {
+namespace binance {
 
 
 //static const cpr::Url gBaseUrl{"https://api.binance.com"};
 static const cpr::Url gBaseUrl{"https://testnet.binance.vision"};
+static const cpr::Url gBaseWebsocketUrl{"wss://testnet.binance.vision"};
+static const cpr::Url gWebsocketPort{"443"};
+
+const Endpoints Api::gProduction{
+    "https://api.binance.com",
+    "stream.binance.com",
+    "9443"
+};
+
+const Endpoints Api::gTestNet{
+    "https://testnet.binance.vision",
+    "testnet.binance.vision",
+    "443"
+};
+
 
 namespace {
 
@@ -51,7 +66,7 @@ namespace {
     {
         aOut
             << "Url: " << aResponse.url << " "
-            << "(" << aResponse.status_code << " " << aResponse.elapsed << "ms);\n"
+            << "(" << aResponse.status_code << " " << aResponse.elapsed << "s);\n"
             << "Headers: " << aResponse.header << ";\n"
             << "Cookies: " << aResponse.cookies << ";\n"
             << "Error: " << aResponse.error << ";"
@@ -116,19 +131,20 @@ namespace {
 } // anonymous namespace
 
 
-Api::Api(const Json & aSecrets) :
+Api::Api(const Json & aSecrets, Endpoints aEndpoints) :
+        mEndpoints{std::move(aEndpoints)},
         mApiKey{aSecrets["apikey"]},
         mSecretKey{aSecrets["secretkey"]}
 {}
 
 
-Api::Api(std::istream & aSecrets) :
-        Api{[&aSecrets](){Json j; aSecrets>>j; return j;}()}
+Api::Api(std::istream & aSecrets, Endpoints aEndpoints) :
+        Api{[&aSecrets](){Json j; aSecrets>>j; return j;}(), std::move(aEndpoints)}
 {}
 
 
-Api::Api(std::istream && aSecrets) :
-        Api{aSecrets}
+Api::Api(std::istream && aSecrets, Endpoints aEndpoints) :
+        Api{aSecrets, std::move(aEndpoints)}
 {}
 
 
@@ -146,37 +162,66 @@ Response Api::getExchangeInformation()
 
 Response Api::getAllCoinsInformation()
 {
-    return makeSignedRequest({"/sapi/v1/capital/config/getall"});
+    return makeSignedRequest({"/sapi/v1/capital/config/getall"}, Verb::GET);
 }
 
 
 Response Api::getAccountInformation()
 {
-    return makeSignedRequest({"/api/v3/account"});
+    return makeSignedRequest({"/api/v3/account"}, Verb::GET);
+}
+
+
+Response Api::createSpotListenKey()
+{
+    return makeSignedRequest({"/api/v3/userDataStream"}, Verb::POST);
 }
 
 
 Response Api::makeRequest(const std::string & aEndpoint)
 {
-    cpr::Response response = cpr::Get(gBaseUrl + cpr::Url{aEndpoint});
+    cpr::Response response = cpr::Get(cpr::Url{mEndpoints.restUrl} + cpr::Url{aEndpoint});
     return analyzeResponse(response);
 }
 
 
-Response Api::makeSignedRequest(const std::string & aEndpoint)
+// TODO currently hardcoded just what I need (POST is user_stream, which does not sign)
+// the makeXXXRequest methods should  be deeply refactored,
+// so there is less duplication, and easier combination of:
+// * Verb
+// * Signed or not
+// * API key or not
+Response Api::makeSignedRequest(const std::string & aEndpoint, Verb aVerb)
 {
     cpr::Parameters parameters{
         {"timestamp", std::to_string(getTimestamp())},
         {"recvWindow", std::to_string(mReceiveWindow.count())},
     };
-    cpr::Response response = cpr::Get(gBaseUrl + cpr::Url{aEndpoint},
-                                       cpr::Header{
-                                            {"X-MBX-APIKEY", mApiKey},
-                                       },
-                                       sign(mSecretKey, parameters));
+
+    cpr::Response response;
+    switch (aVerb)
+    {
+        case Verb::GET:
+        {
+            response = cpr::Get(cpr::Url{mEndpoints.restUrl} + cpr::Url{aEndpoint},
+                                cpr::Header{
+                                     {"X-MBX-APIKEY", mApiKey},
+                                },
+                                sign(mSecretKey, parameters));
+            break;
+        }
+        case Verb::POST:
+        {
+            response = cpr::Post(cpr::Url{mEndpoints.restUrl} + cpr::Url{aEndpoint},
+                                 cpr::Header{
+                                      {"X-MBX-APIKEY", mApiKey},
+                                 });
+            break;
+        }
+    }
     return analyzeResponse(response);
 }
 
 
-} // namespace binanceapi
+} // namespace binance
 } // namespace ad

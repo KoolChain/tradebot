@@ -29,7 +29,7 @@ public:
 
     /// \brief Connects the websocket, which will start sending and receiving messages.
     /// \attention Blocks the calling thread until the websocket is closed.
-    void run(const std::string & aHost, const std::string & aPort);
+    void run(const std::string & aHost, const std::string & aPort, const std::string & aTarget = "/");
 
     /// \brief Queue a message to be sent at first opportunity, thread safe.
     /// \note Can be called while the WebSocket is running, or not running.

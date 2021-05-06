@@ -47,9 +47,26 @@ namespace ad {
 namespace net {
 
 
+void logFailure(beast::error_code aErrorCode, const std::string & aWhat)
+{
+    // The outstanding read (and potential write) will be aborted
+    // on close. This is normal.
+    if (! (aErrorCode == ::net::error::operation_aborted
+           // Present in the "Chat Server" Beast example
+           //|| aErrorCode == beast::websocket::error::closed
+           // To shut up "stream truncated" error
+           // see: https://github.com/boostorg/beast/issues/824
+           //|| aErrorCode == ::net::ssl::error::stream_truncated
+          ))
+    {
+        spdlog::error("{}: {}", aWhat, aErrorCode.message());
+    }
+}
+
+
 struct WebSocket::impl
 {
-    void run(std::string aHost, const std::string & aPort);
+    void run(std::string aHost, const std::string & aPort, const std::string & aTarget);
 
     void onWrite(beast::error_code aErrorCode, std::size_t aBytesTransferred);
     void onRead(beast::error_code aErrorCode, std::size_t aBytesTransferred);
@@ -82,7 +99,7 @@ struct WebSocket::impl
 const std::string WebSocket::impl::gFifoGuard{"NOT-CONNECTED-GUARD"};
 
 
-void WebSocket::impl::run(std::string aHost, const std::string & aPort)
+void WebSocket::impl::run(std::string aHost, const std::string & aPort, const std::string & aTarget)
 {
     ::net::ip::tcp::resolver resolver{mIoc};
 
@@ -99,16 +116,16 @@ void WebSocket::impl::run(std::string aHost, const std::string & aPort)
     // Set a timeout on the operation
     beast::get_lowest_layer(mStream).expires_after(std::chrono::seconds(20));
 
-    // TODO ??
-    //// Set SNI Hostname (many hosts need this to handshake successfully)
-    //if(! SSL_set_tlsext_host_name(
-    //        ws_.next_layer().native_handle(),
-    //        host_.c_str()))
-    //{
-    //    ec = beast::error_code(static_cast<int>(::ERR_get_error()),
-    //        net::error::get_ssl_category());
-    //    return fail(ec, "connect");
-    //}
+    // Set SNI Hostname (many hosts need this to handshake successfully)
+    // Binance does require it
+    if(! SSL_set_tlsext_host_name(
+            mStream.next_layer().native_handle(),
+            aHost.c_str()))
+    {
+        auto ec = beast::error_code(static_cast<int>(::ERR_get_error()),
+                                    ::net::error::get_ssl_category());
+        return logFailure(ec, "Connect");
+    }
 
     // SSL handshake
     mStream.next_layer().handshake(::net::ssl::stream_base::client);
@@ -126,7 +143,7 @@ void WebSocket::impl::run(std::string aHost, const std::string & aPort)
     // it does not perform any DNS lookup. That must be done first, as shown above.
     mStream.handshake(
         aHost,  // The Host field
-        "/"     // The request-target
+        aTarget     // The request-target
     );
     spdlog::trace("Websocket handshake complete.");
 
@@ -138,17 +155,6 @@ void WebSocket::impl::run(std::string aHost, const std::string & aPort)
     readNext();
 
     spdlog::info("Websocket connection established.");
-}
-
-
-void logFailure(beast::error_code aErrorCode, const std::string & aWhat)
-{
-    // The outstanding read (and potential write) will be aborted
-    // on close. This is normal.
-    if (aErrorCode != ::net::error::operation_aborted)
-    {
-        spdlog::error("{}: {}", aWhat, aErrorCode.message());
-    }
 }
 
 
@@ -181,6 +187,7 @@ void WebSocket::impl::onRead(beast::error_code aErrorCode, std::size_t aBytesTra
                       beast::buffers_to_string(mBuffer.cdata()));
 
         mReceiveCallback(beast::buffers_to_string(mBuffer.cdata()));
+        mBuffer.consume(aBytesTransferred);
         readNext();
     }
 }
@@ -263,9 +270,9 @@ WebSocket::~WebSocket()
 {}
 
 
-void WebSocket::run(const std::string & aHost, const std::string & aPort)
+void WebSocket::run(const std::string & aHost, const std::string & aPort, const std::string & aTarget)
 {
-    mImpl->run(aHost, aPort);
+    mImpl->run(aHost, aPort, aTarget);
     mImpl->mIoc.run();
 }
 

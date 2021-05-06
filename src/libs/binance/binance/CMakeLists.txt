@@ -1,8 +1,10 @@
-project(binanceapi VERSION "${CMAKE_PROJECT_VERSION}")
+project(binance VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
     Api.h
     Cryptography.h
+    Json.h
+    Orders.h
 )
 
 set(${PROJECT_NAME}_SOURCES
@@ -23,6 +25,7 @@ cmc_target_current_include_directory(${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
+        ad::websocket
         jsonformoderncpp::jsonformoderncpp
     PRIVATE
         Boost::boost
