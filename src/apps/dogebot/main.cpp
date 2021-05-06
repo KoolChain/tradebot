@@ -18,22 +18,40 @@ int main(int argc, char * argv[])
         return EXIT_FAILURE;
     }
 
-    auto systemStatus = binanceapi::Api::getSystemStatus();
-    if (systemStatus.json)
-    {
-        std::cout
-            << *(systemStatus.json) << '\n'
-            << std::endl;
-    }
+    spdlog::set_level(spdlog::level::trace);
+
+    binance::Api binance{std::ifstream{argv[1]}, binance::Api::gProduction};
 
     std::ofstream dumpfile{argv[2]};
-    dumpfile << binanceapi::Api::getExchangeInformation().json->dump(4)
-             << "\n\n---------\n\n";
+
+    //auto systemStatus = binance::Api::getSystemStatus();
+    //if (systemStatus.json)
+    //{
+    //    std::cout
+    //        << *(systemStatus.json) << '\n'
+    //        << std::endl;
+    //}
+#if 0
+    {
+        dumpfile << binance.getExchangeInformation().json->dump(3)
+                 << "\n\n---------\n\n";
+    }
 
 
-    binanceapi::Api binance{std::ifstream{argv[1]}};
-    dumpfile << binance.getAccountInformation().json->dump(4)
-             << "\n\n---------\n\n";
+    {
+        dumpfile << binance.getAccountInformation().json->dump(4)
+                 << "\n\n---------\n\n";
+    }
+#endif
 
+    {
+        std::string listenKey = binance.createSpotListenKey().json->at("listenKey");
+        std::cerr << "Listenkey:" << listenKey << '\n';
+
+        net::WebSocket stream{};
+        stream.run(binance::Api::gProduction.websocketHost,
+                   binance::Api::gProduction.websocketPort,
+                   "/ws/"+listenKey);
+    }
     return EXIT_SUCCESS;
 }

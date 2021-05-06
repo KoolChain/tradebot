@@ -6,6 +6,8 @@
 #include <binance/Json.h>
 #include <websocket/WebSocket.h>
 
+#include <spdlog/spdlog.h>
+
 #include <iostream>
 #include <thread>
 
@@ -35,7 +37,7 @@ SCENARIO("Binance REST API", "[binance][net][live]")
 
 SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
 {
-    GIVEN("A websocket")
+    GIVEN("A websocket reading a single message")
     {
         std::vector<std::string> received;
         net::WebSocket stream{[&stream, &received](auto aMessage)
@@ -66,12 +68,33 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
             stream.async_send(subscription.dump());
             stream.run("testnet.binance.vision", "443", "/ws");
         }
+    }
+
+    GIVEN("A websocket placing and order and reading single message")
+    {
+        static const std::string symbol = "BTCUSDT";
+        binance::Api binance{gTestnetSecrets, binance::Api::gTestNet};
+
+        std::vector<std::string> received;
+        net::WebSocket stream{
+            [&binance]()
+            {
+                binance::MarketOrder order{
+                    symbol,
+                    binance::Side::SELL,
+                    0.001,
+                };
+                binance.placeOrderTrade(order);
+            },
+            [&stream, &received](auto aMessage)
+            {
+                received.emplace_back(std::move(aMessage));
+                stream.async_close();
+            }};
 
         GIVEN("A SPOT listen key")
         {
-            binance::Api binance{gTestnetSecrets, binance::Api::gTestNet};
             std::string listenKey = binance.createSpotListenKey().json->at("listenKey");
-            std::cerr << "Listenkey:" << listenKey;
             REQUIRE(! listenKey.empty());
 
             THEN("The websocket can listen to user data stream")
@@ -82,14 +105,15 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
                         stream.run(binance::Api::gTestNet.websocketHost,
                                    binance::Api::gTestNet.websocketPort,
                                    "/ws/"+listenKey);
+                        spdlog::info("Thread end");
                     }};
                 t.join();
+                spdlog::info("We done");
             }
         }
+
+        spdlog::info("All orders for symbol {}:\n{}",
+                     symbol,
+                     binance.listAllOrders(symbol).json->dump(4));
     }
 }
-
-
-    //GIVEN("A Binance interface")
-    //{
-    //    binance::Api binance{gTestnetSecrets};
