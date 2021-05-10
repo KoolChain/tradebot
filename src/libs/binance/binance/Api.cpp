@@ -1,6 +1,7 @@
 #include "Api.h"
 
 #include "Cryptography.h"
+#include "Time.h"
 
 #include "detail/OrdersHelpers.h"
 
@@ -101,13 +102,6 @@ namespace {
                 crypto::hashMacSha256(aSecretKey, aParameters.GetContent(cpr::CurlHolder{})))
         });
         return aParameters;
-    }
-
-
-    auto getTimestamp()
-    {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch()).count();
     }
 
 

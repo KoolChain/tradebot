@@ -5,6 +5,7 @@ set(${PROJECT_NAME}_HEADERS
     Cryptography.h
     Json.h
     Orders.h
+    Time.h
 
     detail/OrdersHelpers.h
 )
