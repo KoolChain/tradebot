@@ -15,6 +15,7 @@ set(${PROJECT_NAME}_SOURCES
 
     Binance_tests.cpp
     Cryptography_tests.cpp
+    Database_tests.cpp
     Websocket_tests.cpp
 )
 

@@ -1,3 +1,4 @@
-#@find_package@(Name CONFIG REQUIRED COMPONENTS name)
+@find_package@(spdlog REQUIRED COMPONENTS libspdlog)
+@find_package@(SqliteOrm REQUIRED)
 
 #@find_package_internal@(Tradebot CONFIG REQUIRED COMPONENTS name)

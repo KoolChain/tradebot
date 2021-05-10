@@ -1,9 +1,16 @@
 project(tradebot VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
+    Database.h
+    Fragment.h
+    Order.h
+    OrmAdaptors-impl.h
 )
 
 set(${PROJECT_NAME}_SOURCES
+    Database.cpp
+    Order.cpp
+    Fragment.cpp
     Trader.cpp
 )
 
@@ -18,9 +25,11 @@ add_library(ad::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 cmc_target_current_include_directory(${PROJECT_NAME})
 
-#target_link_libraries(${PROJECT_NAME}
-#    PUBLIC
-#)
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+        spdlog::libspdlog
+        sqlite_orm::sqlite_orm
+)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
                       VERSION "${${PROJECT_NAME}_VERSION}"
