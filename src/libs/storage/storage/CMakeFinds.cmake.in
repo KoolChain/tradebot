@@ -1,0 +1,2 @@
+@find_package@(spdlog REQUIRED COMPONENTS libspdlog)
+find_package(@SQLite3@ REQUIRED)

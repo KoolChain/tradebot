@@ -11,8 +11,8 @@
 2. Cancel all active orders
 
 3. Get the current rate.
-    * Consolidated `BUY` **market** order for all `BUY` with target rates **above** current.
-    * Consolidated `SELL` **market** order for all `SELL` with target rates **below** current.
+    * Issue separate `BUY` **market** orders for all `BUY` constituants with target rates **above** current, grouped by target rate.
+    * Issue separate `SELL` **market** orders for all `SELL` constituants with target rates **below** current, grouped by target rate.
     * Invoke fulfill callbacks, to distribute counter-order constituants.
 
    **Important**: The counter order will still be computed from the original target rates, not the actual fulfill rate.
@@ -50,6 +50,8 @@ The "order emitter" must be aware of the current rate:
 How to address websocket 24h transition (risk of missing an order fulfil maybe?) This is a more generic problem in case of crash, some orders might be missed: should it only be checked at launch though?
 
 Handle 400 errors (such as 400 Client error -1021 "Timestamp for this request is outside of the recvWindow."). Probably retrying.
+
+Mark all constituants as done once their order is fulfilled.
 
 
 ## Data model
