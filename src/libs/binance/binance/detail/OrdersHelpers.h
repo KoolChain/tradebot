@@ -18,11 +18,6 @@ cpr::Parameters initParameters(const MarketOrder & aOrder)
             {"side", to_string(aOrder.side)},
             {"type", to_string(aOrder.type)},
             {"quantity", std::to_string(aOrder.quantity)}};
-
- //   aParameters.Add("symbol", aOrder.symbol);
- //   aParameters.Add("side", to_string(aOrder.side));
- //   aParameters.Add("type", to_string(aOrder.type));
- //   aParameters.Add("quantity", std::to_string(aOrder.quantity));
 }
 
 

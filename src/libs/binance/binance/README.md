@@ -19,6 +19,10 @@ If there are performance issues with the endpoint above, these API clusters are 
 * https://api2.binance.com
 * https://api3.binance.com
 
+### Test network
+
+Apparently, only supports `api` endpoints, [not `sapi`/`wapi`](https://dev.binance.vision/t/which-streams-and-endpoints-are-available-on-testnet/3414/2?u=shredastaire).
+
 ## Headers
 
 ### Request
