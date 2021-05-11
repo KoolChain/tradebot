@@ -15,7 +15,8 @@ bool operator==(const Fragment & aLhs, const Fragment & aRhs)
         && aLhs.amount == aRhs.amount
         && aLhs.targetRate == aRhs.targetRate
         && aLhs.direction == aRhs.direction
-        && aLhs.originOrder == aRhs.originOrder
+        && aLhs.spawningOrder == aRhs.spawningOrder
+        && aLhs.composedOrder == aRhs.composedOrder
         && aLhs.status == aRhs.status
         ;
 }

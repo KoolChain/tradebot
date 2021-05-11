@@ -16,11 +16,12 @@ bool operator==(const Order & aLhs, const Order & aRhs)
         && aLhs.fragmentsRate == aRhs.fragmentsRate
         && aLhs.executionRate== aRhs.executionRate
         && aLhs.direction == aRhs.direction
-        && aLhs.creationTime == aRhs.creationTime
         && aLhs.fulfillResponse == aRhs.fulfillResponse
+        && aLhs.creationTime == aRhs.creationTime
         && aLhs.status == aRhs.status
         && aLhs.takenHome == aRhs.takenHome
         && aLhs.fulfillTime == aRhs.fulfillTime
+        && aLhs.exchangeId == aRhs.exchangeId
         ;
 }
 

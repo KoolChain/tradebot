@@ -24,7 +24,7 @@ struct Fragment
     {
         Inactive,
         Active,
-        Fullfilled,
+        Fulfilled,
     };
 
     std::string base;
@@ -33,7 +33,8 @@ struct Fragment
     Decimal targetRate;
     Direction direction;
 
-    long originOrder{-1};
+    long spawningOrder{-1};
+    long composedOrder{-1};
     Status status{Status::Inactive};
     long id{-1}; // auto-increment by ORM
 };

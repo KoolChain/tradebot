@@ -9,6 +9,13 @@ namespace ad {
 namespace tradebot {
 
 
+struct Pair
+{
+    std::string base;
+    std::string quote;
+};
+
+
 struct Order
 {
     enum class Status
@@ -31,13 +38,14 @@ struct Order
     Decimal fragmentsRate;
     Decimal executionRate;
     Direction direction;
-    MillisecondsSinceEpoch creationTime;
 
     FulfillResponse fulfillResponse;
 
+    MillisecondsSinceEpoch creationTime{0};
     Status status{Status::Inactive};
     Decimal takenHome{0};
     MillisecondsSinceEpoch fulfillTime{0};
+    long exchangeId{-1}; // assigned by Binance
     long id{-1}; // auto-increment by ORM
 };
 

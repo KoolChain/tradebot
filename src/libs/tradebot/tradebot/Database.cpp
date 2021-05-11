@@ -29,11 +29,12 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("fragments_rate", &Order::fragmentsRate),
                        make_column("execution_rate", &Order::executionRate),
                        make_column("direction", &Order::direction),
-                       make_column("creation_time", &Order::creationTime),
                        make_column("fulfill_response", &Order::fulfillResponse),
+                       make_column("creation_time", &Order::creationTime),
                        make_column("status", &Order::status),
                        make_column("taken_home", &Order::takenHome),
-                       make_column("fulfill_time", &Order::fulfillTime)
+                       make_column("fulfill_time", &Order::fulfillTime),
+                       make_column("exchange_id", &Order::exchangeId)
             ),
             make_table("Fragments",
                        make_column("id", &Fragment::id, primary_key(), autoincrement()),
@@ -43,7 +44,8 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("amount", &Fragment::amount),
                        make_column("target_rate", &Fragment::targetRate),
                        make_column("direction", &Fragment::direction),
-                       make_column("origin_order", &Fragment::originOrder),
+                       make_column("spawning_order", &Fragment::spawningOrder),
+                       make_column("composed_order", &Fragment::composedOrder),
                        make_column("status", &Fragment::status)
             ));
 }
@@ -78,11 +80,11 @@ Database::~Database()
 {}
 
 
-long Database::insert(const Order & aOrder)
+long Database::insert(Order & aOrder)
 {
-    auto id = mImpl->storage.insert(aOrder);
-    spdlog::trace("Inserted order {} in database", id);
-    return id;
+    aOrder.id = mImpl->storage.insert(aOrder);
+    spdlog::trace("Inserted order {} in database", aOrder.id);
+    return aOrder.id;
 }
 
 
@@ -92,11 +94,24 @@ Order Database::getOrder(decltype(Order::id) aIndex)
 }
 
 
-long Database::insert(const Fragment & aFragment)
+long Database::insert(Fragment & aFragment)
 {
-    auto id = mImpl->storage.insert(aFragment);
-    spdlog::trace("Inserted fragment {} in database", id);
-    return id;
+    aFragment.id = mImpl->storage.insert(aFragment);
+    spdlog::trace("Inserted fragment {} in database", aFragment.id);
+    return aFragment.id;
+}
+
+
+
+void Database::update(const Order & aOrder)
+{
+    mImpl->storage.update(aOrder);
+}
+
+
+void Database::update(const Fragment & aFragment)
+{
+    mImpl->storage.update(aFragment);
 }
 
 
@@ -105,6 +120,106 @@ Fragment Database::getFragment(decltype(Fragment::id) aIndex)
     return mImpl->storage.get<Fragment>(aIndex);
 }
 
+
+std::size_t Database::countFragments()
+{
+    return mImpl->storage.count<Fragment>();
+}
+
+
+std::vector<Decimal> Database::getSellRatesAbove(Decimal aRateLimit, const Pair & aPair)
+{
+    using namespace sqlite_orm;
+    return mImpl->storage.select(&Fragment::targetRate,
+            where(   (c(&Fragment::targetRate) > aRateLimit)
+                  && (c(&Fragment::direction) = static_cast<int>(Direction::Sell))
+                  && (c(&Fragment::base) = aPair.base)
+                  && (c(&Fragment::quote) = aPair.quote)
+                  && (c(&Fragment::composedOrder) = -1l) ), // Fragments not already part of an order
+            group_by(&Fragment::targetRate)
+            );
+}
+
+
+std::vector<Decimal> Database::getBuyRatesBelow(Decimal aRateLimit, const Pair & aPair)
+{
+    using namespace sqlite_orm;
+    return mImpl->storage.select(&Fragment::targetRate,
+            where(   (c(&Fragment::targetRate) < aRateLimit)
+                  && (c(&Fragment::direction) = static_cast<int>(Direction::Buy))
+                  && (c(&Fragment::base) = aPair.base)
+                  && (c(&Fragment::quote) = aPair.quote)
+                  && (c(&Fragment::composedOrder) = -1l) ), // Fragments not already part of an order
+            group_by(&Fragment::targetRate)
+            );
+}
+
+
+void Database::assignAvailableFragments(const Order & aOrder)
+{
+    using namespace sqlite_orm;
+    // I think there is a bug when trying to compile some clauses.
+    // see: https://github.com/fnc12/sqlite_orm/issues/723
+    mImpl->storage.update_all(set(c(&Fragment::composedOrder) = aOrder.id),
+            where(
+                     //(c(&Fragment::targetRate) = aOrder.fragmentsRate) // compilation error
+                  is_equal(&Fragment::targetRate, aOrder.fragmentsRate)
+                  && (c(&Fragment::direction) = static_cast<int>(aOrder.direction))
+                  && (c(&Fragment::base) = aOrder.base)
+                  && (c(&Fragment::quote) = aOrder.quote)
+                  && (c(&Fragment::composedOrder) = -1l) ) // Fragments not already part of an order
+            );
+}
+
+
+Decimal Database::sumFragmentsOfOrder(const Order & aOrder)
+{
+    using namespace sqlite_orm;
+    std::unique_ptr<Decimal> result =
+        mImpl->storage.sum(&Fragment::amount,
+                where(is_equal(&Fragment::composedOrder, aOrder.id)));
+    if (!result)
+    {
+        spdlog::critical("Cannot sum fragments for order {}", aOrder.id);
+        throw std::logic_error("Unable to sum fragments.");
+    }
+    return *result;
+}
+
+
+std::vector<Fragment> Database::getFragmentsComposing(const Order & aOrder)
+{
+    using namespace sqlite_orm;
+    return mImpl->storage.get_all<Fragment>(where(is_equal(&Fragment::composedOrder, aOrder.id)));
+}
+
+
+Order Database::prepareOrder(Direction aDirection,
+                             Decimal aFragmentsRate,
+                             const Pair & aPair,
+                             Order::FulfillResponse aFulfillResponse)
+{
+    Order order{
+        aPair.base,
+        aPair.quote,
+        0, // amount
+        aFragmentsRate,
+        0, // execution rate
+        aDirection,
+        aFulfillResponse
+    };
+
+    auto transaction = mImpl->storage.transaction_guard();
+
+    insert(order);
+    assignAvailableFragments(order);
+    order.amount = sumFragmentsOfOrder(order);
+    update(order);
+
+    transaction.commit();
+
+    return order;
+}
 
 } // namespace tradebot
 } // namespace ad
