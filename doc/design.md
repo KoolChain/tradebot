@@ -4,31 +4,85 @@
 
 ### Initialization
 
-1. At launch, list all "transitioning orders"
-(i.e. `sending` or `cancelling`, but confirmation not received. There might have been a crash)
-    * Update to their actual status
+1. At launch, list all "transitioning orders".
+(Transitioning are `sending` or `cancelling`, but confirmation not received. There might have been a crash)
+    * Update to their actual status, either `Inactive` if they did not make it to Binance, or `Active`.
 
-2. Cancel all active orders
+2. For each `Active` order:
+    * If it fulfilled, complete the order.
+    * If it is still live, cancel the order.
 
-3. Get the current rate.
+3. Delete all `Inactive` orders.
+    * Also remove all fragments associated with the `Inactive` orders.
+
+4. Get the current rate.
     * Issue separate `BUY` **market** orders for all `BUY` constituants with target rates **above** current, grouped by target rate.
     * Issue separate `SELL` **market** orders for all `SELL` constituants with target rates **below** current, grouped by target rate.
     * Invoke fulfill callbacks, to distribute counter-order constituants.
 
    **Important**: The counter order will still be computed from the original target rates, not the actual fulfill rate.
 
+
+#### Finding outstanding orders
+
+List all rates for which there are fragments in the group of interest (GROUP BY `targetRate`)
+
+  * Filter on `direction`.
+  * Filter on > or < `targetRate`.
+  * Fragments which are `Inactive` (or not associated to any order).
+
+#### Placing orders
+
+For each rate:
+
+  1. Create a new `Inactive` order in DB, get the `order id`.
+
+  2. Assign all matching fragments to this `order id`.
+
+  3. Sum all fragments amounts assigned to this order, and update `order amount`.
+
+  4. Mark the order `Sending`.
+
+  5. Send the order via binance API.
+
+  6. Upon confirmation:
+
+    * mark the order `Active`.
+    * record the order creation time.
+    * record the `exchange id`.
+
+#### Completing order
+
+a. Spawn fragments (counter orders).
+
+b. Mark the order `Fulfilled`.
+
+#### Cancelling order
+
+a. Mark the order `Cancelling`.
+
+b. Cancel the order vian binance API.
+
+c.  Upon confirmation:
+
+  1. Remove all fragments association.
+
+  2. Mark the order `Inactive`.
+
+  3. Delete order from database.
+
 ### Main loop (2 orders active at the same time)
 
-4. Place the `SELL` and `BUY` around the current rate.
+5. Place the `SELL` and `BUY` around the current rate.
   They emit *events* upon fulfilling.
   **Note**: This is the only moment the two active orders will be direct neighbors on the "rate scale".
 
-5. Upon *fulfill event*:
-    * distribute resulting counter-order constituants.
+6. Upon *fulfill event*:
+    * Distribute resulting counter-order fragments, and complete order.
     * Cancel the other active order.
-    * Place a `SELL` order at the rate step immediately **above** the fulfill rate
-    * Place a `BUY` order at the rate step immediately **below** the fulfill rate
-    * Loop on next *fulfill event*
+    * Place a `SELL` order at the rate step immediately **above** the fulfill rate.
+    * Place a `BUY` order at the rate step immediately **below** the fulfill rate.
+    * Start again at next *fulfill event*.
 
 
 ## Reminders
