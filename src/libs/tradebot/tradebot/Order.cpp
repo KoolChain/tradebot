@@ -7,6 +7,18 @@ namespace ad {
 namespace tradebot {
 
 
+std::string Order::symbol() const
+{
+    return base + quote;
+}
+
+
+std::string Order::clientId(const std::string & aTraderName) const
+{
+    return aTraderName + std::to_string(id);
+}
+
+
 bool operator==(const Order & aLhs, const Order & aRhs)
 {
     return

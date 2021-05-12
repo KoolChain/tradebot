@@ -20,13 +20,6 @@ enum class Direction
 
 struct Fragment
 {
-    enum class Status
-    {
-        Inactive,
-        Active,
-        Fulfilled,
-    };
-
     std::string base;
     std::string quote;
     Decimal amount;
@@ -35,7 +28,6 @@ struct Fragment
 
     long spawningOrder{-1};
     long composedOrder{-1};
-    Status status{Status::Inactive};
     long id{-1}; // auto-increment by ORM
 };
 

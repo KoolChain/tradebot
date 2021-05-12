@@ -2,7 +2,7 @@
 
 #include "Order.h"
 
-#include "sqlite_orm/sqlite_orm.h"
+#include <sqlite_orm/sqlite_orm.h>
 
 #include <spdlog/spdlog.h>
 
@@ -45,8 +45,7 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("target_rate", &Fragment::targetRate),
                        make_column("direction", &Fragment::direction),
                        make_column("spawning_order", &Fragment::spawningOrder),
-                       make_column("composed_order", &Fragment::composedOrder),
-                       make_column("status", &Fragment::status)
+                       make_column("composed_order", &Fragment::composedOrder)
             ));
 }
 
@@ -184,6 +183,9 @@ Decimal Database::sumFragmentsOfOrder(const Order & aOrder)
         throw std::logic_error("Unable to sum fragments.");
     }
     return *result;
+
+    int id = 1;
+    auto & storage = mImpl->storage;
 }
 
 

@@ -55,10 +55,15 @@ public:
     Response createSpotListenKey();
 
     Response placeOrderTrade(const MarketOrder & aOrder);
+    Response placeOrderTrade(const LimitOrder & aOrder);
 
     Response listOpenOrders(const Symbol & aSymbol);
 
     Response listAllOrders(const Symbol & aSymbol);
+
+    Response queryOrder(const Symbol & aSymbol, const std::string & aClientOrderId);
+
+    Response cancelAllOpenOrders(const Symbol & aSymbol);
 
     static const Endpoints gProduction;
     static const Endpoints gTestNet;
@@ -66,6 +71,7 @@ public:
 private:
     enum class Verb
     {
+        DELETE,
         GET,
         POST,
     };

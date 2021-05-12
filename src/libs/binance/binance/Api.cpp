@@ -194,6 +194,12 @@ Response Api::placeOrderTrade(const MarketOrder & aOrder)
 }
 
 
+Response Api::placeOrderTrade(const LimitOrder & aOrder)
+{
+    return makeRequest(Verb::POST, {"/api/v3/order"}, Security::Signed, aOrder);
+}
+
+
 Response Api::listOpenOrders(const Symbol & aSymbol)
 {
     return makeRequest(Verb::GET, {"/api/v3/openOrders"}, Security::Signed,
@@ -206,6 +212,22 @@ Response Api::listAllOrders(const Symbol & aSymbol)
     return makeRequest(Verb::GET, {"/api/v3/allOrders"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol}});
 }
+
+
+Response Api::queryOrder(const Symbol & aSymbol, const std::string & aClientOrderId)
+{
+    return makeRequest(Verb::GET, {"/api/v3/order"}, Security::Signed,
+                       cpr::Parameters{{"symbol", aSymbol},
+                                       {"origClientOrderId", aClientOrderId}});
+}
+
+
+Response Api::cancelAllOpenOrders(const Symbol & aSymbol)
+{
+    return makeRequest(Verb::DELETE, {"/api/v3/openOrders"}, Security::Signed,
+                       cpr::Parameters{{"symbol", aSymbol}});
+}
+
 
 Response Api::makeRequest(const std::string & aEndpoint)
 {
@@ -243,6 +265,9 @@ Response Api::makeRequest(Verb aVerb,
     cpr::Response response;
     switch (aVerb)
     {
+        case Verb::DELETE:
+            response = session.Delete();
+            break;
         case Verb::GET:
             response = session.Get();
             break;

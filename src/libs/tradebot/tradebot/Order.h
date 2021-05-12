@@ -13,11 +13,19 @@ struct Pair
 {
     std::string base;
     std::string quote;
+
+    std::string symbol() const
+    {
+        return base + quote;
+    }
 };
 
 
 struct Order
 {
+    std::string symbol() const;
+    std::string clientId(const std::string & aTraderName) const;
+
     enum class Status
     {
         Sending,

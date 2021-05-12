@@ -2,13 +2,16 @@ project(tradebot VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
     Database.h
+    Exchange.h
     Fragment.h
     Order.h
     OrmAdaptors-impl.h
+    Trader.h
 )
 
 set(${PROJECT_NAME}_SOURCES
     Database.cpp
+    Exchange.cpp
     Order.cpp
     Fragment.cpp
     Trader.cpp
@@ -27,6 +30,8 @@ cmc_target_current_include_directory(${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
+        ad::binance
+
         spdlog::libspdlog
         sqlite_orm::sqlite_orm
 )

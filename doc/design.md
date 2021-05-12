@@ -2,7 +2,7 @@
 
 ## Functional outline
 
-### Initialization
+### Initialization - deprecated
 
 1. At launch, list all "transitioning orders".
 (Transitioning are `sending` or `cancelling`, but confirmation not received. There might have been a crash)
@@ -14,6 +14,32 @@
 
 3. Delete all `Inactive` orders.
     * Also remove all fragments associated with the `Inactive` orders.
+
+4. Get the current rate.
+    * Issue separate `BUY` **market** orders for all `BUY` constituants with target rates **above** current, grouped by target rate.
+    * Issue separate `SELL` **market** orders for all `SELL` constituants with target rates **below** current, grouped by target rate.
+    * Invoke fulfill callbacks, to distribute counter-order constituants.
+
+   **Important**: The counter order will still be computed from the original target rates, not the actual fulfill rate.
+
+### Initialization
+
+**Note**: "transitioning orders" are `Cancelling` or `Sending` orders for which a crash occured
+before the confirmation for the transition was received.
+So they were not taken out of the transition status.
+
+1. At launch, cancel all open orders. This will cancel `Active` order that did not fulfill,
+as well as not-fulfilled "transitioning orders".
+(`Sending` that were received by the engine, and `Canceling` that were not received by the engine).
+    * For the returned list of cancelled orders, mark them `Inactive`.
+
+2. For each remaining `Active`, `Sending` or `Cancelling` order:
+   * Query the engine about the order status
+     * If it fulfilled, mark the order `Fulfilled`.
+     * If it is cancelled, mark the order `Inactive`.
+     * If the order does not exist on the exchange, the order should be `Sending`, or there is a problem.
+
+3. Clean-up `Inactive` orders.
 
 4. Get the current rate.
     * Issue separate `BUY` **market** orders for all `BUY` constituants with target rates **above** current, grouped by target rate.
@@ -61,15 +87,19 @@ b. Mark the order `Fulfilled`.
 
 a. Mark the order `Cancelling`.
 
-b. Cancel the order vian binance API.
+b. Cancel the order via binance API.
 
 c.  Upon confirmation:
+  1. Mark the order `Inactive`.
+  2. Clean-up
 
-  1. Remove all fragments association.
 
-  2. Mark the order `Inactive`.
+##### Clean-up Inactive order
 
-  3. Delete order from database.
+a. Remove all fragments association.
+
+b. Delete order from database.
+
 
 ### Main loop (2 orders active at the same time)
 

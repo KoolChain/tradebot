@@ -17,7 +17,6 @@ bool operator==(const Fragment & aLhs, const Fragment & aRhs)
         && aLhs.direction == aRhs.direction
         && aLhs.spawningOrder == aRhs.spawningOrder
         && aLhs.composedOrder == aRhs.composedOrder
-        && aLhs.status == aRhs.status
         ;
 }
 

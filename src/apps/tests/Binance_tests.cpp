@@ -13,17 +13,12 @@
 
 using namespace ad;
 
-const Json gTestnetSecrets{
-    {"apikey", secret::gTestnetApiKey},
-    {"secretkey", secret::gTestnetSecretKey},
-};
-
 
 SCENARIO("Binance REST API", "[binance][net][live]")
 {
     GIVEN("A Binance interface connected to the testnet")
     {
-        binance::Api binance{gTestnetSecrets, binance::Api::gTestNet};
+        binance::Api binance{secret::gTestnetCredentials, binance::Api::gTestNet};
 
         THEN("It is possible to retrieve the account informations")
         {
@@ -73,7 +68,7 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
     GIVEN("A websocket placing and order and reading single message")
     {
         static const std::string symbol = "BTCUSDT";
-        binance::Api binance{gTestnetSecrets, binance::Api::gTestNet};
+        binance::Api binance{secret::gTestnetCredentials, binance::Api::gTestNet};
 
         std::vector<std::string> received;
         net::WebSocket stream{
