@@ -34,6 +34,7 @@ target_link_libraries(${PROJECT_NAME}
         Boost::boost
         cpr::cpr
         OpenSSL::Crypto
+        spdlog::libspdlog
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

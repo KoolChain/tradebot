@@ -34,22 +34,26 @@ SCENARIO("Initialization clean-up", "[trader]")
         {
             THEN("All open orders can be cancelled anyways")
             {
-                std::cout << binance.restApi.cancelAllOpenOrders(pair.symbol()).json->dump(4);
+                REQUIRE(binance.cancelAllOpenOrders(pair).size() == 0);
             }
         }
 
-        WHEN("There is an opened order.")
+        WHEN("There is an open order.")
         {
+            binance::ClientId id{"testdog01"};
             binance::LimitOrder impossibleOrder{
                 pair.symbol(),
                 binance::Side::SELL,
                 0.01, // qty
+                id,
                 100000,  // price
             };
             binance.restApi.placeOrderTrade(impossibleOrder);
             THEN("The open orders can be cancelled")
             {
-                std::cout << binance.restApi.cancelAllOpenOrders(pair.symbol()).json->dump(4);
+                std::vector<binance::ClientId> cancelled = binance.cancelAllOpenOrders(pair);
+                REQUIRE(cancelled.size() == 1);
+                REQUIRE(cancelled.at(0) == id);
             }
         }
 

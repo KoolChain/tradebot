@@ -11,25 +11,28 @@ namespace binance {
 namespace detail {
 
 
-cpr::Parameters initParameters(const MarketOrder & aOrder)
+inline cpr::Parameters initParameters(const MarketOrder & aOrder)
 {
     return {
             {"symbol", aOrder.symbol},
             {"side", to_string(aOrder.side)},
-            {"type", to_string(aOrder.type)},
-            {"quantity", std::to_string(aOrder.quantity)}
+            {"quantity", std::to_string(aOrder.quantity)},
+            {"newClientOrderId", aOrder.clientId},
+            {"type", to_string(aOrder.type)}
     };
 }
 
-cpr::Parameters initParameters(const LimitOrder & aOrder)
+
+inline cpr::Parameters initParameters(const LimitOrder & aOrder)
 {
     return {
             {"symbol", aOrder.symbol},
             {"side", to_string(aOrder.side)},
-            {"type", to_string(aOrder.type)},
             {"quantity", std::to_string(aOrder.quantity)},
+            {"newClientOrderId", aOrder.clientId},
             {"price", std::to_string(aOrder.price)},
-            {"timeInForce", to_string(aOrder.timeInForce)}
+            {"timeInForce", to_string(aOrder.timeInForce)},
+            {"type", to_string(aOrder.type)}
     };
 }
 

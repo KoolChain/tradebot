@@ -7,6 +7,8 @@
 
 #include <cpr/cpr.h>
 
+#include <spdlog/spdlog.h>
+
 // TODO remove
 #include <iostream>
 
@@ -105,22 +107,40 @@ namespace {
     }
 
 
-    Response analyzeResponse(const cpr::Response & aResponse)
+    Response analyzeResponse(const std::string aVerb, const cpr::Response & aResponse)
     {
-        std::cout << aResponse;
-
+        //std::cout << aResponse;
         if (aResponse.status_code == 404)
         {
-            std::cerr << "HTTP Response " << aResponse.status_line;
+            spdlog::error("Status: {}. {} to url '{}'.",
+                          aResponse.status_code,
+                          aVerb,
+                          std::string{aResponse.url});
             return Response {aResponse.status_code, std::nullopt};
         }
         else if (aResponse.status_code >= 400 && aResponse.status_code < 500)
         {
             Json binanceError = Json::parse(aResponse.text);
-            std::cerr << "HTTP Response " << aResponse.status_line
-                      << ". Client error " << binanceError["code"] << ": "
-                      << binanceError["msg"] << "\n"
-                      ;
+            spdlog::warn("Status: {}. {} to url '{}'. Client error {}: {}",
+                         aResponse.status_code,
+                         aVerb,
+                         std::string{aResponse.url},
+                         to_string(binanceError["code"]),
+                         binanceError["msg"]);
+        }
+        else if (aResponse.status_code == 200)
+        {
+            spdlog::debug("Status: {}. {} to url '{}'.",
+                          aResponse.status_code,
+                          aVerb,
+                          std::string{aResponse.url});
+        }
+        else
+        {
+            spdlog::critical("Unexpected status: {}. {} to url '{}'.",
+                             aResponse.status_code,
+                             aVerb,
+                             std::string{aResponse.url});
         }
 
         try {
@@ -131,8 +151,7 @@ namespace {
         }
         catch (const nlohmann::detail::parse_error &)
         {
-            std::cerr << "Error: cannot parse response as json: '"
-                << aResponse.text << "'\n";
+            spdlog::error("Error: cannot parse response as json: '{}'", aResponse.text);
             return Response {aResponse.status_code, std::nullopt};
         }
     }
@@ -232,7 +251,7 @@ Response Api::cancelAllOpenOrders(const Symbol & aSymbol)
 Response Api::makeRequest(const std::string & aEndpoint)
 {
     cpr::Response response = cpr::Get(cpr::Url{mEndpoints.restUrl} + cpr::Url{aEndpoint});
-    return analyzeResponse(response);
+    return analyzeResponse("GET", response);
 }
 
 
@@ -262,20 +281,15 @@ Response Api::makeRequest(Verb aVerb,
     }
     session.SetParameters(parameters);
 
-    cpr::Response response;
     switch (aVerb)
     {
         case Verb::DELETE:
-            response = session.Delete();
-            break;
+            return analyzeResponse("DELETE", session.Delete());
         case Verb::GET:
-            response = session.Get();
-            break;
+            return analyzeResponse("GET", session.Get());
         case Verb::POST:
-            response = session.Post();
-            break;
+            return analyzeResponse("POST", session.Post());
     }
-    return analyzeResponse(response);
 }
 
 

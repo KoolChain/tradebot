@@ -104,11 +104,44 @@ inline const std::string & to_string(TimeInForce aTimeInForce)
 //};
 
 
-struct MarketOrder
+/// \brief Not default constructible, explicitly typed.
+class ClientId
+{
+public:
+    explicit ClientId(std::string aId) :
+        mId{std::move(aId)}
+    {}
+
+    operator const std::string &() const
+    {
+        return mId;
+    }
+
+    bool operator==(const ClientId & aRhs) const
+    {
+        return mId == aRhs.mId;
+    }
+
+    bool operator!=(const ClientId & aRhs) const
+    {
+        return ! (*this == aRhs);
+    }
+
+private:
+    std::string mId;
+};
+
+struct OrderBase
 {
     Symbol symbol;
     Side side;
     Decimal quantity;
+    ClientId clientId;
+};
+
+
+struct MarketOrder : public OrderBase
+{
     const Type type{Type::MARKET};
 
     //Json json() const override
@@ -122,11 +155,9 @@ struct MarketOrder
     //}
 };
 
-struct LimitOrder
+
+struct LimitOrder : public OrderBase
 {
-    Symbol symbol;
-    Side side;
-    Decimal quantity;
     Decimal price;
     TimeInForce timeInForce{TimeInForce::GTC};
     const Type type{Type::LIMIT};

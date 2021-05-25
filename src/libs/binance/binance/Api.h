@@ -63,6 +63,7 @@ public:
 
     Response queryOrder(const Symbol & aSymbol, const std::string & aClientOrderId);
 
+    Response cancelOrder();
     Response cancelAllOpenOrders(const Symbol & aSymbol);
 
     static const Endpoints gProduction;

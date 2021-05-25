@@ -65,7 +65,7 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
         }
     }
 
-    GIVEN("A websocket placing and order and reading single message")
+    GIVEN("A websocket placing an order and reading single message")
     {
         static const std::string symbol = "BTCUSDT";
         binance::Api binance{secret::gTestnetCredentials, binance::Api::gTestNet};
@@ -78,6 +78,7 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
                     symbol,
                     binance::Side::SELL,
                     0.001,
+                    binance::ClientId{""},
                 };
                 binance.placeOrderTrade(order);
             },

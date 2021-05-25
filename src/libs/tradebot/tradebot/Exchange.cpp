@@ -34,6 +34,7 @@ std::string Exchange::getOrderStatus(Order aOrder, const std::string & aTraderNa
     return "UNEXPECTED";
 }
 
+
 // Cancel all order return 400 -2011 if no order is present to be cancelled.
 // If they are present, returned in a list
 // [
@@ -53,6 +54,40 @@ std::string Exchange::getOrderStatus(Order aOrder, const std::string & aTraderNa
 //        "type": "LIMIT"
 //    }
 //]
+std::vector<binance::ClientId> Exchange::cancelAllOpenOrders(const Pair & aPair)
+{
+    std::vector<binance::ClientId> result;
+
+    binance::Response response = restApi.cancelAllOpenOrders(aPair.symbol());
+
+    if (response.status == 200)
+    {
+        Json json = *response.json;
+        std::transform(json.begin(), json.end(), std::back_inserter(result),
+                       [](const auto & element)
+                        {
+                            return binance::ClientId{element["origClientOrderId"]};
+                        });
+    }
+    else if (response.status == 400)
+    {
+        if ((*response.json)["code"] == -2011)
+        {
+            // normal empty return situation
+        }
+        else
+        {
+            spdlog::error("Unexpected status {} with binance error code {}.",
+                          response.status,
+                          (*response.json)["code"]);
+        }
+    }
+    else
+    {
+        spdlog::error("Unexpected status {}.", response.status);
+    }
+    return result;
+}
 
 // Place order returns 400 -1013 if the price is above the symbol limit.
 

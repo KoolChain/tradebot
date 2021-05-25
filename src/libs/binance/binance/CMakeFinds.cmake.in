@@ -2,3 +2,4 @@
 @find_package@(cpr REQUIRED)
 @find_package@(jsonformoderncpp REQUIRED)
 @find_package@(OpenSSL REQUIRED)
+@find_package@(spdlog REQUIRED COMPONENTS libspdlog)
