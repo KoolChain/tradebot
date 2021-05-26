@@ -23,6 +23,7 @@ struct Exchange
     ///         * NEW (Active order)
     ///         * CANCELED
     ///         * FILLED
+    ///         * EXPIRED
     std::string getOrderStatus(const Order & aOrder);
 
     Decimal getCurrentAveragePrice(const Pair & aPair);
