@@ -11,7 +11,7 @@
 using namespace ad;
 
 
-SCENARIO("Testing database access.", "[db]")
+SCENARIO("Order and fragment records.", "[db]")
 {
     GIVEN("A tradebot database")
     {
@@ -68,7 +68,86 @@ SCENARIO("Testing database access.", "[db]")
 }
 
 
-SCENARIO("Prototyping initialization.", "[db]")
+SCENARIO("Orders selection", "[db]")
+{
+    GIVEN("A tradebot database")
+    {
+        tradebot::Database db{":memory:"};
+        const tradebot::Pair pair{"DOGE", "BUSD"};
+
+        THEN("It does not contain any order")
+        {
+            REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Active).empty());
+            REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Fulfilled).empty());
+            REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Inactive).empty());
+            REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Cancelling).empty());
+            REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Sending).empty());
+        }
+
+        WHEN("Different orders are recorded")
+        {
+            const int ordersTotal = 5;
+            std::vector<tradebot::Order> orders{
+                ordersTotal,
+                {
+                    pair.base,
+                    pair.quote,
+                    10.,
+                    1.,
+                    0.,
+                    tradebot::Side::Sell,
+                    tradebot::Order::FulfillResponse::SmallSpread,
+                }
+            };
+
+            for (auto & order : orders)
+            {
+                db.insert(order);
+            }
+
+            THEN("By default orders are Inactive")
+            {
+                REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Inactive).size() == ordersTotal);
+
+                REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Active).empty());
+                REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Fulfilled).empty());
+                REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Cancelling).empty());
+                REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Sending).empty());
+
+                THEN("Orders are only selected for matching pair")
+                {
+                    const tradebot::Pair otherPair{"ETH", "BUSD"};
+                    REQUIRE(db.selectOrders(otherPair, tradebot::Order::Status::Inactive).size() == 0);
+                }
+            }
+
+            WHEN("First order is marked active, second order is marked fulfilled")
+            {
+                orders.at(0).status = tradebot::Order::Status::Active;
+                orders.at(1).status = tradebot::Order::Status::Fulfilled;
+
+                for (const auto & order : orders)
+                {
+                    db.update(order);
+                }
+
+                THEN("The selections are reflecting this update")
+                {
+                    REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Inactive).size() == ordersTotal - 2);
+                    REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Active).size() == 1);
+                    REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Fulfilled).size() == 1);
+
+                    REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Cancelling).empty());
+                    REQUIRE(db.selectOrders(pair, tradebot::Order::Status::Sending).empty());
+                }
+            }
+        }
+
+    }
+}
+
+
+SCENARIO("Order high-level creation.", "[db]")
 {
     using namespace ad::tradebot;
 

@@ -196,6 +196,17 @@ std::vector<Fragment> Database::getFragmentsComposing(const Order & aOrder)
 }
 
 
+std::vector<Order> Database::selectOrders(const Pair & aPair, Order::Status aStatus)
+{
+    using namespace sqlite_orm;
+    return mImpl->storage.get_all<Order>(
+            where(is_equal(&Order::status, static_cast<int>(aStatus))
+                  && (c(&Order::base) = aPair.base)
+                  && (c(&Order::quote) = aPair.quote)
+            ));
+}
+
+
 Order Database::prepareOrder(Side aSide,
                              Decimal aFragmentsRate,
                              const Pair & aPair,

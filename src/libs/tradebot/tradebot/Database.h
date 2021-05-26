@@ -50,6 +50,8 @@ public:
 
     Decimal sumFragmentsOfOrder(const Order & aOrder);
 
+    std::vector<Order> selectOrders(const Pair & aPair, Order::Status aStatus);
+
     //
     // High level API
     //
