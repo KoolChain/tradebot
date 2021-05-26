@@ -32,6 +32,14 @@ SCENARIO("Order and fragment records.", "[db]")
                 tradebot::Order::Status::Cancelling,
             };
 
+            WHEN("Requesting the order client ID before the order is written to DB")
+            {
+                THEN("The operation throws")
+                {
+                    REQUIRE_THROWS(order.clientId());
+                }
+            }
+
             auto id = db.insert(order);
 
             REQUIRE(id > 0);

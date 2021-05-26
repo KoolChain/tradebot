@@ -21,7 +21,7 @@ binance::ClientId Order::clientId() const
     {
         throw std::logic_error{"Cannot retrieve the client id for an order not matched in database."};
     }
-    return binance::ClientId{traderName + std::to_string(id)};
+    return binance::ClientId{traderName + '-' + std::to_string(id)};
 }
 
 
