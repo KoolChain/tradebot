@@ -20,6 +20,7 @@ SCENARIO("Order and fragment records.", "[db]")
         THEN("New orders can be created")
         {
             tradebot::Order order{
+                "dbtest",
                 "DOGE",
                 "BUSD",
                 10.,
@@ -90,6 +91,7 @@ SCENARIO("Orders selection", "[db]")
             std::vector<tradebot::Order> orders{
                 ordersTotal,
                 {
+                    "dbtest",
                     pair.base,
                     pair.quote,
                     10.,
@@ -235,7 +237,7 @@ SCENARIO("Order high-level creation.", "[db]")
         THEN("Matching SELL fragments can be assigned to a new SELL order")
         {
             Order order =
-                db.prepareOrder(Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
+                db.prepareOrder("dbtest", Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
 
             REQUIRE(order.amount == 2*baseFragment.amount);
             REQUIRE(order.status == Order::Status::Inactive);
@@ -243,7 +245,7 @@ SCENARIO("Order high-level creation.", "[db]")
             THEN("There are no more fragments at the same rate.")
             {
                 REQUIRE_THROWS(
-                    db.prepareOrder(Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
+                    db.prepareOrder("dbtest", Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
             }
 
             THEN("The fragments matching the rate are now associated with the order.")
@@ -264,7 +266,7 @@ SCENARIO("Order high-level creation.", "[db]")
         THEN("Matching BUY fragments can be assigned to a new BUY order")
         {
             Order order =
-                db.prepareOrder(Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
+                db.prepareOrder("dbtest", Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
 
             REQUIRE(order.amount == 100.);
             REQUIRE(order.status == Order::Status::Inactive);
@@ -272,7 +274,7 @@ SCENARIO("Order high-level creation.", "[db]")
             THEN("There are no more fragments at the same rate.")
             {
                 REQUIRE_THROWS(
-                    db.prepareOrder(Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
+                    db.prepareOrder("dbtest", Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
             }
 
             THEN("The fragments matching the rate are now associated with the order.")

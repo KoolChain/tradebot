@@ -23,6 +23,7 @@ auto initializeStorage(const std::string & aFilename)
             make_table("Orders",
                        make_column("id", &Order::id, primary_key(), autoincrement()),
 
+                       make_column("trader_name", &Order::traderName),
                        make_column("base", &Order::base),
                        make_column("quote", &Order::quote),
                        make_column("amount", &Order::amount),
@@ -207,12 +208,14 @@ std::vector<Order> Database::selectOrders(const Pair & aPair, Order::Status aSta
 }
 
 
-Order Database::prepareOrder(Side aSide,
+Order Database::prepareOrder(const std::string & aTraderName,
+                             Side aSide,
                              Decimal aFragmentsRate,
                              const Pair & aPair,
                              Order::FulfillResponse aFulfillResponse)
 {
     Order order{
+        aTraderName,
         aPair.base,
         aPair.quote,
         0, // amount

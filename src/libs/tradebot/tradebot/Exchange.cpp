@@ -13,9 +13,9 @@ namespace tradebot {
     throw std::logic_error("Unhandled web API response."); \
 }
 
-std::string Exchange::getOrderStatus(const Order & aOrder, const std::string & aTraderName)
+std::string Exchange::getOrderStatus(const Order & aOrder)
 {
-    binance::Response response = restApi.queryOrder(aOrder.symbol(), aOrder.clientId(aTraderName));
+    binance::Response response = restApi.queryOrder(aOrder.symbol(), aOrder.clientId());
 
     if (response.status == 200)
     {
@@ -47,16 +47,16 @@ Decimal Exchange::getCurrentAveragePrice(const Pair & aPair)
 }
 
 
-Order Exchange::placeOrder(Order & aOrder, Execution aExecution, const std::string & aTraderName)
+Order Exchange::placeOrder(Order & aOrder, Execution aExecution)
 {
     binance::Response response;
     switch(aExecution)
     {
         case Execution::Market:
-            response = restApi.placeOrderTrade(to_marketOrder(aOrder, aTraderName));
+            response = restApi.placeOrderTrade(to_marketOrder(aOrder));
             break;
         case Execution::Limit:
-            response = restApi.placeOrderTrade(to_limitOrder(aOrder, aTraderName));
+            response = restApi.placeOrderTrade(to_limitOrder(aOrder));
             break;
     }
 
@@ -78,9 +78,9 @@ Order Exchange::placeOrder(Order & aOrder, Execution aExecution, const std::stri
 
 
 // Return 400 -2011 if the provided order is not present to be cancelled
-bool Exchange::cancelOrder(const Order & aOrder, const std::string & aTraderName)
+bool Exchange::cancelOrder(const Order & aOrder)
 {
-    binance::Response response = restApi.cancelOrder(aOrder.symbol(), aOrder.clientId(aTraderName));
+    binance::Response response = restApi.cancelOrder(aOrder.symbol(), aOrder.clientId());
 
     if (response.status == 200)
     {
@@ -91,7 +91,7 @@ bool Exchange::cancelOrder(const Order & aOrder, const std::string & aTraderName
         if ((*response.json)["code"] == -2011)
         {
             spdlog::trace("Order '{}' was not present in the exchange.",
-                          std::string{aOrder.clientId(aTraderName)});
+                          std::string{aOrder.clientId()});
             return false;
         }
     }

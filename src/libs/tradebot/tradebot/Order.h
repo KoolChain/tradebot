@@ -26,7 +26,7 @@ struct Pair
 struct Order
 {
     std::string symbol() const;
-    binance::ClientId clientId(const std::string & aTraderName) const;
+    binance::ClientId clientId() const;
 
     enum class Status
     {
@@ -42,6 +42,7 @@ struct Order
         SmallSpread,
     };
 
+    std::string traderName;
     std::string base;
     std::string quote;
     Decimal amount; // Quantity of base to exchange
@@ -60,27 +61,28 @@ struct Order
 };
 
 
-inline binance::MarketOrder to_marketOrder(const Order & aOrder, const std::string & aTraderName)
+inline binance::MarketOrder to_marketOrder(const Order & aOrder)
 {
     return {
         aOrder.symbol(),
         (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
         aOrder.amount,
-        aOrder.clientId(aTraderName),
+        aOrder.clientId(),
     };
 }
 
 
-inline binance::LimitOrder to_limitOrder(const Order & aOrder, const std::string & aTraderName)
+inline binance::LimitOrder to_limitOrder(const Order & aOrder)
 {
     return {
         aOrder.symbol(),
         (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
         aOrder.amount,
-        aOrder.clientId(aTraderName),
+        aOrder.clientId(),
         aOrder.fragmentsRate,
     };
 }
+
 
 /// \important Compares every data member except for the `id`!
 bool operator==(const Order & aLhs, const Order & aRhs);

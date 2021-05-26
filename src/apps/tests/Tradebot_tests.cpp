@@ -91,7 +91,10 @@ SCENARIO("Orders cancellation", "[trader]")
 
         GIVEN("'Sending' order, never received by the exchange.")
         {
+            // We use a different trader name, otherwise the order might have been
+            // added and cancelled by other tests.
             Order sendingOrder{
+                "NeverSendingTrader",
                 pair.base,
                 pair.quote,
                 10.,
@@ -105,19 +108,15 @@ SCENARIO("Orders cancellation", "[trader]")
 
             db.insert(sendingOrder);
 
-            // We use a different trader name, otherwise, otherwise the order might have been
-            // added and cancelled by other tests.
-            const std::string otherTrader = "NeverSendingTrader";
-
             THEN("The trader can enquire the actual status of this outstanding orders.")
             {
-                REQUIRE(binance.getOrderStatus(sendingOrder, otherTrader)
+                REQUIRE(binance.getOrderStatus(sendingOrder)
                         == "NOTEXISTING");
             }
 
             THEN("The trader can try to cancel the order.")
             {
-                REQUIRE_FALSE(binance.cancelOrder(sendingOrder, otherTrader));
+                REQUIRE_FALSE(binance.cancelOrder(sendingOrder));
             }
         }
 
@@ -127,6 +126,7 @@ SCENARIO("Orders cancellation", "[trader]")
         GIVEN("Active order that is not fulfilled")
         {
             Order impossibleOrder{
+                trader.name,
                 pair.base,
                 pair.quote,
                 0.01,
@@ -136,20 +136,20 @@ SCENARIO("Orders cancellation", "[trader]")
                 Order::FulfillResponse::SmallSpread,
             };
             db.insert(impossibleOrder);
-            binance.placeOrder(impossibleOrder, Execution::Limit, trader.name);
+            binance.placeOrder(impossibleOrder, Execution::Limit);
 
             REQUIRE(impossibleOrder.status == Order::Status::Active);
             REQUIRE(impossibleOrder.exchangeId != -1);
 
             THEN("The trader can enquire the actual status of the order.")
             {
-                REQUIRE(binance.getOrderStatus(impossibleOrder, trader.name)
+                REQUIRE(binance.getOrderStatus(impossibleOrder)
                         == "NEW");
             }
 
             THEN("The trader can cancel the order.")
             {
-                REQUIRE(binance.cancelOrder(impossibleOrder, trader.name));
+                REQUIRE(binance.cancelOrder(impossibleOrder));
 
                 // The situation where a 'cancelling' order was received by the exchange
                 // but a crash occured before confirmation.
@@ -157,13 +157,13 @@ SCENARIO("Orders cancellation", "[trader]")
                 {
                     THEN("The trader can enquire the actual status of the order.")
                     {
-                        REQUIRE(binance.getOrderStatus(impossibleOrder, trader.name)
+                        REQUIRE(binance.getOrderStatus(impossibleOrder)
                                 == "CANCELED");
                     }
 
                     THEN("The trader can cancel the order again.")
                     {
-                        REQUIRE_FALSE(binance.cancelOrder(impossibleOrder, trader.name));
+                        REQUIRE_FALSE(binance.cancelOrder(impossibleOrder));
                     }
                 }
             }
@@ -173,6 +173,7 @@ SCENARIO("Orders cancellation", "[trader]")
         GIVEN("Active order")
         {
             Order immediateOrder{
+                trader.name,
                 pair.base,
                 pair.quote,
                 0.01,
@@ -182,7 +183,7 @@ SCENARIO("Orders cancellation", "[trader]")
                 Order::FulfillResponse::SmallSpread,
             };
             db.insert(immediateOrder);
-            binance.placeOrder(immediateOrder, Execution::Market, trader.name);
+            binance.placeOrder(immediateOrder, Execution::Market);
 
             REQUIRE(immediateOrder.status == Order::Status::Active);
             REQUIRE(immediateOrder.exchangeId != -1);
@@ -190,7 +191,7 @@ SCENARIO("Orders cancellation", "[trader]")
             WHEN("The order is completed")
             {
                 // Wait for the order to not be new anymore
-                while(binance.getOrderStatus(immediateOrder, trader.name) == "NEW")
+                while(binance.getOrderStatus(immediateOrder) == "NEW")
                 {
                     std::this_thread::sleep_for(std::chrono::milliseconds(50));
                 }
@@ -198,13 +199,13 @@ SCENARIO("Orders cancellation", "[trader]")
                 THEN("The trader can enquire the actual status of the order.")
                 {
 
-                    REQUIRE(binance.getOrderStatus(immediateOrder, trader.name)
+                    REQUIRE(binance.getOrderStatus(immediateOrder)
                             == "FILLED");
                 }
 
                 THEN("The trader can try to cancel the order.")
                 {
-                    REQUIRE_FALSE(binance.cancelOrder(immediateOrder, trader.name));
+                    REQUIRE_FALSE(binance.cancelOrder(immediateOrder));
                 }
             }
 
@@ -212,7 +213,7 @@ SCENARIO("Orders cancellation", "[trader]")
             {
                 immediateOrder.side = Side::Buy;
                 db.insert(immediateOrder);
-                binance.placeOrder(immediateOrder, Execution::Market, trader.name);
+                binance.placeOrder(immediateOrder, Execution::Market);
             }
         }
     }

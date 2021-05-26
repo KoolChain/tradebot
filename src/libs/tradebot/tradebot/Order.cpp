@@ -13,16 +13,23 @@ std::string Order::symbol() const
 }
 
 
-binance::ClientId Order::clientId(const std::string & aTraderName) const
+binance::ClientId Order::clientId() const
 {
-    return binance::ClientId{aTraderName + std::to_string(id)};
+    // TODO Ideally we would have separate types to model orders matched in DB or not.
+    // Right now we rely on runtime checks.
+    if (id == -1)
+    {
+        throw std::logic_error{"Cannot retrieve the client id for an order not matched in database."};
+    }
+    return binance::ClientId{traderName + std::to_string(id)};
 }
 
 
 bool operator==(const Order & aLhs, const Order & aRhs)
 {
     return
-        aLhs.base == aRhs.base
+        aLhs.traderName == aRhs.traderName
+        && aLhs.base == aRhs.base
         && aLhs.quote == aRhs.quote
         && aLhs.amount == aRhs.amount
         && aLhs.fragmentsRate == aRhs.fragmentsRate
@@ -47,7 +54,8 @@ bool operator!=(const Order & aLhs, const Order & aRhs)
 std::ostream & operator<<(std::ostream & aOut, const Order & aRhs)
 {
     return aOut
-        << aRhs.status << " order " << std::string(aRhs.side == Side::Sell ? "Sell" : "Buy")
+        << aRhs.status << " order " << static_cast<const std::string &>(aRhs.clientId()) << ' '
+        << std::string(aRhs.side == Side::Sell ? "Sell" : "Buy")
         << ' ' << aRhs.amount << ' ' << aRhs.base
         << " (fragments: " << aRhs.fragmentsRate
         << " execution: " << aRhs.executionRate << ' '

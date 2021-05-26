@@ -2,6 +2,8 @@
 
 #include "Order.h"
 
+#include <spdlog/spdlog.h>
+
 #include <experimental/propagate_const>
 
 
@@ -55,7 +57,8 @@ public:
     //
     // High level API
     //
-    Order prepareOrder(Side aSide,
+    Order prepareOrder(const std::string & aTraderName,
+                       Side aSide,
                        Decimal aFragmentsRate,
                        const Pair & aPair,
                        Order::FulfillResponse aFulfillResponse);

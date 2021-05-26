@@ -23,15 +23,15 @@ struct Exchange
     ///         * NEW (Active order)
     ///         * CANCELED
     ///         * FILLED
-    std::string getOrderStatus(const Order & aOrder, const std::string & aTraderName);
+    std::string getOrderStatus(const Order & aOrder);
 
     Decimal getCurrentAveragePrice(const Pair & aPair);
 
-    Order placeOrder(Order & aOrder, Execution aExecution, const std::string & aTraderName);
+    Order placeOrder(Order & aOrder, Execution aExecution);
 
     /// \return true if the order was cancelled, false otherwise
     ///         (because it was not present, already cancelled, etc.).
-    bool cancelOrder(const Order & aOrder, const std::string & aTraderName);
+    bool cancelOrder(const Order & aOrder);
 
     std::vector<binance::ClientId> cancelAllOpenOrders(const Pair & aPair);
 
