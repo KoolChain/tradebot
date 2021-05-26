@@ -14,7 +14,7 @@ bool operator==(const Fragment & aLhs, const Fragment & aRhs)
         && aLhs.quote == aRhs.quote
         && aLhs.amount == aRhs.amount
         && aLhs.targetRate == aRhs.targetRate
-        && aLhs.direction == aRhs.direction
+        && aLhs.side == aRhs.side
         && aLhs.spawningOrder == aRhs.spawningOrder
         && aLhs.composedOrder == aRhs.composedOrder
         ;
@@ -28,7 +28,7 @@ bool operator!=(const Fragment & aLhs, const Fragment & aRhs)
 std::ostream & operator<<(std::ostream & aOut, const Fragment & aRhs)
 {
     return aOut
-        << "Fragment " << std::string{aRhs.direction == Direction::Sell ? "Sell" : "Buy"} << ' '
+        << "Fragment " << std::string{aRhs.side == Side::Sell ? "Sell" : "Buy"} << ' '
         << aRhs.amount << ' ' << aRhs.base
         << " (@" << aRhs.targetRate << " " << aRhs.quote << " per " << aRhs.base << ")"
         ;

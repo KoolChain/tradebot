@@ -25,7 +25,7 @@ SCENARIO("Testing database access.", "[db]")
                 10.,
                 1.4,
                 1.5,
-                tradebot::Direction::Sell,
+                tradebot::Side::Sell,
                 tradebot::Order::FulfillResponse::SmallSpread,
                 getTimestamp(),
                 tradebot::Order::Status::Cancelling,
@@ -50,7 +50,7 @@ SCENARIO("Testing database access.", "[db]")
                 "BUSD",
                 5.,
                 1.1,
-                tradebot::Direction::Sell,
+                tradebot::Side::Sell,
             };
 
             auto id = db.insert(fragment);
@@ -81,7 +81,7 @@ SCENARIO("Prototyping initialization.", "[db]")
             "BUSD",
             10.,
             -1.,
-            Direction::Sell,
+            Side::Sell,
         };
 
         for(auto rate : {1., 2., 3.})
@@ -101,14 +101,14 @@ SCENARIO("Prototyping initialization.", "[db]")
                 "BUSD",
                 100.,
                 2.,
-                Direction::Sell
+                Side::Sell
             });
             db.insert(Fragment{
                 "DOGE",
                 "USDT",
                 100.,
                 2.,
-                Direction::Sell
+                Side::Sell
             });
 
             db.insert(Fragment{
@@ -116,21 +116,21 @@ SCENARIO("Prototyping initialization.", "[db]")
                 "BUSD",
                 100.,
                 1.,
-                Direction::Buy
+                Side::Buy
             });
             db.insert(Fragment{
                 "DOGE",
                 "BUSD",
                 100.,
                 2.,
-                Direction::Buy
+                Side::Buy
             });
             db.insert(Fragment{
                 "DOGE",
                 "BUSD",
                 100.,
                 3.,
-                Direction::Buy
+                Side::Buy
             });
         }
         REQUIRE(db.countFragments() == 3*2 + 5);
@@ -156,7 +156,7 @@ SCENARIO("Prototyping initialization.", "[db]")
         THEN("Matching SELL fragments can be assigned to a new SELL order")
         {
             Order order =
-                db.prepareOrder(Direction::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
+                db.prepareOrder(Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
 
             REQUIRE(order.amount == 2*baseFragment.amount);
             REQUIRE(order.status == Order::Status::Inactive);
@@ -164,7 +164,7 @@ SCENARIO("Prototyping initialization.", "[db]")
             THEN("There are no more fragments at the same rate.")
             {
                 REQUIRE_THROWS(
-                    db.prepareOrder(Direction::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
+                    db.prepareOrder(Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
             }
 
             THEN("The fragments matching the rate are now associated with the order.")
@@ -185,7 +185,7 @@ SCENARIO("Prototyping initialization.", "[db]")
         THEN("Matching BUY fragments can be assigned to a new BUY order")
         {
             Order order =
-                db.prepareOrder(Direction::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
+                db.prepareOrder(Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
 
             REQUIRE(order.amount == 100.);
             REQUIRE(order.status == Order::Status::Inactive);
@@ -193,7 +193,7 @@ SCENARIO("Prototyping initialization.", "[db]")
             THEN("There are no more fragments at the same rate.")
             {
                 REQUIRE_THROWS(
-                    db.prepareOrder(Direction::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
+                    db.prepareOrder(Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
             }
 
             THEN("The fragments matching the rate are now associated with the order.")

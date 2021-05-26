@@ -17,7 +17,7 @@ inline cpr::Parameters initParameters(const MarketOrder & aOrder)
             {"symbol", aOrder.symbol},
             {"side", to_string(aOrder.side)},
             {"quantity", std::to_string(aOrder.quantity)},
-            {"newClientOrderId", aOrder.clientId},
+            {"newClientOrderId", static_cast<const std::string &>(aOrder.clientId)},
             {"type", to_string(aOrder.type)}
     };
 }
@@ -29,7 +29,7 @@ inline cpr::Parameters initParameters(const LimitOrder & aOrder)
             {"symbol", aOrder.symbol},
             {"side", to_string(aOrder.side)},
             {"quantity", std::to_string(aOrder.quantity)},
-            {"newClientOrderId", aOrder.clientId},
+            {"newClientOrderId", static_cast<const std::string &>(aOrder.clientId)},
             {"price", std::to_string(aOrder.price)},
             {"timeInForce", to_string(aOrder.timeInForce)},
             {"type", to_string(aOrder.type)}

@@ -45,6 +45,7 @@ public:
     Api(std::istream && aSecrets, Endpoints aEndpoints);
 
     Response getSystemStatus();
+
     Response getExchangeInformation();
 
     Response getAllCoinsInformation();
@@ -54,6 +55,8 @@ public:
 
     Response createSpotListenKey();
 
+    Response getCurrentAveragePrice(const Symbol & aSymbol);
+
     Response placeOrderTrade(const MarketOrder & aOrder);
     Response placeOrderTrade(const LimitOrder & aOrder);
 
@@ -61,10 +64,14 @@ public:
 
     Response listAllOrders(const Symbol & aSymbol);
 
-    Response queryOrder(const Symbol & aSymbol, const std::string & aClientOrderId);
+    Response queryOrder(const Symbol & aSymbol, const ClientId & aClientOrderId);
 
-    Response cancelOrder();
+    Response cancelOrder(const Symbol & aSymbol, const ClientId & aClientOrderId);
     Response cancelAllOpenOrders(const Symbol & aSymbol);
+
+    Response getSwapHistory();
+
+    Response getCompletedWidthdrawHistory();
 
     static const Endpoints gProduction;
     static const Endpoints gTestNet;

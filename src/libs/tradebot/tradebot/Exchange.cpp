@@ -7,7 +7,13 @@ namespace ad {
 namespace tradebot {
 
 
-std::string Exchange::getOrderStatus(Order aOrder, const std::string & aTraderName)
+#define unhandledResponse(aResponse, aContext) \
+{ \
+    spdlog::critical("Unexpected response status {} on {}.", aResponse.status, aContext); \
+    throw std::logic_error("Unhandled web API response."); \
+}
+
+std::string Exchange::getOrderStatus(const Order & aOrder, const std::string & aTraderName)
 {
     binance::Response response = restApi.queryOrder(aOrder.symbol(), aOrder.clientId(aTraderName));
 
@@ -15,23 +21,82 @@ std::string Exchange::getOrderStatus(Order aOrder, const std::string & aTraderNa
     {
         return (*response.json)["status"];
     }
-    else if (response.status == 400)
+    else if ((response.status == 400)
+             && ((*response.json)["code"] == -2013))
     {
-        if ((*response.json)["code"] == -2013)
-        {
             return "NOTEXISTING";
-        }
-        else
-        {
-            spdlog::error("Unexpected status {} with binance error code {}.", response.status, (*response.json)["code"]);
-        }
+    }
+
+    unhandledResponse(response, "get order status");
+}
+
+
+Decimal Exchange::getCurrentAveragePrice(const Pair & aPair)
+{
+    binance::Response response = restApi.getCurrentAveragePrice(aPair.symbol());
+
+    if (response.status == 200)
+    {
+        const Json & json = *response.json;
+        return std::stod(json["price"].get<std::string>());
     }
     else
     {
-        spdlog::error("Unexpected status {}.", response.status);
+        unhandledResponse(response, "current average price");
+    }
+}
+
+
+Order Exchange::placeOrder(Order & aOrder, Execution aExecution, const std::string & aTraderName)
+{
+    binance::Response response;
+    switch(aExecution)
+    {
+        case Execution::Market:
+            response = restApi.placeOrderTrade(to_marketOrder(aOrder, aTraderName));
+            break;
+        case Execution::Limit:
+            response = restApi.placeOrderTrade(to_limitOrder(aOrder, aTraderName));
+            break;
     }
 
-    return "UNEXPECTED";
+    if (response.status == 200)
+    {
+        const Json & json = *response.json;
+        aOrder.status = Order::Status::Active;
+        aOrder.activationTime = json["transactTime"];
+        aOrder.exchangeId = json["orderId"];
+
+        return aOrder;
+    }
+
+    else
+    {
+        unhandledResponse(response, "place order");
+    }
+}
+
+
+// Return 400 -2011 if the provided order is not present to be cancelled
+bool Exchange::cancelOrder(const Order & aOrder, const std::string & aTraderName)
+{
+    binance::Response response = restApi.cancelOrder(aOrder.symbol(), aOrder.clientId(aTraderName));
+
+    if (response.status == 200)
+    {
+        return true;
+    }
+    else if (response.status == 400)
+    {
+        if ((*response.json)["code"] == -2011)
+        {
+            spdlog::trace("Order '{}' was not present in the exchange.",
+                          std::string{aOrder.clientId(aTraderName)});
+            return false;
+        }
+    }
+
+    unhandledResponse(response, "cancel order");
 }
 
 
@@ -56,38 +121,55 @@ std::string Exchange::getOrderStatus(Order aOrder, const std::string & aTraderNa
 //]
 std::vector<binance::ClientId> Exchange::cancelAllOpenOrders(const Pair & aPair)
 {
-    std::vector<binance::ClientId> result;
-
     binance::Response response = restApi.cancelAllOpenOrders(aPair.symbol());
 
     if (response.status == 200)
     {
+        std::vector<binance::ClientId> result;
         Json json = *response.json;
         std::transform(json.begin(), json.end(), std::back_inserter(result),
                        [](const auto & element)
                         {
                             return binance::ClientId{element["origClientOrderId"]};
                         });
+        return result;
     }
-    else if (response.status == 400)
+    else if ((response.status == 400)
+             && ((*response.json)["code"] == -2011))
     {
-        if ((*response.json)["code"] == -2011)
-        {
-            // normal empty return situation
-        }
-        else
-        {
-            spdlog::error("Unexpected status {} with binance error code {}.",
-                          response.status,
-                          (*response.json)["code"]);
-        }
+        return {};
     }
-    else
-    {
-        spdlog::error("Unexpected status {}.", response.status);
-    }
-    return result;
+
+    unhandledResponse(response, "cancel all open orders");
 }
+
+
+std::vector<binance::ClientId> Exchange::listOpenOrders(const Pair & aPair)
+{
+    binance::Response response = restApi.listOpenOrders(aPair.symbol());
+
+    if (response.status == 200)
+    {
+        std::vector<binance::ClientId> result;
+        Json json = *response.json;
+        spdlog::debug(json.dump(4));
+
+        std::transform(json.begin(), json.end(), std::back_inserter(result),
+                       [](const auto & element)
+                        {
+                            return binance::ClientId{element["clientOrderId"]};
+                        });
+        return result;
+    }
+    else if ((response.status == 400)
+             && ((*response.json)["code"] == -2011))
+    {
+        return {};
+    }
+
+    unhandledResponse(response, "list open orders");
+}
+
 
 // Place order returns 400 -1013 if the price is above the symbol limit.
 

@@ -68,6 +68,7 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
     GIVEN("A websocket placing an order and reading single message")
     {
         static const std::string symbol = "BTCUSDT";
+        static const binance::ClientId clientId{"BinanceTest01"};
         binance::Api binance{secret::gTestnetCredentials, binance::Api::gTestNet};
 
         std::vector<std::string> received;
@@ -78,9 +79,9 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
                     symbol,
                     binance::Side::SELL,
                     0.001,
-                    binance::ClientId{""},
+                    clientId,
                 };
-                binance.placeOrderTrade(order);
+                REQUIRE(binance.placeOrderTrade(order).status == 200);
             },
             [&stream, &received](auto aMessage)
             {
@@ -104,12 +105,51 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
                         spdlog::info("Thread end");
                     }};
                 t.join();
-                spdlog::info("We done");
+                // Might receive several message before the async close takes effect
+                REQUIRE(received.size() >= 1);
+
+                // Make a few checks on the received message
+                Json report = Json::parse(received.at(0));
+                REQUIRE(report["e"] == "executionReport");
+                REQUIRE(report["s"] == symbol);
+                REQUIRE(report["c"] == static_cast<const std::string &>(clientId));
+
+                long exchangeOrderId = report["i"];
+
+                THEN("The completed order can be found among all orders")
+                {
+                    binance::Response response = binance.listAllOrders(symbol);
+                    REQUIRE(response.json);
+                    Json allOrders = *response.json;
+
+                    REQUIRE(allOrders.size() > 0);
+
+                    auto count =
+                        std::count_if(allOrders.begin(), allOrders.end(), [&](const auto & order)
+                                      {
+                                        return order["orderId"] == exchangeOrderId;
+                                      });
+                    REQUIRE(count == 1);
+
+                    auto found =
+                        std::find_if(allOrders.begin(), allOrders.end(), [&](const auto & order)
+                                     {
+                                        return order["orderId"] == exchangeOrderId;
+                                     });
+                    REQUIRE((*found)["clientOrderId"] == clientId);
+                }
             }
         }
 
-        spdlog::info("All orders for symbol {}:\n{}",
-                     symbol,
-                     binance.listAllOrders(symbol).json->dump(4));
+        // Revert the order the best we can (conserve balance)
+        {
+            binance::MarketOrder order{
+                symbol,
+                binance::Side::BUY,
+                0.001,
+                clientId, // we can reuse it, since the order did complete
+            };
+            REQUIRE(binance.placeOrderTrade(order).status == 200);
+        }
     }
 }

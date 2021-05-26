@@ -13,9 +13,9 @@ std::string Order::symbol() const
 }
 
 
-std::string Order::clientId(const std::string & aTraderName) const
+binance::ClientId Order::clientId(const std::string & aTraderName) const
 {
-    return aTraderName + std::to_string(id);
+    return binance::ClientId{aTraderName + std::to_string(id)};
 }
 
 
@@ -27,9 +27,9 @@ bool operator==(const Order & aLhs, const Order & aRhs)
         && aLhs.amount == aRhs.amount
         && aLhs.fragmentsRate == aRhs.fragmentsRate
         && aLhs.executionRate== aRhs.executionRate
-        && aLhs.direction == aRhs.direction
+        && aLhs.side == aRhs.side
         && aLhs.fulfillResponse == aRhs.fulfillResponse
-        && aLhs.creationTime == aRhs.creationTime
+        && aLhs.activationTime == aRhs.activationTime
         && aLhs.status == aRhs.status
         && aLhs.takenHome == aRhs.takenHome
         && aLhs.fulfillTime == aRhs.fulfillTime
@@ -47,7 +47,7 @@ bool operator!=(const Order & aLhs, const Order & aRhs)
 std::ostream & operator<<(std::ostream & aOut, const Order & aRhs)
 {
     return aOut
-        << aRhs.status << " order " << std::string(aRhs.direction == Direction::Sell ? "Sell" : "Buy")
+        << aRhs.status << " order " << std::string(aRhs.side == Side::Sell ? "Sell" : "Buy")
         << ' ' << aRhs.amount << ' ' << aRhs.base
         << " (fragments: " << aRhs.fragmentsRate
         << " execution: " << aRhs.executionRate << ' '

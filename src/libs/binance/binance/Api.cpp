@@ -207,6 +207,13 @@ Response Api::createSpotListenKey()
 }
 
 
+Response Api::getCurrentAveragePrice(const Symbol & aSymbol)
+{
+    return makeRequest(Verb::GET, {"/api/v3/avgPrice"}, Security::None,
+                       cpr::Parameters{{"symbol", aSymbol}});
+}
+
+
 Response Api::placeOrderTrade(const MarketOrder & aOrder)
 {
     return makeRequest(Verb::POST, {"/api/v3/order"}, Security::Signed, aOrder);
@@ -233,11 +240,20 @@ Response Api::listAllOrders(const Symbol & aSymbol)
 }
 
 
-Response Api::queryOrder(const Symbol & aSymbol, const std::string & aClientOrderId)
+Response Api::queryOrder(const Symbol & aSymbol, const ClientId & aClientOrderId)
 {
     return makeRequest(Verb::GET, {"/api/v3/order"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol},
-                                       {"origClientOrderId", aClientOrderId}});
+                                       {"origClientOrderId", static_cast<const std::string &>(aClientOrderId)}});
+}
+
+
+Response Api::cancelOrder(const Symbol & aSymbol, const ClientId & aClientOrderId)
+{
+    return makeRequest(Verb::DELETE, {"/api/v3/order"}, Security::Signed,
+                       cpr::Parameters{{"symbol", aSymbol},
+                                       {"origClientOrderId", static_cast<const std::string &>(aClientOrderId)}});
+
 }
 
 
@@ -245,6 +261,22 @@ Response Api::cancelAllOpenOrders(const Symbol & aSymbol)
 {
     return makeRequest(Verb::DELETE, {"/api/v3/openOrders"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol}});
+}
+
+
+Response Api::getSwapHistory()
+{
+    return makeRequest(Verb::GET, {"/sapi/v1/bswap/swap"}, Security::Signed,
+                       cpr::Parameters{{"limit", "100"},
+                                       {"status", "1"}});
+}
+
+
+Response Api::getCompletedWidthdrawHistory()
+{
+    return makeRequest(Verb::GET, {"/wapi/v3/withdrawHistory.html"}, Security::Signed,
+                       cpr::Parameters{{"status", "6"} // completed
+                                      });
 }
 
 

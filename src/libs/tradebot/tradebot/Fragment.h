@@ -11,7 +11,7 @@ using MillisecondsSinceEpoch = long long;
 
 using Decimal = double;
 
-enum class Direction
+enum class Side
 {
     Buy,
     Sell,
@@ -24,7 +24,7 @@ struct Fragment
     std::string quote;
     Decimal amount;
     Decimal targetRate;
-    Direction direction;
+    Side side;
 
     long spawningOrder{-1};
     long composedOrder{-1};

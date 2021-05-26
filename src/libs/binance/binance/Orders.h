@@ -112,7 +112,7 @@ public:
         mId{std::move(aId)}
     {}
 
-    operator const std::string &() const
+    explicit operator const std::string &() const
     {
         return mId;
     }
@@ -143,16 +143,6 @@ struct OrderBase
 struct MarketOrder : public OrderBase
 {
     const Type type{Type::MARKET};
-
-    //Json json() const override
-    //{
-    //    return {
-    //        {"symbol", symbol},
-    //        {"side", to_string(side)},
-    //        {"type", to_string(type)},
-    //        {"quantity", std::to_string(quantity)},
-    //    };
-    //}
 };
 
 
@@ -161,16 +151,6 @@ struct LimitOrder : public OrderBase
     Decimal price;
     TimeInForce timeInForce{TimeInForce::GTC};
     const Type type{Type::LIMIT};
-
-    //Json json() const override
-    //{
-    //    return {
-    //        {"symbol", symbol},
-    //        {"side", to_string(side)},
-    //        {"type", to_string(type)},
-    //        {"quantity", std::to_string(quantity)},
-    //    };
-    //}
 };
 
 } // namespace binance

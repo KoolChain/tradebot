@@ -2,6 +2,8 @@
 
 #include "Fragment.h"
 
+#include <binance/Orders.h>
+
 #include <string>
 
 
@@ -24,7 +26,7 @@ struct Pair
 struct Order
 {
     std::string symbol() const;
-    std::string clientId(const std::string & aTraderName) const;
+    binance::ClientId clientId(const std::string & aTraderName) const;
 
     enum class Status
     {
@@ -42,14 +44,14 @@ struct Order
 
     std::string base;
     std::string quote;
-    Decimal amount;
+    Decimal amount; // Quantity of base to exchange
     Decimal fragmentsRate;
     Decimal executionRate;
-    Direction direction;
+    Side side;
 
     FulfillResponse fulfillResponse;
 
-    MillisecondsSinceEpoch creationTime{0};
+    MillisecondsSinceEpoch activationTime{0};
     Status status{Status::Inactive};
     Decimal takenHome{0};
     MillisecondsSinceEpoch fulfillTime{0};
@@ -57,6 +59,28 @@ struct Order
     long id{-1}; // auto-increment by ORM
 };
 
+
+inline binance::MarketOrder to_marketOrder(const Order & aOrder, const std::string & aTraderName)
+{
+    return {
+        aOrder.symbol(),
+        (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
+        aOrder.amount,
+        aOrder.clientId(aTraderName),
+    };
+}
+
+
+inline binance::LimitOrder to_limitOrder(const Order & aOrder, const std::string & aTraderName)
+{
+    return {
+        aOrder.symbol(),
+        (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
+        aOrder.amount,
+        aOrder.clientId(aTraderName),
+        aOrder.fragmentsRate,
+    };
+}
 
 /// \important Compares every data member except for the `id`!
 bool operator==(const Order & aLhs, const Order & aRhs);

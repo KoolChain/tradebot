@@ -53,7 +53,7 @@ public:
     //
     // High level API
     //
-    Order prepareOrder(Direction aDirection,
+    Order prepareOrder(Side aSide,
                        Decimal aFragmentsRate,
                        const Pair & aPair,
                        Order::FulfillResponse aFulfillResponse);

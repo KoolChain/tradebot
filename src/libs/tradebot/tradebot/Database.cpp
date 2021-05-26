@@ -28,9 +28,9 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("amount", &Order::amount),
                        make_column("fragments_rate", &Order::fragmentsRate),
                        make_column("execution_rate", &Order::executionRate),
-                       make_column("direction", &Order::direction),
+                       make_column("side", &Order::side),
                        make_column("fulfill_response", &Order::fulfillResponse),
-                       make_column("creation_time", &Order::creationTime),
+                       make_column("activation_time", &Order::activationTime),
                        make_column("status", &Order::status),
                        make_column("taken_home", &Order::takenHome),
                        make_column("fulfill_time", &Order::fulfillTime),
@@ -43,7 +43,7 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("quote", &Fragment::quote),
                        make_column("amount", &Fragment::amount),
                        make_column("target_rate", &Fragment::targetRate),
-                       make_column("direction", &Fragment::direction),
+                       make_column("side", &Fragment::side),
                        make_column("spawning_order", &Fragment::spawningOrder),
                        make_column("composed_order", &Fragment::composedOrder)
             ));
@@ -131,7 +131,7 @@ std::vector<Decimal> Database::getSellRatesAbove(Decimal aRateLimit, const Pair 
     using namespace sqlite_orm;
     return mImpl->storage.select(&Fragment::targetRate,
             where(   (c(&Fragment::targetRate) > aRateLimit)
-                  && (c(&Fragment::direction) = static_cast<int>(Direction::Sell))
+                  && (c(&Fragment::side) = static_cast<int>(Side::Sell))
                   && (c(&Fragment::base) = aPair.base)
                   && (c(&Fragment::quote) = aPair.quote)
                   && (c(&Fragment::composedOrder) = -1l) ), // Fragments not already part of an order
@@ -145,7 +145,7 @@ std::vector<Decimal> Database::getBuyRatesBelow(Decimal aRateLimit, const Pair &
     using namespace sqlite_orm;
     return mImpl->storage.select(&Fragment::targetRate,
             where(   (c(&Fragment::targetRate) < aRateLimit)
-                  && (c(&Fragment::direction) = static_cast<int>(Direction::Buy))
+                  && (c(&Fragment::side) = static_cast<int>(Side::Buy))
                   && (c(&Fragment::base) = aPair.base)
                   && (c(&Fragment::quote) = aPair.quote)
                   && (c(&Fragment::composedOrder) = -1l) ), // Fragments not already part of an order
@@ -163,7 +163,7 @@ void Database::assignAvailableFragments(const Order & aOrder)
             where(
                      //(c(&Fragment::targetRate) = aOrder.fragmentsRate) // compilation error
                   is_equal(&Fragment::targetRate, aOrder.fragmentsRate)
-                  && (c(&Fragment::direction) = static_cast<int>(aOrder.direction))
+                  && (c(&Fragment::side) = static_cast<int>(aOrder.side))
                   && (c(&Fragment::base) = aOrder.base)
                   && (c(&Fragment::quote) = aOrder.quote)
                   && (c(&Fragment::composedOrder) = -1l) ) // Fragments not already part of an order
@@ -196,7 +196,7 @@ std::vector<Fragment> Database::getFragmentsComposing(const Order & aOrder)
 }
 
 
-Order Database::prepareOrder(Direction aDirection,
+Order Database::prepareOrder(Side aSide,
                              Decimal aFragmentsRate,
                              const Pair & aPair,
                              Order::FulfillResponse aFulfillResponse)
@@ -207,7 +207,7 @@ Order Database::prepareOrder(Direction aDirection,
         0, // amount
         aFragmentsRate,
         0, // execution rate
-        aDirection,
+        aSide,
         aFulfillResponse
     };
 
