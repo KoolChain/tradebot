@@ -3,6 +3,7 @@ project(binance VERSION "${CMAKE_PROJECT_VERSION}")
 set(${PROJECT_NAME}_HEADERS
     Api.h
     Cryptography.h
+    Decimal.h
     Json.h
     Orders.h
     Time.h

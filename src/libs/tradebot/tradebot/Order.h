@@ -65,6 +65,12 @@ struct Order
         status = aStatus;
         return *this;
     }
+
+    Order & reverseSide()
+    {
+        side = (side == Side::Sell ? Side::Buy : Side::Sell);
+        return *this;
+    }
 };
 
 

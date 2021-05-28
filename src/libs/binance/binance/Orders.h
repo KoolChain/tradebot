@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "Decimal.h"
 #include "Json.h"
 
 #include <string>
@@ -8,10 +9,6 @@
 
 namespace ad {
 namespace binance {
-
-
-// TODO use a real decimal type
-using Decimal = double;
 
 
 // No intention to specialize that right now

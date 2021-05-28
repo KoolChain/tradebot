@@ -17,6 +17,7 @@ set(${PROJECT_NAME}_SOURCES
     Cryptography_tests.cpp
     Database_tests.cpp
     Exchange_tests.cpp
+    Order_tests.cpp
     Tradebot_tests.cpp
     Websocket_tests.cpp
 )
