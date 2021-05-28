@@ -28,17 +28,21 @@ bool Trader::cancel(Order & aOrder)
     database.update(aOrder.setStatus(Order::Status::Cancelling));
     bool result = exchange.cancelOrder(aOrder);
 
-    if (result || (exchange.getOrderStatus(aOrder) != "FILLED"))
+    if (const std::string status = exchange.getOrderStatus(aOrder); status != "FILLED")
     {
         // TODO Handle partially filled orders properly instead of throwing
-        Decimal partialFill = std::stod(exchange.queryOrder(aOrder)["executedQty"].get<std::string>());
-        if (partialFill != 0.)
+        if (status != "NOTEXISTING")
         {
-            spdlog::critical("Order {} was cancelled but partially filled for {} {}.",
-                             static_cast<const std:: string &>(aOrder.clientId()),
-                             partialFill,
-                             aOrder.base);
-            throw std::logic_error("Cannot handle partially filled orders.");
+            Decimal partialFill = std::stod(exchange.queryOrder(aOrder)["executedQty"].get<std::string>());
+            if (partialFill != 0.)
+            {
+                spdlog::critical("Order {} was cancelled but partially filled for {}/{} {}.",
+                                 static_cast<const std:: string &>(aOrder.clientId()),
+                                 partialFill,
+                                 aOrder.amount,
+                                 aOrder.base);
+                throw std::logic_error("Cannot handle partially filled orders.");
+            }
         }
 
         // There is little benefit in marking it inactive just before removal:
@@ -55,6 +59,22 @@ bool Trader::cancel(Order & aOrder)
     }
 
     return result;
+}
+
+
+int Trader::cancelLiveOrders()
+{
+    auto cancelForStatus = [&](Order::Status status)
+    {
+        auto orders = database.selectOrders(pair, status);
+        spdlog::info("Found {} {} order(s).", orders.size(), status);
+        return std::count_if(orders.begin(), orders.end(), [&](Order & order){return cancel(order);});
+    };
+
+    return
+        cancelForStatus(Order::Status::Active)
+        + cancelForStatus(Order::Status::Cancelling)
+        + cancelForStatus(Order::Status::Sending);
 }
 
 

@@ -127,8 +127,8 @@ SCENARIO("Trader low-level functions.", "[trader]")
                     REQUIRE(orderJson["status"] == "NEW");
                     REQUIRE(orderJson["symbol"] == impossible.symbol());
                     REQUIRE(orderJson["orderId"] == impossible.exchangeId);
-                    REQUIRE(std::stod(orderJson["price"].get<std::string>()) == impossible.fragmentsRate);
-                    REQUIRE(std::stod(orderJson["origQty"].get<std::string>()) == impossible.amount);
+                    REQUIRE(jstod(orderJson["price"]) == impossible.fragmentsRate);
+                    REQUIRE(jstod(orderJson["origQty"]) == impossible.amount);
                     REQUIRE(orderJson["timeInForce"] == "GTC");
                     REQUIRE(orderJson["type"] == "LIMIT");
                     REQUIRE(orderJson["side"] == "SELL");
@@ -201,3 +201,188 @@ SCENARIO("Trader low-level functions.", "[trader]")
         }
     }
 }
+
+
+SCENARIO("Controlled initialization clean-up", "[trader]")
+{
+    const Pair pair{"BTC", "USDT"};
+    const std::string traderName = "tradertest";
+
+    GIVEN("A trader instance.")
+    {
+        Trader trader{
+            traderName,
+            pair,
+            Database{":memory:"},
+            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+        };
+
+        auto & db = trader.database;
+        auto & exchange = trader.exchange;
+
+        // Sanity check
+        exchange.cancelAllOpenOrders(pair);
+        REQUIRE(exchange.listOpenOrders(pair).empty());
+
+        Decimal averagePrice = exchange.getCurrentAveragePrice(pair);
+        Decimal impossiblePrice = std::floor(4*averagePrice);
+
+        WHEN("No orders are present.")
+        {
+            THEN("The initial 'cancel live orders' can still be invoked")
+            {
+                REQUIRE(trader.cancelLiveOrders() == 0);
+            }
+        }
+
+        GIVEN("One order in each possible state")
+        {
+            // Inactive never sent
+            Order inactive{
+                traderName,
+                pair.base,
+                pair.quote,
+                0.01,
+                averagePrice,
+                0.,
+                tradebot::Side::Sell,
+                tradebot::Order::FulfillResponse::SmallSpread,
+            };
+            db.insert(inactive);
+
+            // Sending never received
+            db.insert(Fragment{pair.base, pair.quote, 0.001, impossiblePrice, Side::Sell});
+            Order sendingNeverReceived =
+                db.prepareOrder(traderName, Side::Sell, impossiblePrice, pair,
+                                Order::FulfillResponse::SmallSpread);
+            db.update(sendingNeverReceived.setStatus(Order::Status::Sending));
+
+            // Sending and received
+            db.insert(Fragment{pair.base, pair.quote, 0.001, impossiblePrice, Side::Sell});
+            Order sendingAndReceived =
+                trader.placeOrderForMatchingFragments(Execution::Limit,
+                                                      Side::Sell,
+                                                      impossiblePrice,
+                                                      Order::FulfillResponse::SmallSpread);
+            db.update(sendingAndReceived.setStatus(Order::Status::Sending));
+
+            // Active not fulfilled
+            {
+                db.insert(Fragment{pair.base, pair.quote, 0.001, impossiblePrice, Side::Sell});
+                Order activeNotFulfilled =
+                    trader.placeOrderForMatchingFragments(Execution::Limit,
+                                                          Side::Sell,
+                                                          impossiblePrice,
+                                                          Order::FulfillResponse::SmallSpread);
+            }
+
+            // Active fulfilled
+            // averagePrice is only used as a marker for later test (this will be a market order)
+            Fragment fulfilledFragment =
+                db.getFragment(db.insert(Fragment{pair.base,
+                                                  pair.quote,
+                                                  0.001,
+                                                  averagePrice,
+                                                  Side::Sell}));
+            Order activeFulfilled =
+                trader.placeOrderForMatchingFragments(Execution::Market,
+                                                      Side::Sell,
+                                                      averagePrice,
+                                                      Order::FulfillResponse::SmallSpread);
+            while(exchange.getOrderStatus(activeFulfilled) != "FILLED")
+            {
+                // TODO remove
+                spdlog::trace("Status: {}",exchange.getOrderStatus(activeFulfilled));
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
+
+            // Cancelling never received
+            {
+                db.insert(Fragment{pair.base, pair.quote, 0.001, impossiblePrice, Side::Sell});
+                Order cancelling =
+                    trader.placeOrderForMatchingFragments(Execution::Limit,
+                                                          Side::Sell,
+                                                          impossiblePrice,
+                                                          Order::FulfillResponse::SmallSpread);
+                db.update(cancelling.setStatus(Order::Status::Cancelling));
+            }
+
+            // Cancelling and received
+            {
+                db.insert(Fragment{pair.base, pair.quote, 0.001, impossiblePrice, Side::Sell});
+                Order cancelling =
+                    trader.placeOrderForMatchingFragments(Execution::Limit,
+                                                          Side::Sell,
+                                                          impossiblePrice,
+                                                          Order::FulfillResponse::SmallSpread);
+                REQUIRE(exchange.cancelOrder(cancelling));
+                db.update(cancelling.setStatus(Order::Status::Cancelling));
+            }
+
+            // Avoids the repetition...
+            //THEN("All orders are found in the database")
+            {
+                REQUIRE(db.countFragments() == 6);
+                REQUIRE(db.getUnassociatedFragments(Side::Sell, impossiblePrice, pair).empty());
+                REQUIRE(db.getUnassociatedFragments(Side::Sell, averagePrice, pair).empty());
+
+                REQUIRE(db.countOrders() == 7);
+
+                REQUIRE(db.selectOrders(pair, Order::Status::Inactive).size() == 1);
+                REQUIRE(db.selectOrders(pair, Order::Status::Sending).size() == 2);
+                REQUIRE(db.selectOrders(pair, Order::Status::Active).size() == 2);
+                REQUIRE(db.selectOrders(pair, Order::Status::Cancelling).size() == 2);
+                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 0);
+            }
+
+            THEN("Orders active on the exchange can be cancelled.")
+            {
+                REQUIRE(trader.cancelLiveOrders() == 3);
+
+                // Only orders remaining are:
+                // * inactive
+                // * active fulfilled
+                REQUIRE(db.countOrders() == 2);
+
+                REQUIRE(db.selectOrders(pair, Order::Status::Inactive).size() == 1);
+                REQUIRE(db.selectOrders(pair, Order::Status::Sending).size() == 0);
+                // TODO
+                //REQUIRE(db.selectOrders(pair, Order::Status::Active).size() == 1);
+                //REQUIRE(db.selectOrders(pair, Order::Status::Cancelling).size() == 0);
+                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 0);
+
+                // THEN("The not fulfilled fragments are freed.")
+                {
+                    REQUIRE(db.countFragments() == 6);
+                    REQUIRE(db.getUnassociatedFragments(Side::Sell, impossiblePrice, pair).size() == 5);
+                    REQUIRE(db.getUnassociatedFragments(Side::Sell, averagePrice, pair).size() == 0);
+
+                    REQUIRE(db.getFragmentsComposing(activeFulfilled).size() == 1);
+                    REQUIRE(db.getFragmentsComposing(activeFulfilled).at(0) == db.getFragment(fulfilledFragment.id));
+                    REQUIRE(db.getFragmentsComposing(activeFulfilled).at(0).id == fulfilledFragment.id);
+                }
+
+                THEN("There are no more orders to cancel")
+                {
+                    REQUIRE(trader.cancelLiveOrders() == 0);
+                }
+            }
+
+            // Let's "revert" the fulfilled order the best we can (to conserve balance)
+            {
+                activeFulfilled.side = Side::Buy;
+                db.insert(activeFulfilled);
+                exchange.placeOrder(activeFulfilled, Execution::Market);
+
+                while(exchange.getOrderStatus(activeFulfilled) != "FILLED")
+                {
+                    // TODO remove
+                    spdlog::trace("Status: {}",exchange.getOrderStatus(activeFulfilled));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                }
+            }
+        }
+    }
+}
+
+// TODO ensure the active order that fulfilled are marked as such after initialization
