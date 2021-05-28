@@ -54,8 +54,10 @@ bool Trader::cancel(Order & aOrder)
 
         database.discardOrder(aOrder);
     }
+    else
     {
-
+        // The order completely filled
+        database.onFillOrder(fulfillFromQuery(aOrder, exchange.queryOrder(aOrder)));
     }
 
     return result;

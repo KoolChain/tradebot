@@ -121,6 +121,20 @@ void Database::update(const Fragment & aFragment)
 }
 
 
+Order & Database::reload(Order & aOrder)
+{
+    aOrder = getOrder(aOrder.id);
+    return aOrder;
+}
+
+
+Fragment & Database::reload(Fragment & aFragment)
+{
+    aFragment = getFragment(aFragment.id);
+    return aFragment;
+}
+
+
 Fragment Database::getFragment(decltype(Fragment::id) aIndex)
 {
     return mImpl->storage.get<Fragment>(aIndex);
@@ -279,6 +293,31 @@ void Database::discardOrder(Order & aOrder)
     transaction.commit();
 }
 
+
+bool Database::onFillOrder(const FulfilledOrder & aOrder)
+{
+    using namespace sqlite_orm;
+
+    // Make it resilient to multiple "fulfill" notifications.
+    // e.g. Realizing the order is fulfilled while trying to cancel it, and receiving
+    // the WebSocket notif at the same time.
+    // Note: this works well only if onFillOrder() is called from a single thread.
+    bool alreadyFilled = getOrder(aOrder.id).status == Order::Status::Fulfilled;
+
+    if (! alreadyFilled)
+    {
+        update(aOrder);
+        spdlog::trace("Order {} is marked fulfilled.",
+                      static_cast<const std::string &>(aOrder.clientId()));
+    }
+    else
+    {
+        spdlog::warn("Order {} was already fulfilled.",
+                      static_cast<const std::string &>(aOrder.clientId()));
+    }
+
+    return ! alreadyFilled;
+}
 
 } // namespace tradebot
 } // namespace ad

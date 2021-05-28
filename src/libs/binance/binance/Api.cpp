@@ -244,7 +244,8 @@ Response Api::queryOrder(const Symbol & aSymbol, const ClientId & aClientOrderId
 {
     return makeRequest(Verb::GET, {"/api/v3/order"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol},
-                                       {"origClientOrderId", static_cast<const std::string &>(aClientOrderId)}});
+                                       {"origClientOrderId", static_cast<const std::string &>(aClientOrderId)},
+                                      });
 }
 
 

@@ -81,7 +81,12 @@ For each rate:
 
 a. Spawn fragments (counter orders).
 
-b. Mark the order `Fulfilled`.
+b. Update the order in database:
+
+  * Record `executionRate`
+  * Record `takenHome`
+  * Record `fulfillTime`
+  * Set state to `Fulfilled`.
 
 #### Cancelling order
 

@@ -40,6 +40,9 @@ public:
     void update(const Order & aOrder);
     void update(const Fragment & aFragment);
 
+    Order & reload(Order & aOrder);
+    Fragment & reload(Fragment & aFragment);
+
     Order getOrder(decltype(Order::id) aIndex);
     std::size_t countOrders();
     Fragment getFragment(decltype(Fragment::id) aIndex);
@@ -67,6 +70,8 @@ public:
                        Order::FulfillResponse aFulfillResponse);
 
     void discardOrder(Order & aOrder);
+
+    bool onFillOrder(const FulfilledOrder & aOrder);
 
 private:
     std::experimental::propagate_const<std::unique_ptr<Impl>> mImpl;

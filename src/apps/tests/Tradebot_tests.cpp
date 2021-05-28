@@ -276,23 +276,46 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                                                           Order::FulfillResponse::SmallSpread);
             }
 
-            // Active fulfilled
-            // averagePrice is only used as a marker for later test (this will be a market order)
-            Fragment fulfilledFragment =
+            // TODO Reactivate this test for market orders
+            // Also reactive the counter order...
+            // when we have a way to retrieve the price of the order after the fact
+            //// Active fulfilled market order
+            //// averagePrice is only used as a marker for later test (this will be a market order)
+            //Fragment fulfilledFragment =
+            //    db.getFragment(db.insert(Fragment{pair.base,
+            //                                      pair.quote,
+            //                                      0.001,
+            //                                      averagePrice,
+            //                                      Side::Sell}));
+            //Order activeFulfilled =
+            //    trader.placeOrderForMatchingFragments(Execution::Market,
+            //                                          Side::Sell,
+            //                                          averagePrice,
+            //                                          Order::FulfillResponse::SmallSpread);
+            //while(exchange.getOrderStatus(activeFulfilled) != "FILLED")
+            //{
+            //    // TODO remove
+            //    spdlog::trace("Status: {}",exchange.getOrderStatus(activeFulfilled));
+            //    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            //}
+
+            // Active fulfilled LIMIT order
+            Decimal limitGenerous = std::floor(1.1 * averagePrice);
+            Fragment limitFulfilledFragment =
                 db.getFragment(db.insert(Fragment{pair.base,
                                                   pair.quote,
                                                   0.001,
-                                                  averagePrice,
-                                                  Side::Sell}));
-            Order activeFulfilled =
-                trader.placeOrderForMatchingFragments(Execution::Market,
-                                                      Side::Sell,
-                                                      averagePrice,
+                                                  limitGenerous,
+                                                  Side::Buy}));
+            Order limitFulfilled =
+                trader.placeOrderForMatchingFragments(Execution::Limit,
+                                                      Side::Buy,
+                                                      limitGenerous,
                                                       Order::FulfillResponse::SmallSpread);
-            while(exchange.getOrderStatus(activeFulfilled) != "FILLED")
+            while(exchange.getOrderStatus(limitFulfilled) != "FILLED")
             {
                 // TODO remove
-                spdlog::trace("Status: {}",exchange.getOrderStatus(activeFulfilled));
+                spdlog::trace("Status: {}",exchange.getOrderStatus(limitFulfilled));
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
 
@@ -346,10 +369,9 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                 REQUIRE(db.selectOrders(pair, Order::Status::Inactive).size() == 1);
                 REQUIRE(db.selectOrders(pair, Order::Status::Sending).size() == 0);
-                // TODO
-                //REQUIRE(db.selectOrders(pair, Order::Status::Active).size() == 1);
-                //REQUIRE(db.selectOrders(pair, Order::Status::Cancelling).size() == 0);
-                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 0);
+                REQUIRE(db.selectOrders(pair, Order::Status::Active).size() == 0);
+                REQUIRE(db.selectOrders(pair, Order::Status::Cancelling).size() == 0);
+                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 1);
 
                 // THEN("The not fulfilled fragments are freed.")
                 {
@@ -357,9 +379,27 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                     REQUIRE(db.getUnassociatedFragments(Side::Sell, impossiblePrice, pair).size() == 5);
                     REQUIRE(db.getUnassociatedFragments(Side::Sell, averagePrice, pair).size() == 0);
 
-                    REQUIRE(db.getFragmentsComposing(activeFulfilled).size() == 1);
-                    REQUIRE(db.getFragmentsComposing(activeFulfilled).at(0) == db.getFragment(fulfilledFragment.id));
-                    REQUIRE(db.getFragmentsComposing(activeFulfilled).at(0).id == fulfilledFragment.id);
+                    // TODO re-activate when the market order above is re-activated
+                    //REQUIRE(db.getFragmentsComposing(activeFulfilled).size() == 1);
+                    //REQUIRE(db.getFragmentsComposing(activeFulfilled).at(0) == db.getFragment(fulfilledFragment.id));
+                    //REQUIRE(db.getFragmentsComposing(activeFulfilled).at(0).id == fulfilledFragment.id);
+
+                    REQUIRE(db.getFragmentsComposing(limitFulfilled).size() == 1);
+                    REQUIRE(db.getFragmentsComposing(limitFulfilled).at(0) == db.getFragment(limitFulfilledFragment.id));
+                    REQUIRE(db.getFragmentsComposing(limitFulfilled).at(0).id == limitFulfilledFragment.id);
+
+                }
+
+                // THEN("The fulfilled orders are marked as such.")
+                {
+                    db.reload(limitFulfilled);
+                    REQUIRE(limitFulfilled.status == Order::Status::Fulfilled);
+                    REQUIRE(limitFulfilled.executionRate == limitFulfilledFragment.targetRate);
+                    REQUIRE(limitFulfilled.fulfillTime >= limitFulfilled.activationTime);
+
+                    db.reload(limitFulfilledFragment);
+                    REQUIRE(limitFulfilledFragment.composedOrder == limitFulfilled.id);
+                    REQUIRE(limitFulfilledFragment.amount == limitFulfilled.amount);
                 }
 
                 THEN("There are no more orders to cancel")
@@ -368,16 +408,28 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                 }
             }
 
-            // Let's "revert" the fulfilled order the best we can (to conserve balance)
+            // Let's "revert" the fulfilled orders the best we can (to conserve balance)
             {
-                activeFulfilled.side = Side::Buy;
-                db.insert(activeFulfilled);
-                exchange.placeOrder(activeFulfilled, Execution::Market);
+                // TODO re-activate when the market order above is re-activated
+                //activeFulfilled.side = Side::Buy;
+                //db.insert(activeFulfilled);
+                //exchange.placeOrder(activeFulfilled, Execution::Market);
+                //
+                //while(exchange.getOrderStatus(activeFulfilled) != "FILLED")
+                //{
+                //    // TODO remove
+                //    spdlog::trace("Status: {}",exchange.getOrderStatus(activeFulfilled));
+                //    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                //}
+                //
+                db.insert(limitFulfilled.reverseSide());
+                exchange.placeOrder(limitFulfilled, Execution::Market);
 
-                while(exchange.getOrderStatus(activeFulfilled) != "FILLED")
+                //TODO replace
+                while(exchange.getOrderStatus(limitFulfilled) != "FILLED")
                 {
                     // TODO remove
-                    spdlog::trace("Status: {}",exchange.getOrderStatus(activeFulfilled));
+                    spdlog::trace("Status: {}",exchange.getOrderStatus(limitFulfilled));
                     std::this_thread::sleep_for(std::chrono::milliseconds(50));
                 }
             }

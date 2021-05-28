@@ -74,6 +74,15 @@ struct Order
 };
 
 
+/// \brief Strictly equivalent to an Order, used to make sure some function receive an
+/// Order with the "fulfill-related" fields completed.
+struct FulfilledOrder : public Order
+{};
+
+
+FulfilledOrder fulfillFromQuery(const Order & aOrder, const Json & aQueryStatus);
+
+
 inline binance::MarketOrder to_marketOrder(const Order & aOrder)
 {
     return {
