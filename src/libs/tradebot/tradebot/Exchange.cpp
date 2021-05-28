@@ -153,7 +153,6 @@ std::vector<binance::ClientId> Exchange::listOpenOrders(const Pair & aPair)
     {
         std::vector<binance::ClientId> result;
         Json json = *response.json;
-        spdlog::debug(json.dump(4));
 
         std::transform(json.begin(), json.end(), std::back_inserter(result),
                        [](const auto & element)
@@ -181,7 +180,7 @@ Json Exchange::queryOrder(const Order & aOrder)
     }
     else
     {
-        unhandledResponse(response, "list open orders");
+        unhandledResponse(response, "query order");
     }
 }
 
