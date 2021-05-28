@@ -11,12 +11,19 @@ namespace tradebot {
 
 struct Trader
 {
-    int cancelOpenOrders();
+    Order placeOrderForMatchingFragments(Execution aExecution,
+                                         Side aSide,
+                                         Decimal aFragmentsRate,
+                                         Order::FulfillResponse aFulfillResponse);
+
+    /// \brief Attempt to cancel the order on the exchange,
+    /// and always discard the order from the database.
+    bool cancel(Order & aOrder);
 
     std::string name;
     Pair pair;
     Database database;
-    Exchange binance;
+    Exchange exchange;
 };
 
 

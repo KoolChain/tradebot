@@ -94,6 +94,12 @@ Order Database::getOrder(decltype(Order::id) aIndex)
 }
 
 
+std::size_t Database::countOrders()
+{
+    return mImpl->storage.count<Order>();
+}
+
+
 long Database::insert(Fragment & aFragment)
 {
     aFragment.id = mImpl->storage.insert(aFragment);
@@ -193,7 +199,25 @@ Decimal Database::sumFragmentsOfOrder(const Order & aOrder)
 std::vector<Fragment> Database::getFragmentsComposing(const Order & aOrder)
 {
     using namespace sqlite_orm;
+    if (aOrder.id == -1)
+    {
+        throw std::logic_error{"Cannot get fragments composing an order not matched in the database."};
+    }
     return mImpl->storage.get_all<Fragment>(where(is_equal(&Fragment::composedOrder, aOrder.id)));
+}
+
+
+std::vector<Fragment> Database::getUnassociatedFragments(Side aSide,
+                                                         Decimal aRate,
+                                                         const Pair & aPair)
+{
+    using namespace sqlite_orm;
+    return mImpl->storage.get_all<Fragment>(
+            where(is_equal(&Fragment::composedOrder, -1l)
+                  && is_equal(&Fragment::base, aPair.base)
+                  && is_equal(&Fragment::quote, aPair.quote)
+                  && is_equal(&Fragment::side, static_cast<int>(aSide))
+                  && is_equal(&Fragment::targetRate, aRate)));
 }
 
 
@@ -236,6 +260,25 @@ Order Database::prepareOrder(const std::string & aTraderName,
 
     return order;
 }
+
+
+void Database::discardOrder(Order & aOrder)
+{
+    using namespace sqlite_orm;
+
+    auto transaction = mImpl->storage.transaction_guard();
+
+    mImpl->storage.update_all(set(c(&Fragment::composedOrder) = -1l),
+                              where(is_equal(&Fragment::composedOrder, aOrder.id)));
+    mImpl->storage.remove<Order>(aOrder.id);
+
+    aOrder.id = -1;
+
+    // Bug 2021/05/27: I don't think the sqlite_orm implementation of the transactions works,
+    // commenting out this commit(), the order is still removed from DB
+    transaction.commit();
+}
+
 
 } // namespace tradebot
 } // namespace ad

@@ -38,6 +38,8 @@ struct Exchange
 
     std::vector<binance::ClientId> listOpenOrders(const Pair & aPair);
 
+    Json queryOrder(const Order & aOrder);
+
     binance::Api restApi;
 };
 

@@ -254,6 +254,11 @@ SCENARIO("Order high-level creation.", "[db]")
             {
                 REQUIRE_THROWS(
                     db.prepareOrder("dbtest", Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
+
+                auto sellRates = db.getSellRatesAbove(0., {"DOGE", "BUSD"});
+                REQUIRE(std::find(sellRates.begin(), sellRates.end(), 2.) == sellRates.end());
+
+                REQUIRE(db.getUnassociatedFragments(Side::Sell, 2., {"DOGE", "BUSD"}).empty());
             }
 
             THEN("The fragments matching the rate are now associated with the order.")
@@ -265,9 +270,32 @@ SCENARIO("Order high-level creation.", "[db]")
                 for (const auto & fragment : fragments)
                 {
                     REQUIRE(fragment.targetRate == 2.);
+                    REQUIRE(fragment.composedOrder == order.id);
                     accumulator += fragment.amount;
                 }
                 REQUIRE(accumulator == order.amount);
+            }
+
+            THEN("The SELL order can be discarded")
+            {
+                const auto backedOrder = order;
+                db.discardOrder(order);
+
+                REQUIRE(order.status == Order::Status::Inactive);
+                REQUIRE(order.id == -1);
+
+                REQUIRE_THROWS(db.getOrder(backedOrder.id));
+                REQUIRE_THROWS(db.getOrder(order.id));
+
+                THEN("The fragments matching the rate are not associated anymore")
+                {
+                    REQUIRE(db.getFragmentsComposing(backedOrder).empty());
+
+                    auto sellRates = db.getSellRatesAbove(0., {"DOGE", "BUSD"});
+                    REQUIRE(std::find(sellRates.begin(), sellRates.end(), 2.) != sellRates.end());
+
+                    REQUIRE(db.getUnassociatedFragments(Side::Sell, 2., {"DOGE", "BUSD"}).size() == 2);
+                }
             }
         }
 
@@ -283,6 +311,11 @@ SCENARIO("Order high-level creation.", "[db]")
             {
                 REQUIRE_THROWS(
                     db.prepareOrder("dbtest", Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
+
+                auto buyRates = db.getBuyRatesBelow(4., {"DOGE", "BUSD"});
+                REQUIRE(std::find(buyRates.begin(), buyRates.end(), 2.) == buyRates.end());
+
+                REQUIRE(db.getUnassociatedFragments(Side::Buy, 2., {"DOGE", "BUSD"}).empty());
             }
 
             THEN("The fragments matching the rate are now associated with the order.")
@@ -294,9 +327,32 @@ SCENARIO("Order high-level creation.", "[db]")
                 for (const auto & fragment : fragments)
                 {
                     REQUIRE(fragment.targetRate == 2.);
+                    REQUIRE(fragment.composedOrder == order.id);
                     accumulator += fragment.amount;
                 }
                 REQUIRE(accumulator == order.amount);
+            }
+
+            THEN("The BUY order can be discarded")
+            {
+                const auto backedOrder = order;
+                db.discardOrder(order);
+
+                REQUIRE(order.status == Order::Status::Inactive);
+                REQUIRE(order.id == -1);
+
+                REQUIRE_THROWS(db.getOrder(backedOrder.id));
+                REQUIRE_THROWS(db.getOrder(order.id));
+
+                THEN("The fragments matching the rate are not associated anymore")
+                {
+                    REQUIRE(db.getFragmentsComposing(backedOrder).empty());
+
+                    auto buyRates = db.getBuyRatesBelow(4., {"DOGE", "BUSD"});
+                    REQUIRE(std::find(buyRates.begin(), buyRates.end(), 2.) != buyRates.end());
+
+                    REQUIRE(db.getUnassociatedFragments(Side::Buy, 2., {"DOGE", "BUSD"}).size() == 1);
+                }
             }
         }
     }

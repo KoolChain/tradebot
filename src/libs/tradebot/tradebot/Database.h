@@ -41,9 +41,12 @@ public:
     void update(const Fragment & aFragment);
 
     Order getOrder(decltype(Order::id) aIndex);
+    std::size_t countOrders();
     Fragment getFragment(decltype(Fragment::id) aIndex);
     std::size_t countFragments();
+
     std::vector<Fragment> getFragmentsComposing(const Order & aOrder);
+    std::vector<Fragment> getUnassociatedFragments(Side aSide, Decimal aRate, const Pair & aPair);
 
     std::vector<Decimal> getSellRatesAbove(Decimal aRateLimit, const Pair & aPair);
     std::vector<Decimal> getBuyRatesBelow(Decimal aRateLimit, const Pair & aPair);
@@ -62,6 +65,8 @@ public:
                        Decimal aFragmentsRate,
                        const Pair & aPair,
                        Order::FulfillResponse aFulfillResponse);
+
+    void discardOrder(Order & aOrder);
 
 private:
     std::experimental::propagate_const<std::unique_ptr<Impl>> mImpl;

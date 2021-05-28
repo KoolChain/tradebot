@@ -58,6 +58,13 @@ struct Order
     MillisecondsSinceEpoch fulfillTime{0};
     long exchangeId{-1}; // assigned by Binance
     long id{-1}; // auto-increment by ORM
+
+    // Syntax convenience
+    Order & setStatus(Status aStatus)
+    {
+        status = aStatus;
+        return *this;
+    }
 };
 
 

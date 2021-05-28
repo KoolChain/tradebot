@@ -47,6 +47,7 @@ Decimal Exchange::getCurrentAveragePrice(const Pair & aPair)
 }
 
 
+// Place order returns 400 -1013 if the price is above the symbol limit.
 Order Exchange::placeOrder(Order & aOrder, Execution aExecution)
 {
     binance::Response response;
@@ -171,7 +172,19 @@ std::vector<binance::ClientId> Exchange::listOpenOrders(const Pair & aPair)
 }
 
 
-// Place order returns 400 -1013 if the price is above the symbol limit.
+Json Exchange::queryOrder(const Order & aOrder)
+{
+    binance::Response response = restApi.queryOrder(aOrder.symbol(), aOrder.clientId());
+    if (response.status == 200)
+    {
+        return *response.json;
+    }
+    else
+    {
+        unhandledResponse(response, "list open orders");
+    }
+}
+
 
 } // namespace tradebot
 } // namespace ad
