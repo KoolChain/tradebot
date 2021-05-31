@@ -7,6 +7,7 @@ configure_file(testnet_secrets.h.in testnet_secrets.h @ONLY)
 
 set(${PROJECT_NAME}_HEADERS
     catch.hpp
+    Utilities.h
     ${CMAKE_CURRENT_BINARY_DIR}/testnet_secrets.h
 )
 

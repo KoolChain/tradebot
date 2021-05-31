@@ -47,19 +47,10 @@ Decimal Exchange::getCurrentAveragePrice(const Pair & aPair)
 }
 
 
-// Place order returns 400 -1013 if the price is above the symbol limit.
-Order Exchange::placeOrder(Order & aOrder, Execution aExecution)
+template<class T_order>
+binance::Response placeOrderImpl(const T_order & aBinanceOrder, Order & aOrder, binance::Api & aRestApi)
 {
-    binance::Response response;
-    switch(aExecution)
-    {
-        case Execution::Market:
-            response = restApi.placeOrderTrade(to_marketOrder(aOrder));
-            break;
-        case Execution::Limit:
-            response = restApi.placeOrderTrade(to_limitOrder(aOrder));
-            break;
-    }
+    binance::Response response = aRestApi.placeOrderTrade(aBinanceOrder);
 
     if (response.status == 200)
     {
@@ -67,13 +58,68 @@ Order Exchange::placeOrder(Order & aOrder, Execution aExecution)
         aOrder.status = Order::Status::Active;
         aOrder.activationTime = json["transactTime"];
         aOrder.exchangeId = json["orderId"];
-
-        return aOrder;
     }
 
+    return response;
+}
+
+// Place order returns 400 -1013 if the price is above the symbol limit.
+Order Exchange::placeOrder(Order & aOrder, Execution aExecution)
+{
+    binance::Response response;
+    switch(aExecution)
+    {
+        case Execution::Market:
+            response = placeOrderImpl(to_marketOrder(aOrder), aOrder, restApi);
+            break;
+        case Execution::Limit:
+            response = placeOrderImpl(to_limitOrder(aOrder), aOrder, restApi);
+            break;
+    }
+
+    if (response.status == 200)
+    {
+        return aOrder;
+    }
     else
     {
         unhandledResponse(response, "place order");
+    }
+}
+
+
+std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
+{
+    binance::Response response = placeOrderImpl(to_marketOrder(aOrder), aOrder, restApi);
+    if (response.status == 200)
+    {
+        const Json & json = *response.json;
+        if (json["status"] == "FILLED")
+        {
+            return fulfillFromQuery(aOrder, json);
+        }
+        else if (json["status"] == "EXPIRED")
+        {
+            spdlog::warn("Market order '{}' for {} {} at {} {} is expired.",
+                         static_cast<const std::string &>(aOrder.clientId()),
+                         aOrder.amount,
+                         aOrder.base,
+                         aOrder.fragmentsRate,
+                         aOrder.quote
+                    );
+            return {};
+        }
+        else
+        {
+            spdlog::critical("Unhandled status '{}' when placing market order '{}'.",
+                             json["status"],
+                             static_cast<const std::string &>(aOrder.clientId()));
+            throw std::logic_error{"Unhandled market order status in response."};
+        }
+    }
+    else
+    {
+        unhandledResponse(response, "fill market order");
     }
 }
 

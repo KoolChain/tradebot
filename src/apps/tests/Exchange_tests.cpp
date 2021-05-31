@@ -1,11 +1,12 @@
 #include "catch.hpp"
 
 #include "testnet_secrets.h"
+#include "Utilities.h"
+
+#include <binance/Time.h>
 
 #include <tradebot/Database.h>
 #include <tradebot/Exchange.h>
-
-#include <thread>
 
 
 using namespace ad;
@@ -30,26 +31,16 @@ SCENARIO("Placing orders", "[exchange]")
 
         WHEN("A buy market order is placed.")
         {
-            Order immediateOrder{
-                traderName,
-                pair.base,
-                pair.quote,
-                0.01,
-                std::floor(averagePrice),
-                0.,
-                Side::Buy,
-                Order::FulfillResponse::SmallSpread,
-            };
+            Order immediateOrder = makeOrder(traderName, pair, Side::Buy, std::floor(averagePrice));
             db.insert(immediateOrder);
             binance.placeOrder(immediateOrder, Execution::Market);
 
             REQUIRE(immediateOrder.status == Order::Status::Active);
             REQUIRE(immediateOrder.exchangeId != -1);
 
-            // Wait for the order to not be new anymore
-            while(binance.getOrderStatus(immediateOrder) == "NEW")
+            while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                binance.placeOrder(immediateOrder, Execution::Market);
             }
 
             WHEN("The order is completed.")
@@ -79,13 +70,12 @@ SCENARIO("Placing orders", "[exchange]")
 
             // Let's "revert" the order the best we can (to conserve balance)
             {
-                immediateOrder.side = Side::Sell;
-                db.insert(immediateOrder);
+                db.insert(immediateOrder.reverseSide());
                 binance.placeOrder(immediateOrder, Execution::Market);
 
-                while(binance.getOrderStatus(immediateOrder) != "FILLED")
+                while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
                 {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                    binance.placeOrder(immediateOrder, Execution::Market);
                 }
             }
         }
@@ -94,26 +84,16 @@ SCENARIO("Placing orders", "[exchange]")
         {
             // we want the sell to be instant, so we discount the average price
             Decimal price = std::floor(0.8*averagePrice);
-            Order immediateOrder{
-                traderName,
-                pair.base,
-                pair.quote,
-                0.001,
-                price,
-                0.,
-                Side::Sell,
-                Order::FulfillResponse::SmallSpread,
-            };
+            Order immediateOrder = makeOrder(traderName, pair, Side::Sell, price);
             db.insert(immediateOrder);
             binance.placeOrder(immediateOrder, Execution::Limit);
 
             REQUIRE(immediateOrder.status == Order::Status::Active);
             REQUIRE(immediateOrder.exchangeId != -1);
 
-            // Wait for the order to not be new anymore
-            while(binance.getOrderStatus(immediateOrder) == "NEW")
+            while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                binance.placeOrder(immediateOrder, Execution::Market);
             }
 
             WHEN("The order is completed.")
@@ -136,14 +116,50 @@ SCENARIO("Placing orders", "[exchange]")
 
             // Let's "revert" the order the best we can (to conserve balance)
             {
-                immediateOrder.side = Side::Buy;
-                db.insert(immediateOrder);
+                db.insert(immediateOrder.reverseSide());
                 binance.placeOrder(immediateOrder, Execution::Market);
 
-                while(binance.getOrderStatus(immediateOrder) != "FILLED")
+                while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
                 {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                    binance.placeOrder(immediateOrder, Execution::Market);
                 }
+            }
+        }
+
+        WHEN("A buy market order is executed via the fill market function.")
+        {
+            auto before = getTimestamp();
+
+            Order immediateOrder = makeOrder(traderName, pair, Side::Buy);
+            db.insert(immediateOrder);
+            std::optional<FulfilledOrder> opt = binance.fillMarketOrder(immediateOrder);
+            while(!opt)
+            {
+                opt = binance.fillMarketOrder(immediateOrder);
+            }
+
+            Order filled = *opt;
+            REQUIRE(filled.status == Order::Status::Fulfilled);
+            REQUIRE(filled.traderName == traderName);
+            REQUIRE(filled.symbol() == pair.symbol());
+            REQUIRE(filled.amount == immediateOrder.amount);
+            REQUIRE(filled.fragmentsRate == immediateOrder.fragmentsRate);
+            REQUIRE(filled.executionRate > averagePrice * 0.5);
+            REQUIRE(filled.executionRate < averagePrice * 1.5);
+            REQUIRE(filled.side == Side::Buy);
+            REQUIRE(filled.activationTime >= before);
+            REQUIRE(filled.fulfillTime >= filled.activationTime);
+            REQUIRE(filled.fulfillTime <= getTimestamp());
+
+            REQUIRE(filled.exchangeId != -1);
+
+            // "revert" the order the best we can (to conserve balance)
+            {
+                db.insert(immediateOrder.reverseSide());
+                for(auto fill = binance.fillMarketOrder(immediateOrder);
+                    !fill;
+                    fill = binance.fillMarketOrder(immediateOrder))
+                {}
             }
         }
     }
@@ -265,14 +281,13 @@ SCENARIO("Orders cancellation", "[exchange]")
             REQUIRE(immediateOrder.status == Order::Status::Active);
             REQUIRE(immediateOrder.exchangeId != -1);
 
+            while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
+            {
+                binance.placeOrder(immediateOrder, Execution::Market);
+            }
+
             WHEN("The order is completed")
             {
-                // Wait for the order to not be new anymore
-                while(binance.getOrderStatus(immediateOrder) == "NEW")
-                {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                }
-
                 THEN("The trader can enquire the actual status of the order.")
                 {
 
@@ -292,9 +307,9 @@ SCENARIO("Orders cancellation", "[exchange]")
                 db.insert(immediateOrder);
                 binance.placeOrder(immediateOrder, Execution::Market);
 
-                while(binance.getOrderStatus(immediateOrder) != "FILLED")
+                while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
                 {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                    binance.placeOrder(immediateOrder, Execution::Market);
                 }
             }
         }

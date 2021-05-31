@@ -30,6 +30,8 @@ struct Exchange
 
     Order placeOrder(Order & aOrder, Execution aExecution);
 
+    std::optional<FulfilledOrder> fillMarketOrder(Order & aOrder);
+
     /// \return true if the order was cancelled, false otherwise
     ///         (because it was not present, already cancelled, etc.).
     bool cancelOrder(const Order & aOrder);

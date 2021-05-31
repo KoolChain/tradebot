@@ -292,11 +292,9 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
             //                                          Side::Sell,
             //                                          averagePrice,
             //                                          Order::FulfillResponse::SmallSpread);
-            //while(exchange.getOrderStatus(activeFulfilled) != "FILLED")
+            //while(exchange.getOrderStatus(activeFulfilled) == "EXPIRED")
             //{
-            //    // TODO remove
-            //    spdlog::trace("Status: {}",exchange.getOrderStatus(activeFulfilled));
-            //    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            //    exchange.placeOrder(activeFulfilled, Execution::Market);
             //}
 
             // Active fulfilled LIMIT order
@@ -312,11 +310,9 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                                                       Side::Buy,
                                                       limitGenerous,
                                                       Order::FulfillResponse::SmallSpread);
-            while(exchange.getOrderStatus(limitFulfilled) != "FILLED")
+            while(exchange.getOrderStatus(limitFulfilled) == "EXPIRED")
             {
-                // TODO remove
-                spdlog::trace("Status: {}",exchange.getOrderStatus(limitFulfilled));
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                exchange.placeOrder(limitFulfilled, Execution::Market);
             }
 
             // Cancelling never received
@@ -415,22 +411,18 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                 //db.insert(activeFulfilled);
                 //exchange.placeOrder(activeFulfilled, Execution::Market);
                 //
-                //while(exchange.getOrderStatus(activeFulfilled) != "FILLED")
+                //while(exchange.getOrderStatus(activeFulfilled) == "EXPIRED")
                 //{
-                //    // TODO remove
-                //    spdlog::trace("Status: {}",exchange.getOrderStatus(activeFulfilled));
-                //    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                //    exchange.placeOrder(activeFulfilled, Execution::Market);
                 //}
-                //
+
                 db.insert(limitFulfilled.reverseSide());
                 exchange.placeOrder(limitFulfilled, Execution::Market);
 
                 //TODO replace
-                while(exchange.getOrderStatus(limitFulfilled) != "FILLED")
+                while(exchange.getOrderStatus(limitFulfilled) == "EXPIRED")
                 {
-                    // TODO remove
-                    spdlog::trace("Status: {}",exchange.getOrderStatus(limitFulfilled));
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                    exchange.placeOrder(limitFulfilled, Execution::Market);
                 }
             }
         }

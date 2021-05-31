@@ -57,7 +57,11 @@ bool Trader::cancel(Order & aOrder)
     else
     {
         // The order completely filled
-        database.onFillOrder(fulfillFromQuery(aOrder, exchange.queryOrder(aOrder)));
+        Json orderJson = exchange.queryOrder(aOrder);
+        // TODO properly retrieve the fills
+        orderJson["fills"] = Json::array();
+        orderJson["transactTime"] = orderJson.at("time");
+        database.onFillOrder(fulfillFromQuery(aOrder, orderJson));
     }
 
     return result;

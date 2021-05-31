@@ -66,6 +66,54 @@ std::ostream & operator<<(std::ostream & aOut, const Order & aRhs)
 }
 
 
+struct Fulfill
+{
+    Decimal amountBase{0};
+    Decimal amountQuote{0};
+    Decimal fee{0};
+    std::string feeAsset;
+    MillisecondsSinceEpoch latestTrade{0};
+
+    Decimal price() const
+    {
+        return amountQuote / amountBase;
+    }
+};
+
+
+template <class T_tradeIterator>
+Fulfill analyzeTrades(T_tradeIterator aBegin, const T_tradeIterator aEnd, const Order & aOrder)
+{
+    Fulfill result;
+    for (; aBegin != aEnd; ++aBegin)
+    {
+        auto fill = *aBegin;
+        result.amountBase += jstod(fill["qty"]);
+        result.amountQuote += jstod(fill["price"]) * jstod(fill["qty"]);
+        result.fee += jstod(fill["commission"]);
+        if (result.feeAsset == "")
+        {
+            result.feeAsset = fill["commissionAsset"];
+        }
+        else if (result.feeAsset != fill["commissionAsset"])
+        {
+            spdlog::critical("Inconsistent commissions assets {} vs. {} in fills for order '{}'.",
+                             result.feeAsset,
+                             fill["commissionAsset"],
+                             static_cast<const std::string &>(aOrder.clientId())
+                             );
+            throw std::logic_error{"Different fills for the same order have different commissions assets."};
+        }
+        if (fill.contains("transactionTime"))
+        {
+            result.latestTrade = std::max<MillisecondsSinceEpoch>(result.latestTrade,
+                                                                  fill["transactionTime"]);
+        }
+    }
+    return result;
+}
+
+
 FulfilledOrder fulfillFromQuery(const Order & aOrder, const Json & aQueryStatus)
 {
     FulfilledOrder result{aOrder};
@@ -77,47 +125,53 @@ FulfilledOrder fulfillFromQuery(const Order & aOrder, const Json & aQueryStatus)
             spdlog::critical("Mismatched order amount and executed quantity: {} vs. {}.",
                              aOrder.amount,
                              aQueryStatus["executedQty"]);
-            throw std::logic_error("Mismatching original amount and executed quantity on order");
+            throw std::logic_error("Mismatched original amount and executed quantity on order");
+        }
+
+        if(! aQueryStatus.contains("fills"))
+        {
+            spdlog::critical("'Fills' array is absent from Json for order '{}'.",
+                             static_cast<const std::string &>(aOrder.clientId()));
+            throw std::logic_error("Json status for orders must contain a 'fills' array.");
         }
     }
 
-    if (jstod(aQueryStatus["price"]) == 0.)
-    {
-        spdlog::critical("Cannot handle market order offline completion at the moment, "
-                         "which is the case for '{}'.",
-                         static_cast<const std::string &>(aOrder.clientId()) );
-        throw std::logic_error("Cannot handle market order offline completion.");
-    }
-    // TODO move somewhere appropriate (when creating market orders for example)
-    // it cannot be used here, because it is not possible to retrieve the list of fills
-    // "after the fact" (i.e. after the order creation)
-    // see: https://dev.binance.vision/t/finding-the-price-for-market-orders/201/8?u=shredastaire
-    //Decimal filledPrice = 0.;
-    //Decimal fee = 0.;
-    //std::string feeAsset;
-    //for (const auto & fill : aQueryStatus["fills"])
-    //{
-    //    filledPrice += jstod(fill["price"]) * jstod(fill["qty"]);
-    //    fee += jstod(fill["commission"]);
-    //    if (feeAsset == "")
-    //    {
-    //        feeAsset = fill["commissionAsset"];
-    //    }
-    //    else if (feeAsset != fill["commissionAsset"])
-    //    {
-    //        spdlog::critical("Inconsistent commissions assets {} vs. {} in fills: '{}'",
-    //                         feeAsset,
-    //                         fill["commissionAsset"],
-    //                         aQueryStatus["fills"].dump()); // single line json dump
-    //        throw std::logic_error{"Different fills for the same order have different commissions assets."};
-    //    }
-    //}
+    Fulfill fulfill =
+        analyzeTrades(aQueryStatus["fills"].begin(), aQueryStatus["fills"].end(), aOrder);
 
     result.status = Order::Status::Fulfilled;
     result.executionRate = jstod(aQueryStatus["price"]);
-    // Important 2021/05/28: I cannot find a way to get the different "FILLS" time.
-    // Uses the last time order was updated instead (not sure how accurate that is).
-    result.fulfillTime = aQueryStatus["updateTime"];
+    if (result.executionRate > 0.)
+    {
+        if (result.executionRate != fulfill.price())
+        {
+            // Just warning, and use the order global price.
+            spdlog::warn("The order global price {} is different from the price averaged from trades {}.",
+                         result.executionRate,
+                         fulfill.price());
+
+        }
+    }
+    else if (fulfill.price() > 0.)
+    {
+        result.executionRate = fulfill.price();
+    }
+    else
+    {
+        spdlog::critical("Cannot get the fulfill price for order '{}'.",
+                         static_cast<const std::string &>(aOrder.clientId()));
+        throw std::logic_error{"Cannot get the price while fulfilling an order."};
+    }
+
+    // Important 2021/05/28: I cannot find a way to get the different "FILLS" time for market orders.
+    // Uses the <strike>last time order was updated if available (not sure how accurate that is)</strike>
+    // transaction time instead.
+    // In case of a market order, the "trade" response returns the fills (without any time attached)
+    // and "transactTime". I suspect all fills are considered to have taken places at transaction time.
+    // For other orders (limit), the times will be accumulated from the fills as they arrive on the websocket
+    result.fulfillTime = (fulfill.latestTrade ?
+                          fulfill.latestTrade
+                          : aQueryStatus.at("transactTime").get<MillisecondsSinceEpoch>());
 
     return result;
 }
