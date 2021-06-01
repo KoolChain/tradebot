@@ -1,5 +1,7 @@
 #include "Order.h"
 
+#include "Fulfillment.h"
+
 #include <spdlog/spdlog.h>
 
 #include <ostream>
@@ -66,25 +68,10 @@ std::ostream & operator<<(std::ostream & aOut, const Order & aRhs)
 }
 
 
-struct Fulfill
-{
-    Decimal amountBase{0};
-    Decimal amountQuote{0};
-    Decimal fee{0};
-    std::string feeAsset;
-    MillisecondsSinceEpoch latestTrade{0};
-
-    Decimal price() const
-    {
-        return amountQuote / amountBase;
-    }
-};
-
-
 template <class T_tradeIterator>
-Fulfill analyzeTrades(T_tradeIterator aBegin, const T_tradeIterator aEnd, const Order & aOrder)
+Fulfillment analyzeTrades(T_tradeIterator aBegin, const T_tradeIterator aEnd, const Order & aOrder)
 {
-    Fulfill result;
+    Fulfillment result;
     for (; aBegin != aEnd; ++aBegin)
     {
         auto fill = *aBegin;
@@ -114,6 +101,58 @@ Fulfill analyzeTrades(T_tradeIterator aBegin, const T_tradeIterator aEnd, const 
 }
 
 
+FulfilledOrder fulfill(const Order & aOrder,
+                       const Json & aQueryStatus,
+                       const Fulfillment & aFulfillment)
+{
+    FulfilledOrder result{aOrder};
+
+    // Sanity check
+    {
+        if (aOrder.amount != jstod(aQueryStatus["executedQty"]))
+        {
+            spdlog::critical("Mismatched order amount and executed quantity: {} vs. {}.",
+                             aOrder.amount,
+                             aQueryStatus["executedQty"]);
+            throw std::logic_error("Mismatched original amount and executed quantity on order");
+        }
+    }
+
+    result.status = Order::Status::Fulfilled;
+    result.executionRate = jstod(aQueryStatus["price"]);
+    if (result.executionRate > 0.)
+    {
+        if (result.executionRate != aFulfillment.price())
+        {
+            // Just warning, and use the order global price.
+            spdlog::warn("The order global price {} is different from the price averaged from trades {}.",
+                         result.executionRate,
+                         aFulfillment.price());
+
+        }
+    }
+    else if (aFulfillment.price() > 0.)
+    {
+        result.executionRate = aFulfillment.price();
+    }
+    else
+    {
+        spdlog::critical("Cannot get the aFulfillment price for order '{}'.",
+                         static_cast<const std::string &>(aOrder.clientId()));
+        throw std::logic_error{"Cannot get the price while aFulfillmenting an order."};
+    }
+
+    // In case of a market order, the "trade" response returns the fills (without any time attached)
+    // and "transactTime". I suspect all fills are considered to have taken places at transaction time.
+    // For other orders (limit), the times will be accumulated from the fills as they arrive on the websocket
+    result.fulfillTime = (aFulfillment.latestTrade ?
+                          aFulfillment.latestTrade
+                          : aQueryStatus.at("transactTime").get<MillisecondsSinceEpoch>());
+
+    return result;
+}
+
+// TODO remove
 FulfilledOrder fulfillFromQuery(const Order & aOrder, const Json & aQueryStatus)
 {
     FulfilledOrder result{aOrder};
@@ -136,7 +175,7 @@ FulfilledOrder fulfillFromQuery(const Order & aOrder, const Json & aQueryStatus)
         }
     }
 
-    Fulfill fulfill =
+    Fulfillment fulfill =
         analyzeTrades(aQueryStatus["fills"].begin(), aQueryStatus["fills"].end(), aOrder);
 
     result.status = Order::Status::Fulfilled;

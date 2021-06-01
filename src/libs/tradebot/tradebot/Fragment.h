@@ -7,8 +7,6 @@ namespace ad {
 namespace tradebot {
 
 
-using MillisecondsSinceEpoch = long long;
-
 using Decimal = double;
 
 enum class Side

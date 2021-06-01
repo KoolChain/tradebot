@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Fragment.h"
+#include "Fulfillment.h"
 
 #include <binance/Orders.h>
+#include <binance/Time.h>
 
 #include <string>
 
@@ -80,6 +82,11 @@ struct FulfilledOrder : public Order
 {};
 
 
+FulfilledOrder fulfill(const Order & aOrder,
+                       const Json & aQueryStatus,
+                       const Fulfillment & aFulfillment);
+
+// TODO remove
 FulfilledOrder fulfillFromQuery(const Order & aOrder, const Json & aQueryStatus);
 
 

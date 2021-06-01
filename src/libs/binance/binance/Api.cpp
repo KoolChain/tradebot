@@ -240,6 +240,30 @@ Response Api::listAllOrders(const Symbol & aSymbol)
 }
 
 
+Response Api::listAccountTradesFromTime(const Symbol & aSymbol,
+                                        MillisecondsSinceEpoch aStartTime,
+                                        int aLimit)
+{
+    return makeRequest(Verb::GET, {"/api/v3/myTrades"}, Security::Signed,
+                       cpr::Parameters{{"symbol", aSymbol},
+                                       {"startTime", std::to_string(aStartTime)},
+                                       {"limit", std::to_string(aLimit)}
+                       });
+}
+
+
+Response Api::listAccountTradesFromId(const Symbol & aSymbol,
+                                      long aTradeId,
+                                      int aLimit)
+{
+    return makeRequest(Verb::GET, {"/api/v3/myTrades"}, Security::Signed,
+                       cpr::Parameters{{"symbol", aSymbol},
+                                       {"fromId", std::to_string(aTradeId)},
+                                       {"limit", std::to_string(aLimit)}
+                       });
+}
+
+
 Response Api::queryOrder(const Symbol & aSymbol, const ClientId & aClientOrderId)
 {
     return makeRequest(Verb::GET, {"/api/v3/order"}, Security::Signed,

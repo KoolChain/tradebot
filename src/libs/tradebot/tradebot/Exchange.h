@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "Fulfillment.h"
 #include "Order.h"
 
 #include <binance/Api.h>
@@ -41,6 +42,10 @@ struct Exchange
     std::vector<binance::ClientId> listOpenOrders(const Pair & aPair);
 
     Json queryOrder(const Order & aOrder);
+
+    /// \param aPageSize The number of trades fetched with each API request.
+    ///        Mainly usefull for writing tests.
+    Fulfillment accumulateTradesFor(const Order & aOrder, int aPageSize=1000);
 
     binance::Api restApi;
 };

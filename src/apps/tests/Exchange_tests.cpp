@@ -303,8 +303,7 @@ SCENARIO("Orders cancellation", "[exchange]")
 
             // Let's "revert" the order the best we can (to conserve balance)
             {
-                immediateOrder.side = Side::Buy;
-                db.insert(immediateOrder);
+                db.insert(immediateOrder.reverseSide());
                 binance.placeOrder(immediateOrder, Execution::Market);
 
                 while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
@@ -313,5 +312,76 @@ SCENARIO("Orders cancellation", "[exchange]")
                 }
             }
         }
+    }
+}
+
+
+SCENARIO("Listing trades.", "[exchange]")
+{
+    const Pair pair{"BTC", "BUSD"};
+    const Decimal amount = 0.03;
+    const std::string traderName{"exchangetest"};
+
+    GIVEN("An exchange instance.")
+    {
+        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto db = Database{":memory:"};
+
+        // Sanity check
+        exchange.cancelAllOpenOrders(pair);
+        REQUIRE(exchange.listOpenOrders(pair).empty());
+
+        Decimal averagePrice = exchange.getCurrentAveragePrice(pair);
+
+        WHEN("A buy market order is placed.")
+        {
+            Order buyLarge = makeOrder(traderName, pair, Side::Sell, 0, amount);
+            db.insert(buyLarge);
+            fulfillMarketOrder(exchange, buyLarge);
+
+            THEN("Its fills can be listed after the fact")
+            {
+                Fulfillment fulfillment = exchange.accumulateTradesFor(buyLarge, 1);
+
+                Json orderJson = exchange.queryOrder(buyLarge);
+
+                REQUIRE(fulfillment.amountBase == buyLarge.amount);
+                REQUIRE(fulfillment.amountBase == jstod(orderJson.at("executedQty")));
+                REQUIRE(fulfillment.amountQuote == jstod(orderJson.at("cummulativeQuoteQty")));
+                REQUIRE(fulfillment.feeAsset != "");
+                REQUIRE(fulfillment.tradeCount >= 1);
+
+                spdlog::error("TradeCount: {}.", fulfillment.tradeCount);
+
+                REQUIRE(fulfillment.price() != 0);
+                // Another way to compute a market order price after the fact
+                // see: https://dev.binance.vision/t/how-to-get-the-price-of-a-market-order-that-is-already-filled/4046/2
+                REQUIRE(fulfillment.price() ==
+                        jstod(orderJson.at("cummulativeQuoteQty"))/jstod(orderJson.at("executedQty")));
+            }
+
+            // "revert" the order the best we can (to conserve balance)
+            revertOrder(exchange, db, buyLarge);
+        }
+        // TODO it would be ideal to be able to automatically test the pagination of accumulateTradesFor()
+        // notably in situation where there are different trades for the order in different pages.
+        // Yet it seems difficult to write a reliable test for that without a mocked-up exchange.
+        // (As the test net is regularly reset, I suspect even if we hardcode the exchange id of an
+        // interesting order it will later be lost).
+
+        // Commented out because:
+        // It is not automatically tested
+        // The page size has to be adapted to the current total number of trades on the pair to make sense:w
+        //GIVEN("A very old order.")
+        //{
+        //    Order oldOrder = makeOrder(traderName, pair, Side::Sell, 0., 0.);
+
+        //    THEN("Listing trades starting from it will paginate, given small enough page size.")
+        //    {
+        //        Fulfillment fulfillment = exchange.accumulateTradesFor(oldOrder, 3);
+        //        // Note: I don't know how to no invasively test that it did paginate...
+        //        // I checked manually in the logs, and as of 2021/06/01 it did paginate.
+        //    }
+        //}
     }
 }

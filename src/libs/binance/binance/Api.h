@@ -2,6 +2,7 @@
 
 #include "Orders.h"
 #include "Json.h"
+#include "Time.h"
 
 #include <websocket/WebSocket.h>
 
@@ -63,6 +64,13 @@ public:
     Response listOpenOrders(const Symbol & aSymbol);
 
     Response listAllOrders(const Symbol & aSymbol);
+
+    Response listAccountTradesFromTime(const Symbol & aSymbol,
+                                       MillisecondsSinceEpoch aStartTime,
+                                       int aLimit=1000);
+    Response listAccountTradesFromId(const Symbol & aSymbol,
+                                     long aTradeId,
+                                     int aLimit=1000);
 
     Response queryOrder(const Symbol & aSymbol, const ClientId & aClientOrderId);
 

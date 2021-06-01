@@ -231,5 +231,55 @@ Json Exchange::queryOrder(const Order & aOrder)
 }
 
 
+// listAccountTrades* return an empty array (not an error status) when there are no trades matching
+Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
+{
+    Fulfillment result;
+    binance::Response response =
+        restApi.listAccountTradesFromTime(aOrder.symbol(), aOrder.activationTime-10000, aPageSize);
+    long lastTradeId = 0;
+
+    while(response.status == 200 && (!(*response.json).empty()))
+    {
+        for(const auto & trade : *response.json)
+        {
+            if (trade.at("orderId") == aOrder.exchangeId)
+            {
+                Fulfillment fill = Fulfillment::fromTradeJson(trade);
+                result.accumulate(fill, aOrder);
+                spdlog::trace("Trade {} for {} {} matching order '{}'.",
+                              trade.at("id").get<long>(),
+                              fill.amountBase,
+                              aOrder.base,
+                              static_cast<const std::string &>(aOrder.clientId()));
+            }
+            lastTradeId = trade.at("id");
+            // TODO might return as soon as the order.amount is matched,
+            // yet that would make testing pagination even more of a pain.
+        }
+        response = restApi.listAccountTradesFromId(aOrder.symbol(), lastTradeId+1, aPageSize);
+    }
+
+    if (response.status != 200)
+    {
+        unhandledResponse(response, "accumulates order trades");
+    }
+    else if (result.amountBase != aOrder.amount)
+    {
+        spdlog::critical("Accumulated trades for order '{}' amount to {} {}, but the order was for {} {}."
+                         " Exchange id: {}.",
+                         static_cast<const std::string &>(aOrder.clientId()),
+                         result.amountBase,
+                         aOrder.base,
+                         aOrder.amount,
+                         aOrder.base,
+                         aOrder.exchangeId);
+        throw std::logic_error{"Trades accumulation does not match the order amount."};
+    }
+
+    return result;
+}
+
+
 } // namespace tradebot
 } // namespace ad

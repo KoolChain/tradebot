@@ -4,6 +4,7 @@ set(${PROJECT_NAME}_HEADERS
     Database.h
     Exchange.h
     Fragment.h
+    Fulfillment.h
     Order.h
     OrmAdaptors-impl.h
     Trader.h
@@ -14,6 +15,7 @@ set(${PROJECT_NAME}_SOURCES
     Exchange.cpp
     Order.cpp
     Fragment.cpp
+    Fulfillment.cpp
     Trader.cpp
 )
 

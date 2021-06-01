@@ -276,26 +276,23 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                                                           Order::FulfillResponse::SmallSpread);
             }
 
-            // TODO Reactivate this test for market orders
-            // Also reactive the counter order...
-            // when we have a way to retrieve the price of the order after the fact
-            //// Active fulfilled market order
-            //// averagePrice is only used as a marker for later test (this will be a market order)
-            //Fragment fulfilledFragment =
-            //    db.getFragment(db.insert(Fragment{pair.base,
-            //                                      pair.quote,
-            //                                      0.001,
-            //                                      averagePrice,
-            //                                      Side::Sell}));
-            //Order activeFulfilled =
-            //    trader.placeOrderForMatchingFragments(Execution::Market,
-            //                                          Side::Sell,
-            //                                          averagePrice,
-            //                                          Order::FulfillResponse::SmallSpread);
-            //while(exchange.getOrderStatus(activeFulfilled) == "EXPIRED")
-            //{
-            //    exchange.placeOrder(activeFulfilled, Execution::Market);
-            //}
+            // Active fulfilled market order
+            // averagePrice is only used as a marker for later test (this will be a market order)
+            Fragment marketFulfilledFragment =
+                db.getFragment(db.insert(Fragment{pair.base,
+                                                  pair.quote,
+                                                  0.001,
+                                                  averagePrice,
+                                                  Side::Sell}));
+            Order marketFulfilled =
+                trader.placeOrderForMatchingFragments(Execution::Market,
+                                                      Side::Sell,
+                                                      averagePrice,
+                                                      Order::FulfillResponse::SmallSpread);
+            while(exchange.getOrderStatus(marketFulfilled) == "EXPIRED")
+            {
+                exchange.placeOrder(marketFulfilled, Execution::Market);
+            }
 
             // Active fulfilled LIMIT order
             Decimal limitGenerous = std::floor(1.1 * averagePrice);
@@ -341,15 +338,15 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
             // Avoids the repetition...
             //THEN("All orders are found in the database")
             {
-                REQUIRE(db.countFragments() == 6);
+                REQUIRE(db.countFragments() == 7);
                 REQUIRE(db.getUnassociatedFragments(Side::Sell, impossiblePrice, pair).empty());
                 REQUIRE(db.getUnassociatedFragments(Side::Sell, averagePrice, pair).empty());
 
-                REQUIRE(db.countOrders() == 7);
+                REQUIRE(db.countOrders() == 8);
 
                 REQUIRE(db.selectOrders(pair, Order::Status::Inactive).size() == 1);
                 REQUIRE(db.selectOrders(pair, Order::Status::Sending).size() == 2);
-                REQUIRE(db.selectOrders(pair, Order::Status::Active).size() == 2);
+                REQUIRE(db.selectOrders(pair, Order::Status::Active).size() == 3);
                 REQUIRE(db.selectOrders(pair, Order::Status::Cancelling).size() == 2);
                 REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 0);
             }
@@ -360,25 +357,25 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                 // Only orders remaining are:
                 // * inactive
-                // * active fulfilled
-                REQUIRE(db.countOrders() == 2);
+                // * market active fulfilled
+                // * limit active fulfilled
+                REQUIRE(db.countOrders() == 3);
 
                 REQUIRE(db.selectOrders(pair, Order::Status::Inactive).size() == 1);
                 REQUIRE(db.selectOrders(pair, Order::Status::Sending).size() == 0);
                 REQUIRE(db.selectOrders(pair, Order::Status::Active).size() == 0);
                 REQUIRE(db.selectOrders(pair, Order::Status::Cancelling).size() == 0);
-                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 1);
+                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 2);
 
                 // THEN("The not fulfilled fragments are freed.")
                 {
-                    REQUIRE(db.countFragments() == 6);
+                    REQUIRE(db.countFragments() == 7);
                     REQUIRE(db.getUnassociatedFragments(Side::Sell, impossiblePrice, pair).size() == 5);
                     REQUIRE(db.getUnassociatedFragments(Side::Sell, averagePrice, pair).size() == 0);
 
-                    // TODO re-activate when the market order above is re-activated
-                    //REQUIRE(db.getFragmentsComposing(activeFulfilled).size() == 1);
-                    //REQUIRE(db.getFragmentsComposing(activeFulfilled).at(0) == db.getFragment(fulfilledFragment.id));
-                    //REQUIRE(db.getFragmentsComposing(activeFulfilled).at(0).id == fulfilledFragment.id);
+                    REQUIRE(db.getFragmentsComposing(marketFulfilled).size() == 1);
+                    REQUIRE(db.getFragmentsComposing(marketFulfilled).at(0) == db.getFragment(marketFulfilledFragment.id));
+                    REQUIRE(db.getFragmentsComposing(marketFulfilled).at(0).id == marketFulfilledFragment.id);
 
                     REQUIRE(db.getFragmentsComposing(limitFulfilled).size() == 1);
                     REQUIRE(db.getFragmentsComposing(limitFulfilled).at(0) == db.getFragment(limitFulfilledFragment.id));
@@ -388,6 +385,16 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                 // THEN("The fulfilled orders are marked as such.")
                 {
+                    db.reload(marketFulfilled);
+                    REQUIRE(marketFulfilled.status == Order::Status::Fulfilled);
+                    REQUIRE(marketFulfilled.executionRate > averagePrice * 0.5);
+                    REQUIRE(marketFulfilled.executionRate < averagePrice * 1.5);
+                    REQUIRE(marketFulfilled.fulfillTime >= marketFulfilled.activationTime);
+
+                    db.reload(marketFulfilledFragment);
+                    REQUIRE(marketFulfilledFragment.composedOrder == marketFulfilled.id);
+                    REQUIRE(marketFulfilledFragment.amount == marketFulfilled.amount);
+
                     db.reload(limitFulfilled);
                     REQUIRE(limitFulfilled.status == Order::Status::Fulfilled);
                     REQUIRE(limitFulfilled.executionRate == limitFulfilledFragment.targetRate);
@@ -406,20 +413,17 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
             // Let's "revert" the fulfilled orders the best we can (to conserve balance)
             {
-                // TODO re-activate when the market order above is re-activated
-                //activeFulfilled.side = Side::Buy;
-                //db.insert(activeFulfilled);
-                //exchange.placeOrder(activeFulfilled, Execution::Market);
-                //
-                //while(exchange.getOrderStatus(activeFulfilled) == "EXPIRED")
-                //{
-                //    exchange.placeOrder(activeFulfilled, Execution::Market);
-                //}
+                db.insert(marketFulfilled.reverseSide());
+                exchange.placeOrder(marketFulfilled, Execution::Market);
+
+                while(exchange.getOrderStatus(marketFulfilled) == "EXPIRED")
+                {
+                    exchange.placeOrder(marketFulfilled, Execution::Market);
+                }
 
                 db.insert(limitFulfilled.reverseSide());
                 exchange.placeOrder(limitFulfilled, Execution::Market);
 
-                //TODO replace
                 while(exchange.getOrderStatus(limitFulfilled) == "EXPIRED")
                 {
                     exchange.placeOrder(limitFulfilled, Execution::Market);
@@ -428,5 +432,3 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
         }
     }
 }
-
-// TODO ensure the active order that fulfilled are marked as such after initialization
