@@ -91,7 +91,9 @@ SCENARIO("Placing orders", "[exchange]")
             REQUIRE(immediateOrder.status == Order::Status::Active);
             REQUIRE(immediateOrder.exchangeId != -1);
 
-            while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
+            auto goOnValues = {"EXPIRED", "PARTIALLY_FILLED"};
+            while(std::find(goOnValues.begin(), goOnValues.end(),
+                            binance.getOrderStatus(immediateOrder)) != goOnValues.end())
             {
                 binance.placeOrder(immediateOrder, Execution::Market);
             }
