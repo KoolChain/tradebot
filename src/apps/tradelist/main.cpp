@@ -43,7 +43,6 @@ int main(int argc, char * argv[])
         pair.quote,
         jstod(orderJson.at("origQty")),
         0.,
-        jstod(orderJson.at("price")),
         orderJson.at("side") == tradebot::Side::Sell ? tradebot::Side::Sell : tradebot::Side::Buy,
         tradebot::Order::FulfillResponse::SmallSpread,
     };

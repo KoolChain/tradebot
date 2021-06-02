@@ -20,7 +20,6 @@ inline tradebot::Order makeOrder(const std::string aTraderName,
         aPair.quote,
         aAmount,
         aPrice,
-        0.,
         aSide,
         tradebot::Order::FulfillResponse::SmallSpread,
     };

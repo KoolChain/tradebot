@@ -172,7 +172,6 @@ SCENARIO("Trader low-level functions.", "[trader]")
                 pair.quote,
                 0.01,
                 averagePrice,
-                0.,
                 tradebot::Side::Sell,
                 tradebot::Order::FulfillResponse::SmallSpread,
                 getTimestamp(),
@@ -244,7 +243,6 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                 pair.quote,
                 0.01,
                 averagePrice,
-                0.,
                 tradebot::Side::Sell,
                 tradebot::Order::FulfillResponse::SmallSpread,
             };

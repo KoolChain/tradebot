@@ -49,13 +49,13 @@ struct Order
     std::string quote;
     Decimal amount; // Quantity of base to exchange
     Decimal fragmentsRate;
-    Decimal executionRate;
     Side side;
 
     FulfillResponse fulfillResponse;
 
     MillisecondsSinceEpoch activationTime{0};
     Status status{Status::Inactive};
+    Decimal executionRate{0};
     Decimal takenHome{0};
     MillisecondsSinceEpoch fulfillTime{0};
     long exchangeId{-1}; // assigned by Binance

@@ -25,7 +25,6 @@ SCENARIO("Order and fragment records.", "[db]")
                 "BUSD",
                 10.,
                 1.4,
-                1.5,
                 tradebot::Side::Sell,
                 tradebot::Order::FulfillResponse::SmallSpread,
                 getTimestamp(),
@@ -104,7 +103,6 @@ SCENARIO("Orders selection", "[db]")
                     pair.quote,
                     10.,
                     1.,
-                    0.,
                     tradebot::Side::Sell,
                     tradebot::Order::FulfillResponse::SmallSpread,
                 }

@@ -194,7 +194,6 @@ SCENARIO("Orders cancellation", "[exchange]")
                 pair.quote,
                 10.,
                 1.,
-                1.,
                 Side::Sell,
                 Order::FulfillResponse::SmallSpread,
                 0,
@@ -225,7 +224,6 @@ SCENARIO("Orders cancellation", "[exchange]")
                 pair.base,
                 pair.quote,
                 0.01,
-                std::floor(averagePrice*4),
                 std::floor(averagePrice*4),
                 Side::Sell,
                 Order::FulfillResponse::SmallSpread,
@@ -273,7 +271,6 @@ SCENARIO("Orders cancellation", "[exchange]")
                 pair.quote,
                 0.001,
                 std::floor(averagePrice),
-                0.,
                 Side::Sell,
                 Order::FulfillResponse::SmallSpread,
             };

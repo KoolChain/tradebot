@@ -19,7 +19,6 @@ SCENARIO("Order usage.", "[order]")
             pair.quote,
             0.02,
             1.1,
-            0.,
             Side::Buy,
         };
 

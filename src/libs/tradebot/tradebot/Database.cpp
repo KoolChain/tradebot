@@ -258,7 +258,6 @@ Order Database::prepareOrder(const std::string & aTraderName,
         aPair.quote,
         0, // amount
         aFragmentsRate,
-        0, // execution rate
         aSide,
         aFulfillResponse
     };
