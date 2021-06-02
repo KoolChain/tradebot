@@ -14,7 +14,7 @@ using Json = nlohmann::json;
 ///
 /// It essentially relies on the fact it is not overload to cast the Json string to std::string,
 /// removing the ambiguity of using std::stod directly.
-inline binance::Decimal jstod(const std::string & aString)
+inline Decimal jstod(const std::string & aString)
 {
     return std::stod(aString);
 };

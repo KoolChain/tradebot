@@ -18,14 +18,14 @@ class Order;
 
 struct Fulfillment
 {
-    binance::Decimal amountBase{0};
-    binance::Decimal amountQuote{0};
-    binance::Decimal fee{0};
+    Decimal amountBase{0};
+    Decimal amountQuote{0};
+    Decimal fee{0};
     std::string feeAsset;
     MillisecondsSinceEpoch latestTrade{0};
     int tradeCount{0};
 
-    binance::Decimal price() const
+    Decimal price() const
     {
         return amountQuote / amountBase;
     }
