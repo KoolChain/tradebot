@@ -111,7 +111,7 @@ std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
         else if (json["status"] == "EXPIRED")
         {
             spdlog::warn("Market order '{}' for {} {} at {} {} is expired.",
-                         static_cast<const std::string &>(aOrder.clientId()),
+                         aOrder.getIdentity(),
                          aOrder.amount,
                          aOrder.base,
                          aOrder.fragmentsRate,
@@ -123,7 +123,7 @@ std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
         {
             spdlog::critical("Unhandled status '{}' when placing market order '{}'.",
                              json["status"],
-                             static_cast<const std::string &>(aOrder.clientId()));
+                             aOrder.getIdentity());
             throw std::logic_error{"Unhandled market order status in response."};
         }
     }
@@ -269,7 +269,7 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
                               trade.at("id").get<long>(),
                               fill.amountBase,
                               aOrder.base,
-                              static_cast<const std::string &>(aOrder.clientId()));
+                              aOrder.getIdentity());
             }
             lastTradeId = trade.at("id");
             // TODO might return as soon as the order.amount is matched,
@@ -286,7 +286,7 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
     {
         spdlog::critical("Accumulated trades for order '{}' amount to {} {}, but the order was for {} {}."
                          " Exchange id: {}.",
-                         static_cast<const std::string &>(aOrder.clientId()),
+                         aOrder.getIdentity(),
                          result.amountBase,
                          aOrder.base,
                          aOrder.amount,

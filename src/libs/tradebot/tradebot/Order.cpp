@@ -5,6 +5,7 @@
 #include <spdlog/spdlog.h>
 
 #include <ostream>
+#include <sstream>
 
 
 namespace ad {
@@ -68,6 +69,17 @@ std::ostream & operator<<(std::ostream & aOut, const Order & aRhs)
 }
 
 
+std::string Order::getIdentity() const
+{
+    std::ostringstream oss;
+    oss << static_cast<const std::string &>(clientId())
+        << ' ' << base << quote
+        << ", exchange id: " << exchangeId
+        ;
+    return oss.str();
+}
+
+
 FulfilledOrder fulfill(const Order & aOrder,
                        const Json & aQueryStatus,
                        const Fulfillment & aFulfillment)
@@ -106,7 +118,7 @@ FulfilledOrder fulfill(const Order & aOrder,
     else
     {
         spdlog::critical("Cannot get the aFulfillment price for order '{}'.",
-                         static_cast<const std::string &>(aOrder.clientId()));
+                         aOrder.getIdentity());
         throw std::logic_error{"Cannot get the price while aFulfillmenting an order."};
     }
 

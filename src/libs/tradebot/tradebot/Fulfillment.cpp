@@ -24,7 +24,7 @@ Fulfillment & Fulfillment::accumulate(const Fulfillment & aRhs, const Order & aC
         spdlog::critical("Inconsistent commissions assets {} vs. {} in fills for order '{}'.",
                          feeAsset,
                          aRhs.feeAsset,
-                         static_cast<const std::string &>(aContext.clientId())
+                         aContext.getIdentity()
                          );
         throw std::logic_error{"Different fills for the same order have different commissions assets."};
     }

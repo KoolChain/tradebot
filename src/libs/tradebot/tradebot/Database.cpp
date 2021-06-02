@@ -307,13 +307,13 @@ bool Database::onFillOrder(const FulfilledOrder & aOrder)
     if (! alreadyFilled)
     {
         update(aOrder);
-        spdlog::trace("Order {} is marked fulfilled.",
-                      static_cast<const std::string &>(aOrder.clientId()));
+        spdlog::trace("Order '{}' is marked fulfilled.",
+                      aOrder.getIdentity());
     }
     else
     {
-        spdlog::warn("Order {} was already fulfilled.",
-                      static_cast<const std::string &>(aOrder.clientId()));
+        spdlog::warn("Order '{}' was already fulfilled.",
+                      aOrder.getIdentity());
     }
 
     return ! alreadyFilled;

@@ -73,6 +73,8 @@ struct Order
         side = (side == Side::Sell ? Side::Buy : Side::Sell);
         return *this;
     }
+
+    std::string getIdentity() const;
 };
 
 
