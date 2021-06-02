@@ -284,14 +284,13 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
     }
     else if (result.amountBase != aOrder.amount)
     {
-        spdlog::critical("Accumulated trades for order '{}' amount to {} {}, but the order was for {} {}."
-                         " Exchange id: {}.",
+        spdlog::critical("Accumulated trades for order '{}' amount to {} {}, but the order was for {} {}.",
                          aOrder.getIdentity(),
                          result.amountBase,
                          aOrder.base,
                          aOrder.amount,
-                         aOrder.base,
-                         aOrder.exchangeId);
+                         aOrder.base
+                         );
         throw std::logic_error{"Trades accumulation does not match the order amount."};
     }
 
