@@ -96,7 +96,17 @@ std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
         const Json & json = *response.json;
         if (json["status"] == "FILLED")
         {
-            return fulfillFromQuery(aOrder, json);
+            Fulfillment fulfillment =
+                std::accumulate(json.at("fills").begin(),
+                                json.at("fills").end(),
+                                Fulfillment{},
+                                [&aOrder](Fulfillment & fulfillment, const auto & fillJson)
+                                {
+                                    return fulfillment.accumulate(Fulfillment::fromFillJson(fillJson), aOrder);
+                                });
+            // The new order fills do not contain the quote quantities, patch it manually
+            fulfillment.amountQuote = jstod(json.at("cummulativeQuoteQty"));
+            return fulfill(aOrder, json, fulfillment);
         }
         else if (json["status"] == "EXPIRED")
         {

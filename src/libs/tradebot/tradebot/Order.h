@@ -86,9 +86,6 @@ FulfilledOrder fulfill(const Order & aOrder,
                        const Json & aQueryStatus,
                        const Fulfillment & aFulfillment);
 
-// TODO remove
-FulfilledOrder fulfillFromQuery(const Order & aOrder, const Json & aQueryStatus);
-
 
 inline binance::MarketOrder to_marketOrder(const Order & aOrder)
 {

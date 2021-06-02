@@ -32,7 +32,10 @@ struct Fulfillment
 
     Fulfillment & accumulate(const Fulfillment & aRhs, const Order & aContext);
 
+    /// \brief Intended for the Json objects returned by account trade list
     static Fulfillment fromTradeJson(const Json & aTrade);
+    /// \brief Intended for the Json objects returned in place order response's "fills" array
+    static Fulfillment fromFillJson(const Json & aTrade);
 };
 
 
@@ -43,7 +46,20 @@ inline Fulfillment Fulfillment::fromTradeJson(const Json & aTrade)
         jstod(aTrade.at("quoteQty")),
         jstod(aTrade.at("commission")),
         aTrade.at("commissionAsset"),
-        aTrade.value("time", 0),
+        aTrade.at("time"),
+        1, // 1 trade
+    };
+}
+
+
+inline Fulfillment Fulfillment::fromFillJson(const Json & aTrade)
+{
+    return {
+        jstod(aTrade.at("qty")),
+        0,
+        jstod(aTrade.at("commission")),
+        aTrade.at("commissionAsset"),
+        0,
         1, // 1 trade
     };
 }
