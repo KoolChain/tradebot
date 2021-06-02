@@ -13,12 +13,15 @@ namespace ad {
 namespace tradebot {
 
 
+using Coin = std::string;
+
+
 struct Pair
 {
-    std::string base;
-    std::string quote;
+    Coin base;
+    Coin quote;
 
-    std::string symbol() const
+    binance::Symbol symbol() const
     {
         return base + quote;
     }
@@ -45,8 +48,8 @@ struct Order
     };
 
     std::string traderName;
-    std::string base;
-    std::string quote;
+    Coin base;
+    Coin quote;
     Decimal amount; // Quantity of base to exchange
     Decimal fragmentsRate;
     Side side;
@@ -55,9 +58,11 @@ struct Order
 
     MillisecondsSinceEpoch activationTime{0};
     Status status{Status::Inactive};
-    Decimal executionRate{0};
-    Decimal takenHome{0};
     MillisecondsSinceEpoch fulfillTime{0};
+    Decimal executionRate{0};
+    Decimal commission{0};
+    Coin commissionAsset;
+    Decimal takenHome{0};
     long exchangeId{-1}; // assigned by Binance
     long id{-1}; // auto-increment by ORM
 

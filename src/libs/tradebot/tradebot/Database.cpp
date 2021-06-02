@@ -28,13 +28,15 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("quote", &Order::quote),
                        make_column("amount", &Order::amount),
                        make_column("fragments_rate", &Order::fragmentsRate),
-                       make_column("execution_rate", &Order::executionRate),
                        make_column("side", &Order::side),
                        make_column("fulfill_response", &Order::fulfillResponse),
                        make_column("activation_time", &Order::activationTime),
                        make_column("status", &Order::status),
-                       make_column("taken_home", &Order::takenHome),
                        make_column("fulfill_time", &Order::fulfillTime),
+                       make_column("execution_rate", &Order::executionRate),
+                       make_column("commission", &Order::commission),
+                       make_column("commissionAsset", &Order::commissionAsset),
+                       make_column("taken_home", &Order::takenHome),
                        make_column("exchange_id", &Order::exchangeId)
             ),
             make_table("Fragments",
@@ -301,7 +303,7 @@ bool Database::onFillOrder(const FulfilledOrder & aOrder)
     // e.g. Realizing the order is fulfilled while trying to cancel it, and receiving
     // the WebSocket notif at the same time.
     // Note: this works well only if onFillOrder() is called from a single thread.
-    bool alreadyFilled = getOrder(aOrder.id).status == Order::Status::Fulfilled;
+    bool alreadyFilled = (getOrder(aOrder.id).status == Order::Status::Fulfilled);
 
     if (! alreadyFilled)
     {

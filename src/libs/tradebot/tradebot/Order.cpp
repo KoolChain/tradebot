@@ -38,13 +38,15 @@ bool operator==(const Order & aLhs, const Order & aRhs)
         && aLhs.quote == aRhs.quote
         && aLhs.amount == aRhs.amount
         && aLhs.fragmentsRate == aRhs.fragmentsRate
-        && aLhs.executionRate== aRhs.executionRate
         && aLhs.side == aRhs.side
         && aLhs.fulfillResponse == aRhs.fulfillResponse
         && aLhs.activationTime == aRhs.activationTime
         && aLhs.status == aRhs.status
-        && aLhs.takenHome == aRhs.takenHome
         && aLhs.fulfillTime == aRhs.fulfillTime
+        && aLhs.executionRate== aRhs.executionRate
+        && aLhs.takenHome == aRhs.takenHome
+        && aLhs.commission == aRhs.commission
+        && aLhs.commissionAsset == aRhs.commissionAsset
         && aLhs.exchangeId == aRhs.exchangeId
         ;
 }
@@ -128,6 +130,9 @@ FulfilledOrder fulfill(const Order & aOrder,
     result.fulfillTime = (aFulfillment.latestTrade ?
                           aFulfillment.latestTrade
                           : aQueryStatus.at("transactTime").get<MillisecondsSinceEpoch>());
+
+    result.commission = aFulfillment.fee;
+    result.commissionAsset = aFulfillment.feeAsset;
 
     return result;
 }
