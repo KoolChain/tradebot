@@ -33,7 +33,7 @@ bool Trader::cancel(Order & aOrder)
         // TODO Handle partially filled orders properly instead of throwing
         if (status != "NOTEXISTING")
         {
-            Decimal partialFill = std::stod(exchange.queryOrder(aOrder)["executedQty"].get<std::string>());
+            Decimal partialFill = jstod(exchange.queryOrder(aOrder)["executedQty"]);
             if (partialFill != 0.)
             {
                 spdlog::critical("Order {} was cancelled but partially filled for {}/{} {}.",
@@ -56,6 +56,19 @@ bool Trader::cancel(Order & aOrder)
     }
     else
     {
+        // I exected that it would not be possible to have partial fills when status is "FILLED"
+        // but I think I observed the opposite during some runs of the tests.
+
+        Decimal executed = jstod(exchange.queryOrder(aOrder)["executedQty"]);
+        if (executed != aOrder.amount)
+        {
+            spdlog::critical("Order {} was marked 'FILLED' but partially filled for {}/{} {}.",
+                             static_cast<const std:: string &>(aOrder.clientId()),
+                             executed,
+                             aOrder.amount,
+                             aOrder.base);
+            throw std::logic_error("Does not expect 'FILLED' order to be partially filled.");
+        }
         // The order completely filled
         Json orderJson = exchange.queryOrder(aOrder);
         Fulfillment fulfillment = exchange.accumulateTradesFor(aOrder);
