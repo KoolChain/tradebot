@@ -273,6 +273,15 @@ Response Api::queryOrder(const Symbol & aSymbol, const ClientId & aClientOrderId
 }
 
 
+Response Api::queryOrderForExchangeId(const Symbol & aSymbol, long aExchangeId)
+{
+    return makeRequest(Verb::GET, {"/api/v3/order"}, Security::Signed,
+                       cpr::Parameters{{"symbol", aSymbol},
+                                       {"orderId", std::to_string(aExchangeId)},
+                                      });
+}
+
+
 Response Api::cancelOrder(const Symbol & aSymbol, const ClientId & aClientOrderId)
 {
     return makeRequest(Verb::DELETE, {"/api/v3/order"}, Security::Signed,

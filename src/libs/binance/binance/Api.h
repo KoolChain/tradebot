@@ -73,6 +73,7 @@ public:
                                      int aLimit=1000);
 
     Response queryOrder(const Symbol & aSymbol, const ClientId & aClientOrderId);
+    Response queryOrderForExchangeId(const Symbol & aSymbol, long aExchangeId);
 
     Response cancelOrder(const Symbol & aSymbol, const ClientId & aClientOrderId);
     Response cancelAllOpenOrders(const Symbol & aSymbol);
