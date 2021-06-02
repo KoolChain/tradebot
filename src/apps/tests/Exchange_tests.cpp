@@ -269,7 +269,7 @@ SCENARIO("Orders cancellation", "[exchange]")
                 traderName,
                 pair.base,
                 pair.quote,
-                0.01,
+                0.001,
                 std::floor(averagePrice),
                 0.,
                 Side::Sell,
@@ -318,8 +318,8 @@ SCENARIO("Orders cancellation", "[exchange]")
 
 SCENARIO("Listing trades.", "[exchange]")
 {
-    const Pair pair{"BTC", "BUSD"};
-    const Decimal amount = 0.03;
+    const Pair pair{"BTC", "USDT"};
+    const Decimal amount = 0.02;
     const std::string traderName{"exchangetest"};
 
     GIVEN("An exchange instance.")

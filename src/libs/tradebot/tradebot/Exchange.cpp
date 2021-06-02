@@ -234,9 +234,17 @@ Json Exchange::queryOrder(const Order & aOrder)
 // listAccountTrades* return an empty array (not an error status) when there are no trades matching
 Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
 {
+    // Note:
+    // It sporadically occured that the accumulated trades did not reach the total amount of the order.
+    // I am not sure what causes it, so let's start listing trades from some time before the recorded
+    // order activatin time, see if that situation ever occurs again.
+    static const MillisecondsSinceEpoch TRADE_MARGIN = 10000;
+
     Fulfillment result;
     binance::Response response =
-        restApi.listAccountTradesFromTime(aOrder.symbol(), aOrder.activationTime-10000, aPageSize);
+        restApi.listAccountTradesFromTime(aOrder.symbol(),
+                                          aOrder.activationTime-TRADE_MARGIN,
+                                          aPageSize);
     long lastTradeId = 0;
 
     while(response.status == 200 && (!(*response.json).empty()))
