@@ -346,9 +346,9 @@ SCENARIO("Listing trades.", "[exchange]")
 
                 Json orderJson = exchange.queryOrder(buyLarge);
 
-                REQUIRE(fulfillment.amountBase == buyLarge.amount);
-                REQUIRE(fulfillment.amountBase == jstod(orderJson.at("executedQty")));
-                REQUIRE(fulfillment.amountQuote == jstod(orderJson.at("cummulativeQuoteQty")));
+                CHECK(fulfillment.amountBase == buyLarge.amount);
+                CHECK(fulfillment.amountBase == jstod(orderJson.at("executedQty")));
+                CHECK(fulfillment.amountQuote == jstod(orderJson.at("cummulativeQuoteQty")));
                 REQUIRE(fulfillment.feeAsset != "");
                 REQUIRE(fulfillment.tradeCount >= 1);
 
@@ -462,9 +462,9 @@ SCENARIO("Listening to SPOT user data stream.")
                     }
 
                     Json orderJson = exchange.queryOrder(immediateOrder);
-                    REQUIRE(fulfillment.amountBase == immediateOrder.amount);
-                    REQUIRE(fulfillment.amountBase == jstod(orderJson.at("executedQty")));
-                    REQUIRE(fulfillment.amountQuote == jstod(orderJson.at("cummulativeQuoteQty")));
+                    CHECK(fulfillment.amountBase == immediateOrder.amount);
+                    CHECK(fulfillment.amountBase == jstod(orderJson.at("executedQty")));
+                    CHECK(fulfillment.amountQuote == jstod(orderJson.at("cummulativeQuoteQty")));
                     REQUIRE(fulfillment.feeAsset != "");
                     // Most of the times the fee is 0., I do not understand why yet.
                     // But there is a not null "commssion asset" anyway.
