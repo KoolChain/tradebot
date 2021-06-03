@@ -298,5 +298,89 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
 }
 
 
+void onStreamReceive(const std::string & aMessage, Exchange::UserStreamCallback aOnExecutionReport)
+{
+    Json json = Json::parse(aMessage);
+    if (json.at("e") == "executionReport")
+    {
+        aOnExecutionReport(std::move(json));
+    }
+}
+
+
+Exchange::Stream::Stream(binance::Api & aRestApi,
+                         Exchange::UserStreamCallback aOnExecutionReport) :
+    restApi{aRestApi},
+    listenKey{restApi.createSpotListenKey().json->at("listenKey")},
+    websocket{
+        // On connect
+        [this]()
+        {
+            {
+                std::scoped_lock<std::mutex> lock{mutex};
+                status = Connected;
+            }
+            statusCondition.notify_one();
+        },
+        // On Message
+        [onReport = std::move(aOnExecutionReport)](const std::string & aMessage)
+        {
+            onStreamReceive(aMessage, onReport);
+        }
+    },
+    thread{
+        [this]()
+        {
+            websocket.run(restApi.getEndpoints().websocketHost,
+                          restApi.getEndpoints().websocketPort,
+                          "/ws/" + listenKey);
+
+            {
+                std::scoped_lock<std::mutex> lock{mutex};
+                status = Done;
+            }
+            statusCondition.notify_one();
+        }
+    }
+{}
+
+
+Exchange::Stream::~Stream()
+{
+    if (restApi.closeSpotListenKey(listenKey).status != 200)
+    {
+        spdlog::critical("Cannot close the current spot listen key, cannot throw in a destructor.");
+        // See note below.
+        //websocket.async_close();
+    }
+    // The close above should result in the websocket closing, so the thread terminating.
+    // NOTE: I expected that closing the listen key would have the server close the websocket.
+    //       Apparently this is not the case, so close it manually anyway.
+    websocket.async_close();
+    thread.join();
+    spdlog::debug("User stream closed successfully.");
+}
+
+
+
+bool Exchange::openUserStream(UserStreamCallback aOnExecutionReport)
+{
+    spotUserStream.emplace(restApi, std::move(aOnExecutionReport));
+    std::unique_lock<std::mutex> lock{spotUserStream->mutex};
+    spotUserStream->statusCondition.wait(lock,
+                                         [&stream = *spotUserStream]()
+                                         {
+                                             return stream.status != Stream::Initialize;
+                                         });
+    return spotUserStream->status == Stream::Connected;
+}
+
+
+void Exchange::closeUserStream()
+{
+    spotUserStream.reset();
+}
+
+
 } // namespace tradebot
 } // namespace ad

@@ -55,6 +55,7 @@ public:
     Response getAccountInformation();
 
     Response createSpotListenKey();
+    Response closeSpotListenKey(const std::string aListenKey);
 
     Response getCurrentAveragePrice(const Symbol & aSymbol);
 
@@ -81,6 +82,8 @@ public:
     Response getSwapHistory();
 
     Response getCompletedWidthdrawHistory();
+
+    const Endpoints & getEndpoints();
 
     static const Endpoints gProduction;
     static const Endpoints gTestNet;

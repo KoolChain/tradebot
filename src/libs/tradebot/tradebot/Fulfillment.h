@@ -36,6 +36,8 @@ struct Fulfillment
     static Fulfillment fromTradeJson(const Json & aTrade);
     /// \brief Intended for the Json objects returned in place order response's "fills" array
     static Fulfillment fromFillJson(const Json & aTrade);
+    /// \brief Intended for the Json execution reports published by the spot user data stream
+    static Fulfillment fromStreamJson(const Json & aTrade);
 };
 
 
@@ -60,6 +62,19 @@ inline Fulfillment Fulfillment::fromFillJson(const Json & aTrade)
         jstod(aTrade.at("commission")),
         aTrade.at("commissionAsset"),
         0,
+        1, // 1 trade
+    };
+}
+
+
+inline Fulfillment Fulfillment::fromStreamJson(const Json & aTrade)
+{
+    return {
+        jstod(aTrade.at("l")),
+        jstod(aTrade.at("Y")),
+        jstod(aTrade.at("n")),
+        aTrade.at("N"),
+        aTrade.at("E"),
         1, // 1 trade
     };
 }

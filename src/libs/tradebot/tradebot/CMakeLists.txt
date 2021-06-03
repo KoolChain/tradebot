@@ -33,6 +33,7 @@ cmc_target_current_include_directory(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         ad::binance
+        ad::websocket
 
         spdlog::libspdlog
         sqlite_orm::sqlite_orm

@@ -207,6 +207,13 @@ Response Api::createSpotListenKey()
 }
 
 
+Response Api::closeSpotListenKey(const std::string aListenKey)
+{
+    return makeRequest(Verb::DELETE, {"/api/v3/userDataStream"}, Security::ApiOnly,
+                       cpr::Parameters{{"listenKey", aListenKey}});
+}
+
+
 Response Api::getCurrentAveragePrice(const Symbol & aSymbol)
 {
     return makeRequest(Verb::GET, {"/api/v3/avgPrice"}, Security::None,
@@ -311,6 +318,12 @@ Response Api::getCompletedWidthdrawHistory()
     return makeRequest(Verb::GET, {"/wapi/v3/withdrawHistory.html"}, Security::Signed,
                        cpr::Parameters{{"status", "6"} // completed
                                       });
+}
+
+
+const Endpoints & Api::getEndpoints()
+{
+    return mEndpoints;
 }
 
 

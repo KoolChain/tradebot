@@ -8,6 +8,8 @@
 #include <tradebot/Database.h>
 #include <tradebot/Exchange.h>
 
+#include <list>
+
 
 using namespace ad;
 using namespace ad::tradebot;
@@ -334,7 +336,7 @@ SCENARIO("Listing trades.", "[exchange]")
 
         WHEN("A buy market order is placed.")
         {
-            Order buyLarge = makeOrder(traderName, pair, Side::Sell, 0, amount);
+            Order buyLarge = makeOrder(traderName, pair, Side::Buy, 0, amount);
             db.insert(buyLarge);
             fulfillMarketOrder(exchange, buyLarge);
 
@@ -382,5 +384,101 @@ SCENARIO("Listing trades.", "[exchange]")
         //        // I checked manually in the logs, and as of 2021/06/01 it did paginate.
         //    }
         //}
+    }
+}
+
+SCENARIO("Listening to SPOT user data stream.")
+{
+    const Pair pair{"ETH", "USDT"};
+    const std::string traderName{"exchangetest"};
+
+    GIVEN("An exchange instance.")
+    {
+        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto db = Database{":memory:"};
+
+        // Sanity check
+        exchange.cancelAllOpenOrders(pair);
+        REQUIRE(exchange.listOpenOrders(pair).empty());
+
+        Decimal averagePrice = exchange.getCurrentAveragePrice(pair);
+
+        WHEN("The SPOT user stream is opened.")
+        {
+            std::list<Json> reports;
+            auto onReport = [&](Json aReport)
+            {
+                reports.push_back(std::move(aReport));
+            };
+            REQUIRE(exchange.openUserStream(onReport));
+
+            WHEN("A market order is placed.")
+            {
+                Order immediateOrder = makeOrder(traderName, pair, Side::Buy, 0., 0.01);
+                db.insert(immediateOrder);
+                exchange.placeOrder(immediateOrder, Execution::Market);
+
+                while(exchange.getOrderStatus(immediateOrder) == "EXPIRED")
+                {
+                    REQUIRE(reports.front().at("i") == immediateOrder.exchangeId);
+                    REQUIRE(reports.front().at("x") == "NEW");
+                    reports.pop_front();
+                    REQUIRE(reports.front().at("i") == immediateOrder.exchangeId);
+                    REQUIRE(reports.front().at("x") == "EXPIRED");
+                    reports.pop_front();
+                    exchange.placeOrder(immediateOrder, Execution::Market);
+                }
+
+                THEN("Execution reports are received.")
+                {
+                    REQUIRE(reports.front().at("i") == immediateOrder.exchangeId);
+                    REQUIRE(reports.front().at("s") == immediateOrder.symbol());
+                    REQUIRE(reports.front().at("c") == immediateOrder.clientId());
+                    REQUIRE(jstod(reports.front().at("q")) == immediateOrder.amount);
+                    REQUIRE(reports.front().at("o") == "MARKET");
+                    REQUIRE(reports.front().at("x") == "NEW");
+                    reports.pop_front();
+
+                    // Remaining messages are order trade completion
+                    Fulfillment fulfillment;
+                    //for(const Json & report : reports)
+                    std::size_t reportId = 0;
+                    for(auto reportIt = reports.begin();
+                        reportIt != reports.end();
+                        ++reportId, ++reportIt)
+                    {
+                        auto report = *reportIt;
+                        REQUIRE(report.at("x") == "TRADE");
+                        fulfillment.accumulate(Fulfillment::fromStreamJson(report), immediateOrder);
+
+                        if (reportId == reports.size()-1)
+                        {
+                            REQUIRE(report.at("X") == "FILLED");
+                        }
+                        else
+                        {
+                            REQUIRE(report.at("X") == "PARTIALLY_FILLED");
+                        }
+                    }
+
+                    Json orderJson = exchange.queryOrder(immediateOrder);
+                    REQUIRE(fulfillment.amountBase == immediateOrder.amount);
+                    REQUIRE(fulfillment.amountBase == jstod(orderJson.at("executedQty")));
+                    REQUIRE(fulfillment.amountQuote == jstod(orderJson.at("cummulativeQuoteQty")));
+                    REQUIRE(fulfillment.feeAsset != "");
+                    // Most of the times the fee is 0., I do not understand why yet.
+                    // But there is a not null "commssion asset" anyway.
+                    //REQUIRE(fulfillment.fee > 0.);
+
+                    THEN("The user stream can be explicitly closed")
+                    {
+                        exchange.closeUserStream();
+                    }
+                }
+
+                // Let's "revert" the order the best we can (to conserve balance)
+                revertOrder(exchange, db, immediateOrder);
+            }
+        }
     }
 }

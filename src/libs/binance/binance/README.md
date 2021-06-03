@@ -3,7 +3,9 @@
 * Difference between HTTP 418 and 403?
 * What is a 504 exactly?
 * Is there a type of order that either entirely fill or not at all?
+  * That would be a `AON` (All Or None), and it does not seem to be available at all in the API.
 * What are filters for?
+  * They are conditions that must be met by orders to be accepted by the binance engine.
 * What is an iceberg order?
 * What is the difference between wapi (about to be decommisionned) and sapi? And api?
 
@@ -63,3 +65,12 @@ Signature is **not** case sensitive.
 
 Base:
 * wss://stream.binance.com:9443
+
+### User Data Streams
+
+#### Order Update payload
+
+* (lowercase) `x` is the current execution type, which seems to be a duplication of the current order status
+unless when it is `TRADE` (i.e., a trade occured for part of all of the order).
+* (uppercase) `X` is the current order status. I suppose it will always be equal to `x`,
+unless when `x` is `TRADE`, then `X` should be either `PARTIALLY_FILLED` or `FILLED` (for the laste trade).
