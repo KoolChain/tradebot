@@ -7,6 +7,8 @@
 #include <binance/Api.h>
 #include <websocket/WebSocket.h>
 
+#include <boost/asio/steady_timer.hpp>
+
 #include <thread>
 
 
@@ -47,6 +49,9 @@ struct Exchange
         Stream & operator = (const Stream &) = delete;
         Stream & operator = (Stream &&) = delete;
 
+
+        void onListenKeyTimer(const boost::system::error_code & aErrorCode);
+
         // Synchronization mechanism for status variable (allowing to wait for connection)
         std::mutex mutex;
         std::condition_variable statusCondition;
@@ -57,6 +62,8 @@ struct Exchange
         binance::Api & restApi;
         std::string listenKey;
         net::WebSocket websocket;
+        boost::asio::steady_timer keepListenKeyAlive;
+        bool timerClosed{false};
         std::thread thread;
     };
 

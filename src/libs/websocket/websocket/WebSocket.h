@@ -7,6 +7,16 @@
 #include <queue>
 
 
+// Some nasty forward declaration to support nasty violations of encapsulation.
+namespace boost {
+namespace asio {
+
+class io_context;
+
+} // namespace asio
+} // namespace boost
+
+
 namespace ad {
 namespace net {
 
@@ -50,6 +60,12 @@ public:
 
     /// \brief Queue a message, thread safe.
     void async_close();
+
+    /// \brief Return the associated ASIO io_context.
+    ///
+    /// \attention This method violates encapsulation, but is a convenience
+    /// allowing to add other asynchronous operations, such as timers.
+    boost::asio::io_context & exposeContextDetail();
 
 private:
     void setConnectCallback(ConnectCallback aOnConnect);

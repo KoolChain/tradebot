@@ -31,10 +31,12 @@ add_library(ad::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 cmc_target_current_include_directory(${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE
+    PUBLIC
         ad::binance
         ad::websocket
 
+        Boost::boost
+    PRIVATE
         spdlog::libspdlog
         sqlite_orm::sqlite_orm
 )

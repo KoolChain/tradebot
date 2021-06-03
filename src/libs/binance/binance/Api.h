@@ -55,6 +55,8 @@ public:
     Response getAccountInformation();
 
     Response createSpotListenKey();
+    // Note 2021/06/03: contrarily to the documentation, the endpoint does not accept the current key
+    Response pingSpotListenKey(/*const std::string aListenKey*/);
     Response closeSpotListenKey(const std::string aListenKey);
 
     Response getCurrentAveragePrice(const Symbol & aSymbol);
@@ -94,6 +96,7 @@ private:
         DELETE,
         GET,
         POST,
+        PUT,
     };
 
     Response makeRequest(const std::string & aEndpoint);

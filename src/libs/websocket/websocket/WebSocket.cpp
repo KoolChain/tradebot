@@ -328,5 +328,11 @@ void WebSocket::setReceiveCallback(ReceiveCallback aOnReceive)
 }
 
 
+::net::io_context & WebSocket::exposeContextDetail()
+{
+    return mImpl->mIoc;
+}
+
+
 } // namespace net
 } // namespace ad

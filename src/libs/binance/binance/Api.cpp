@@ -207,6 +207,12 @@ Response Api::createSpotListenKey()
 }
 
 
+Response Api::pingSpotListenKey()
+{
+    return makeRequest(Verb::PUT, {"/api/v3/userDataStream"}, Security::ApiOnly);
+}
+
+
 Response Api::closeSpotListenKey(const std::string aListenKey)
 {
     return makeRequest(Verb::DELETE, {"/api/v3/userDataStream"}, Security::ApiOnly,
@@ -368,6 +374,11 @@ Response Api::makeRequest(Verb aVerb,
             return analyzeResponse("GET", session.Get());
         case Verb::POST:
             return analyzeResponse("POST", session.Post());
+        case Verb::PUT:
+            return analyzeResponse("PUT", session.Post());
+        default:
+            spdlog::critical("Unhandled HTTP verb, enum value '{}'.", aVerb);
+            throw std::domain_error{"Unhandled HTTP verb value."};
     }
 }
 

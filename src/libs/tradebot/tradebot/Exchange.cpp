@@ -2,9 +2,18 @@
 
 #include <spdlog/spdlog.h>
 
+#include <boost/asio/post.hpp>
+
+#include <functional>
+
 
 namespace ad {
 namespace tradebot {
+
+
+const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
+// Good for testing
+//const std::chrono::milliseconds LISTEN_KEY_REFRESH_PERIOD{100};
 
 
 #define unhandledResponse(aResponse, aContext) \
@@ -308,6 +317,40 @@ void onStreamReceive(const std::string & aMessage, Exchange::UserStreamCallback 
 }
 
 
+// IMPORTANT: Will execute the HTTP PUT query on the websocket io_context thread
+// So it introduces concurrent execution of http requests
+// (potentially complicating proper implementation of "quotas observation and waiting periods").
+// TODO potentially have it post the request to be executed on the main thread.
+void Exchange::Stream::onListenKeyTimer(const boost::system::error_code & aErrorCode)
+{
+    if (aErrorCode == boost::asio::error::operation_aborted)
+    {
+        spdlog::debug("Listen key refresh timer aborted.");
+        return;
+    }
+    else if (aErrorCode)
+    {
+        spdlog::error("Error on listen key refresh timer: {}. Will try to go on.", aErrorCode.message());
+    }
+
+    // timer closed value is changed in the same thread running io_context
+    // so it cannot race,
+    // and as importantly it cannot change value "in the middle" of the if body.
+    if (! timerClosed)
+    {
+        restApi.pingSpotListenKey();
+        keepListenKeyAlive.expires_after(LISTEN_KEY_REFRESH_PERIOD);
+        keepListenKeyAlive.async_wait(std::bind(&Exchange::Stream::onListenKeyTimer,
+                                                this,
+                                                std::placeholders::_1));
+    }
+    else
+    {
+        spdlog::debug("Timer was closed while the handler was already queued. Not restarting it.");
+    }
+}
+
+
 Exchange::Stream::Stream(binance::Api & aRestApi,
                          Exchange::UserStreamCallback aOnExecutionReport) :
     restApi{aRestApi},
@@ -328,9 +371,16 @@ Exchange::Stream::Stream(binance::Api & aRestApi,
             onStreamReceive(aMessage, onReport);
         }
     },
+    keepListenKeyAlive{
+        websocket.exposeContextDetail(),
+        LISTEN_KEY_REFRESH_PERIOD},
     thread{
         [this]()
         {
+            keepListenKeyAlive.async_wait(std::bind(&Exchange::Stream::onListenKeyTimer,
+                                                    this,
+                                                    std::placeholders::_1));
+
             websocket.run(restApi.getEndpoints().websocketHost,
                           restApi.getEndpoints().websocketPort,
                           "/ws/" + listenKey);
@@ -347,6 +397,23 @@ Exchange::Stream::Stream(binance::Api & aRestApi,
 
 Exchange::Stream::~Stream()
 {
+    // This object cannot be destroyed until the io_context is done running
+    // so it is safe to capture it in a lambda executed on the io_context thread.
+    boost::asio::post(
+        keepListenKeyAlive.get_executor(),
+        [this]
+        {
+            // Cancel any pending wait on the timer
+            // (otherwise the io_context::run() would still block on already waiting handlers)
+            keepListenKeyAlive.cancel();
+            // There are conditions where the timer handler might not be waiting anymore
+            // even though the cancellation in happening in the same thread as the completion handler
+            // (notably, completion handler already pending in the io_context queue, just after this lambda)
+            // So it would not be cancelled by the call to cancel().
+            // see: https://stackoverflow.com/a/43169596/1027706
+            timerClosed = true;
+        });
+
     if (restApi.closeSpotListenKey(listenKey).status != 200)
     {
         spdlog::critical("Cannot close the current spot listen key, cannot throw in a destructor.");
