@@ -389,7 +389,7 @@ SCENARIO("Listing trades.", "[exchange]")
 
 SCENARIO("Listening to SPOT user data stream.")
 {
-    const Pair pair{"ETH", "USDT"};
+    const Pair pair{"BTC", "USDT"};
     const std::string traderName{"exchangetest"};
 
     GIVEN("An exchange instance.")
@@ -414,7 +414,7 @@ SCENARIO("Listening to SPOT user data stream.")
 
             WHEN("A market order is placed.")
             {
-                Order immediateOrder = makeOrder(traderName, pair, Side::Buy, 0., 0.01);
+                Order immediateOrder = makeOrder(traderName, pair, Side::Buy, 0., 0.02);
                 db.insert(immediateOrder);
                 exchange.placeOrder(immediateOrder, Execution::Market);
 
