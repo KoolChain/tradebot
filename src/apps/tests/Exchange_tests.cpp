@@ -418,6 +418,10 @@ SCENARIO("Listening to SPOT user data stream.")
                 db.insert(immediateOrder);
                 exchange.placeOrder(immediateOrder, Execution::Market);
 
+                // Hack: small delay, even more chances for the reports to be received on stream
+                // (note: it was already working well without it, but with a few misses)
+                std::this_thread::sleep_for(std::chrono::milliseconds{5});
+
                 while(exchange.getOrderStatus(immediateOrder) == "EXPIRED")
                 {
                     REQUIRE(reports.front().at("i") == immediateOrder.exchangeId);

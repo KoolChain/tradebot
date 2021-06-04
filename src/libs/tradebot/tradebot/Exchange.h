@@ -63,7 +63,7 @@ struct Exchange
         std::string listenKey;
         net::WebSocket websocket;
         boost::asio::steady_timer keepListenKeyAlive;
-        bool timerClosed{false};
+        bool intendedClose{false};
         std::thread thread;
     };
 

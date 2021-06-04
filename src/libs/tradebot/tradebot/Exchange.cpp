@@ -11,9 +11,9 @@ namespace ad {
 namespace tradebot {
 
 
-const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
+//const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
 // Good for testing
-//const std::chrono::milliseconds LISTEN_KEY_REFRESH_PERIOD{100};
+const std::chrono::milliseconds LISTEN_KEY_REFRESH_PERIOD{100};
 
 
 #define unhandledResponse(aResponse, aContext) \
@@ -336,7 +336,7 @@ void Exchange::Stream::onListenKeyTimer(const boost::system::error_code & aError
     // timer closed value is changed in the same thread running io_context
     // so it cannot race,
     // and as importantly it cannot change value "in the middle" of the if body.
-    if (! timerClosed)
+    if (! intendedClose)
     {
         restApi.pingSpotListenKey();
         keepListenKeyAlive.expires_after(LISTEN_KEY_REFRESH_PERIOD);
@@ -364,6 +364,13 @@ Exchange::Stream::Stream(binance::Api & aRestApi,
                 status = Connected;
             }
             statusCondition.notify_one();
+
+            // Cannot be done at the start of the thread directly
+            // because it would still block the run when the websocket cannot connect
+            keepListenKeyAlive.async_wait(std::bind(&Exchange::Stream::onListenKeyTimer,
+                                                    this,
+                                                    std::placeholders::_1));
+
         },
         // On Message
         [onReport = std::move(aOnExecutionReport)](const std::string & aMessage)
@@ -377,13 +384,14 @@ Exchange::Stream::Stream(binance::Api & aRestApi,
     thread{
         [this]()
         {
-            keepListenKeyAlive.async_wait(std::bind(&Exchange::Stream::onListenKeyTimer,
-                                                    this,
-                                                    std::placeholders::_1));
-
             websocket.run(restApi.getEndpoints().websocketHost,
                           restApi.getEndpoints().websocketPort,
                           "/ws/" + listenKey);
+
+            if (! intendedClose)
+            {
+                spdlog::warn("User data stream websocket closed without application consent.");
+            }
 
             {
                 std::scoped_lock<std::mutex> lock{mutex};
@@ -411,7 +419,7 @@ Exchange::Stream::~Stream()
             // (notably, completion handler already pending in the io_context queue, just after this lambda)
             // So it would not be cancelled by the call to cancel().
             // see: https://stackoverflow.com/a/43169596/1027706
-            timerClosed = true;
+            intendedClose = true;
         });
 
     if (restApi.closeSpotListenKey(listenKey).status != 200)
