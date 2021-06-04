@@ -13,9 +13,6 @@ namespace ad {
 namespace tradebot {
 
 
-using Coin = std::string;
-
-
 struct Pair
 {
     Coin base;

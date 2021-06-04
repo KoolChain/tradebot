@@ -7,7 +7,11 @@ namespace ad {
 namespace tradebot {
 
 
+using Coin = std::string;
+
+
 using Decimal = double;
+
 
 enum class Side
 {
@@ -18,8 +22,8 @@ enum class Side
 
 struct Fragment
 {
-    std::string base;
-    std::string quote;
+    Coin base;
+    Coin quote;
     Decimal amount;
     Decimal targetRate;
     Side side;
