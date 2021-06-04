@@ -1,7 +1,28 @@
 #include "Trader.h"
 
+#include <boost/lexical_cast.hpp>
+
+
 namespace ad {
 namespace tradebot {
+
+
+void Trader::sendExistingOrder(Execution aExecution, Order & aOrder)
+{
+    // Send the order to the exchange
+    database.update(aOrder.setStatus(Order::Status::Sending));
+    // Note: placeOrder() marks the order Active.
+    database.update(exchange.placeOrder(aOrder, aExecution));
+}
+
+
+
+void Trader::placeNewOrder(Execution aExecution, Order & aOrder)
+{
+    aOrder.status = Order::Status::Inactive;
+    database.insert(aOrder);
+    sendExistingOrder(aExecution, aOrder);
+}
 
 
 Order Trader::placeOrderForMatchingFragments(Execution aExecution,
@@ -11,12 +32,7 @@ Order Trader::placeOrderForMatchingFragments(Execution aExecution,
 {
     // Create the Inactive order in DB, assigning all matching fragments
     Order order = database.prepareOrder(name, aSide, aFragmentsRate, pair, aFulfillResponse);
-
-    // Send the order to the exchange
-    database.update(order.setStatus(Order::Status::Sending));
-    // Note: placeOrder() marks the order Active.
-    database.update(exchange.placeOrder(order, aExecution));
-
+    sendExistingOrder(aExecution, order);
     return order;
 }
 
@@ -69,12 +85,30 @@ bool Trader::cancel(Order & aOrder)
                              aOrder.base);
             throw std::logic_error("Does not expect 'FILLED' order to be partially filled.");
         }
+
         // The order completely filled
-        Json orderJson = exchange.queryOrder(aOrder);
-        Fulfillment fulfillment = exchange.accumulateTradesFor(aOrder);
-        database.onFillOrder(fulfill(aOrder, orderJson, fulfillment));
+        completeOrder(aOrder, exchange.accumulateTradesFor(aOrder));
     }
 
+    return result;
+}
+
+
+bool Trader::completeOrder(const Order & aOrder, const Fulfillment & aFulfillment)
+{
+    Json orderJson = exchange.queryOrder(aOrder);
+    bool result = database.onFillOrder(fulfill(aOrder, orderJson, aFulfillment));
+    if (result)
+    {
+        spdlog::info("Recorded completion of {} order '{}' for {} {} at a price of {} {}.",
+                boost::lexical_cast<std::string>(aOrder.side),
+                aOrder.getIdentity(),
+                aOrder.amount,
+                aOrder.base,
+                aOrder.executionRate,
+                aOrder.quote
+        );
+    }
     return result;
 }
 
@@ -84,7 +118,7 @@ int Trader::cancelLiveOrders()
     auto cancelForStatus = [&](Order::Status status)
     {
         auto orders = database.selectOrders(pair, status);
-        spdlog::info("Found {} {} order(s).", orders.size(), status);
+        spdlog::info("Found {} {} order(s).", orders.size(), boost::lexical_cast<std::string>(status));
         return std::count_if(orders.begin(), orders.end(), [&](Order & order){return cancel(order);});
     };
 
@@ -92,6 +126,20 @@ int Trader::cancelLiveOrders()
         cancelForStatus(Order::Status::Active)
         + cancelForStatus(Order::Status::Cancelling)
         + cancelForStatus(Order::Status::Sending);
+}
+
+
+void Trader::cleanup()
+{
+    // Clean-up inactive orders
+    auto inactiveOrders = database.selectOrders(pair, Order::Status::Inactive);
+    spdlog::info("Found {} Inactive order(s).", inactiveOrders.size());
+    for (auto inactive : inactiveOrders)
+    {
+        database.discardOrder(inactive);
+    }
+    // Cancel all other orders which are not marked fulfilled
+    cancelLiveOrders();
 }
 
 

@@ -1,6 +1,7 @@
 project(dogebot VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
+    NaiveBot.h
 )
 
 set(${PROJECT_NAME}_SOURCES
@@ -17,6 +18,7 @@ find_package(spdlog REQUIRED COMPONENTS libspdlog)
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         ad::binance
+        ad::tradebot
 
         spdlog::libspdlog
 )

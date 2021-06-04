@@ -287,11 +287,12 @@ void Database::discardOrder(Order & aOrder)
                               where(is_equal(&Fragment::composedOrder, aOrder.id)));
     mImpl->storage.remove<Order>(aOrder.id);
 
-    aOrder.id = -1;
-
     // Bug 2021/05/27: I don't think the sqlite_orm implementation of the transactions works,
     // commenting out this commit(), the order is still removed from DB
     transaction.commit();
+
+    spdlog::trace("Discarded order {} from database.", aOrder.id);
+    aOrder.id = -1;
 }
 
 

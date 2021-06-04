@@ -11,9 +11,9 @@ namespace ad {
 namespace tradebot {
 
 
-//const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
+const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
 // Good for testing
-const std::chrono::milliseconds LISTEN_KEY_REFRESH_PERIOD{100};
+//const std::chrono::milliseconds LISTEN_KEY_REFRESH_PERIOD{100};
 
 
 #define unhandledResponse(aResponse, aContext) \

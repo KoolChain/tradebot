@@ -11,6 +11,12 @@ namespace tradebot {
 
 struct Trader
 {
+private:
+    void sendExistingOrder(Execution aExecution, Order & aOrder);
+
+public:
+    void placeNewOrder(Execution aExecution, Order & aOrder);
+
     Order placeOrderForMatchingFragments(Execution aExecution,
                                          Side aSide,
                                          Decimal aFragmentsRate,
@@ -24,6 +30,19 @@ struct Trader
     /// \return The number of orders that were actually cancelled on the exchange.
     /// This might differ from the number of orders which are removed from the database.
     int cancelLiveOrders();
+
+    /// \brief To be called when an order did complete on the exchange, with its already accumulated
+    /// fulfillment.
+    ///
+    /// \return `true` if the order was completed by this invocation, `false` otherwise.
+    /// (It might be false if the order was already recorded as completed.)
+    bool completeOrder(const Order & aOrder, const Fulfillment & aFulfillment);
+
+    //
+    // High-level API
+    //
+    void cleanup();
+
 
     std::string name;
     Pair pair;

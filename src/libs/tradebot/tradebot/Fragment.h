@@ -43,6 +43,22 @@ bool operator!=(const Fragment & aLhs, const Fragment & aRhs);
 
 std::ostream & operator<<(std::ostream & aOut, const Fragment & aRhs);
 
+inline std::ostream & operator<<(std::ostream & aOut, const Side & aSide)
+{
+    return aOut <<
+        [](const Side & aSide) -> std::string
+        {
+            switch(aSide)
+            {
+                case Side::Sell:
+                    return "Sell";
+                case Side::Buy:
+                    return "Buy";
+            }
+        }
+        (aSide);
+}
+
 
 } // namespace tradebot
 } // namespace ad
