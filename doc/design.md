@@ -28,25 +28,24 @@
 before the confirmation for the transition was received.
 So they were not taken out of the transition status.
 
-1. At launch, cancel all open orders. This will cancel `Active` order that did not fulfill,
-as well as not-fulfilled "transitioning orders".
-(`Sending` that were received by the engine, and `Canceling` that were not received by the engine).
-    * For the returned list of cancelled orders, mark them `Inactive`.
+1. Clean-up `Inactive` orders (Orders that were created but never attempted to send to the exchange).
 
-2. For each remaining `Active`, `Sending` or `Cancelling` order:
-   * Query the engine about the order status
-     * If it fulfilled, mark the order `Fulfilled`.
-     * If it is cancelled, mark the order `Inactive`.
-     * If the order does not exist on the exchange, the order should be `Sending`, or there is a problem.
+2. List all orders in either of these states: `Active`, `Sending` or `Canceling`. For each order:
 
-3. Clean-up `Inactive` orders.
+    * Try to cancel it. This will cancel `Active` order that did not fulfill, as well as still active "transitioning orders" that did no fulfill either.
+     (`Sending` that were received by the engine, and `Canceling` that were not received by the engine).
 
-4. Get the current rate.
+    * Query the order status on the exchange:
+        * If it is `CANCELLED`, or `NOT EXISTING`
+        (`Sending` that were not received, `Cancelling` that were received), mark it `Inactive` and clean-up the order.
+        * If it is `FILLED`, query the trades to accumulate them and complete the order.
+
+3. Get the current rate.
     * Issue separate `BUY` **market** orders for all `BUY` constituants with target rates **above** current, grouped by target rate.
     * Issue separate `SELL` **market** orders for all `SELL` constituants with target rates **below** current, grouped by target rate.
-    * Invoke fulfill callbacks, to distribute counter-order constituants.
+    * Complete orders as the fill on the exchange.
 
-   **Important**: The counter order will still be computed from the original target rates, not the actual fulfill rate.
+   **Important**: The counter order should still be computed from the original target rates, not the actual fulfill rate.
 
 
 #### Finding outstanding orders
@@ -108,11 +107,11 @@ b. Delete order from database.
 
 ### Main loop (2 orders active at the same time)
 
-5. Place the `SELL` and `BUY` around the current rate.
+4. Place the `SELL` and `BUY` around the current rate.
   They emit *events* upon fulfilling.
   **Note**: This is the only moment the two active orders will be direct neighbors on the "rate scale".
 
-6. Upon *fulfill event*:
+5. Upon *fulfill event*:
     * Distribute resulting counter-order fragments, and complete order.
     * Cancel the other active order.
     * Place a `SELL` order at the rate step immediately **above** the fulfill rate.
