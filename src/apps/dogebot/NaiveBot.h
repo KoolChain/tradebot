@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 
 #include <boost/asio/post.hpp>
+#include <boost/asio/deadline_timer.hpp>
 
 
 namespace ad {
@@ -29,6 +30,8 @@ struct NaiveBot
 
     void onCompletion(Json aReport);
 
+    void startEventLoop();
+
     void run();
 };
 
@@ -46,11 +49,11 @@ tradebot::Order & transformOrder(tradebot::Order & aOrder, double aPercentage)
     aOrder.reverseSide();
     if (aOrder.side == tradebot::Side::Buy)
     {
-        aOrder.fragmentsRate = (1.0 - aPercentage) * aOrder.executionRate;
+        aOrder.fragmentsRate = std::floor((1.0 - aPercentage) * aOrder.executionRate);
     }
     else
     {
-        aOrder.fragmentsRate = (1.0 + aPercentage) * aOrder.executionRate;
+        aOrder.fragmentsRate = std::ceil((1.0 + aPercentage) * aOrder.executionRate);
     }
     return aOrder;
 }
@@ -61,17 +64,31 @@ inline void NaiveBot::onCompletion(Json aReport)
     // Complete the order
     onPartialFill(aReport);
     // TODO sanity check regarding the report amount vs order amount vs fulfill amount?
-    if(trader.completeOrder(currentOrder->order, currentOrder->fulfillment))
-    {
-        // Place the next order
-        currentOrder.emplace(OrderTracker{
-                tradebot::Order{transformOrder(currentOrder->order, percentage)},
-                tradebot::Fulfillment{}
-        });
-        trader.placeNewOrder(tradebot::Execution::Limit, currentOrder->order);
-    }
-};
 
+    trader.completeOrder(currentOrder->order, currentOrder->fulfillment);
+
+    // Place the next order
+    currentOrder.emplace(OrderTracker{
+            tradebot::Order{transformOrder(currentOrder->order, percentage)},
+            tradebot::Fulfillment{}
+    });
+    trader.placeNewOrder(tradebot::Execution::Limit, currentOrder->order);
+}
+
+
+inline void NaiveBot::startEventLoop()
+{
+    // io_context run returns as soon as there is no work left.
+    // create a timer never expiring, so it keeps on waiting for events to post work.
+    boost::asio::deadline_timer runForever{mainLoop, boost::posix_time::pos_infin};
+    runForever.async_wait([](const boost::system::error_code & aErrorCode)
+        {
+            spdlog::error("Interruption of run forever timer: {}.", aErrorCode.message());
+        }
+    );
+
+    mainLoop.run();
+}
 
 inline void NaiveBot::run()
 {
@@ -95,10 +112,10 @@ inline void NaiveBot::run()
     };
 
     trader.exchange.openUserStream(onReport);
-    trader.placeNewOrder(tradebot::Execution::Market, currentOrder->order);
+    trader.fillNewMarketOrder(currentOrder->order);
 
-    mainLoop.run();
-};
+    startEventLoop();
+}
 
 
 } // namespace ad
