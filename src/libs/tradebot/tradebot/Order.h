@@ -86,7 +86,7 @@ struct FulfilledOrder : public Order
 {};
 
 
-FulfilledOrder fulfill(const Order & aOrder,
+FulfilledOrder fulfill(Order & aOrder,
                        const Json & aQueryStatus,
                        const Fulfillment & aFulfillment);
 

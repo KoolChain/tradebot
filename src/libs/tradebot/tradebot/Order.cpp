@@ -82,12 +82,10 @@ std::string Order::getIdentity() const
 }
 
 
-FulfilledOrder fulfill(const Order & aOrder,
+FulfilledOrder fulfill(Order & aOrder,
                        const Json & aQueryStatus,
                        const Fulfillment & aFulfillment)
 {
-    FulfilledOrder result{aOrder};
-
     // Sanity check
     {
         if (aOrder.amount != jstod(aQueryStatus["executedQty"]))
@@ -99,23 +97,23 @@ FulfilledOrder fulfill(const Order & aOrder,
         }
     }
 
-    result.status = Order::Status::Fulfilled;
+    aOrder.status = Order::Status::Fulfilled;
 
-    result.executionRate = jstod(aQueryStatus["price"]);
-    if (result.executionRate > 0.)
+    aOrder.executionRate = jstod(aQueryStatus["price"]);
+    if (aOrder.executionRate > 0.)
     {
-        if (result.executionRate != aFulfillment.price())
+        if (aOrder.executionRate != aFulfillment.price())
         {
             // Just warning, and use the order global price.
             spdlog::warn("The order global price {} is different from the price averaged from trades {}.",
-                         result.executionRate,
+                         aOrder.executionRate,
                          aFulfillment.price());
 
         }
     }
     else if (aFulfillment.price() > 0.)
     {
-        result.executionRate = aFulfillment.price();
+        aOrder.executionRate = aFulfillment.price();
     }
     else
     {
@@ -127,14 +125,14 @@ FulfilledOrder fulfill(const Order & aOrder,
     // In case of a market order, the "trade" response returns the fills (without any time attached)
     // and "transactTime". I suspect all fills are considered to have taken places at transaction time.
     // For other orders (limit), the times will be accumulated from the fills as they arrive on the websocket
-    result.fulfillTime = (aFulfillment.latestTrade ?
+    aOrder.fulfillTime = (aFulfillment.latestTrade ?
                           aFulfillment.latestTrade
                           : aQueryStatus.at("transactTime").get<MillisecondsSinceEpoch>());
 
-    result.commission = aFulfillment.fee;
-    result.commissionAsset = aFulfillment.feeAsset;
+    aOrder.commission = aFulfillment.fee;
+    aOrder.commissionAsset = aFulfillment.feeAsset;
 
-    return result;
+    return FulfilledOrder{aOrder};
 }
 
 
