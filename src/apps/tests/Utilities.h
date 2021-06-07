@@ -54,4 +54,17 @@ inline void revertOrder(T_exchange & aExchange, tradebot::Database & aDatabase, 
     }
 }
 
+
+#define REQUIRE_FILLED_MARKET_ORDER(order, orderSide, mTraderName, pair, averagePrice, timeBefore) \
+    REQUIRE(order.status == Order::Status::Fulfilled);  \
+    REQUIRE(order.traderName == (mTraderName));         \
+    REQUIRE(order.symbol() == pair.symbol());           \
+    REQUIRE(order.executionRate > averagePrice * 0.5);  \
+    REQUIRE(order.executionRate < averagePrice * 1.5);  \
+    REQUIRE(order.side == orderSide);                   \
+    REQUIRE(order.activationTime >= timeBefore);        \
+    REQUIRE(order.fulfillTime >= order.activationTime); \
+    REQUIRE(order.fulfillTime <= getTimestamp());       \
+    REQUIRE(order.exchangeId != -1);
+
 } // namespace ad

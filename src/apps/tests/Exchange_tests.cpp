@@ -143,19 +143,8 @@ SCENARIO("Placing orders", "[exchange]")
             }
 
             Order filled = *opt;
-            REQUIRE(filled.status == Order::Status::Fulfilled);
-            REQUIRE(filled.traderName == traderName);
-            REQUIRE(filled.symbol() == pair.symbol());
-            REQUIRE(filled.amount == immediateOrder.amount);
+            REQUIRE_FILLED_MARKET_ORDER(filled, Side::Buy, traderName, pair, averagePrice, before);
             REQUIRE(filled.fragmentsRate == immediateOrder.fragmentsRate);
-            REQUIRE(filled.executionRate > averagePrice * 0.5);
-            REQUIRE(filled.executionRate < averagePrice * 1.5);
-            REQUIRE(filled.side == Side::Buy);
-            REQUIRE(filled.activationTime >= before);
-            REQUIRE(filled.fulfillTime >= filled.activationTime);
-            REQUIRE(filled.fulfillTime <= getTimestamp());
-
-            REQUIRE(filled.exchangeId != -1);
 
             // "revert" the order the best we can (to conserve balance)
             {
