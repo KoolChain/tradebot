@@ -38,7 +38,7 @@ int main(int argc, char * argv[])
     // Hardcoded to testnet ATM
     if (argc != 6)
     {
-        std::cerr << "Usage: " << argv[0] << "secretsfile base quote amount percentage\n";
+        std::cerr << "Usage: " << argv[0] << " secretsfile base quote amount percentage\n";
         return EXIT_FAILURE;
     }
 

@@ -16,7 +16,7 @@ int main(int argc, char * argv[])
 {
     if (argc != 5)
     {
-        std::cerr << "Usage: " << argv[0] << "secretsfile order_exchange_id base quote\n";
+        std::cerr << "Usage: " << argv[0] << " secretsfile order_exchange_id base quote\n";
         return EXIT_FAILURE;
     }
 

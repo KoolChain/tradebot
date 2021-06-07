@@ -60,5 +60,22 @@ inline std::ostream & operator<<(std::ostream & aOut, const Side & aSide)
 }
 
 
+inline Side readSide(const std::string & aSide)
+{
+    if (aSide == "Sell" || aSide == "sell")
+    {
+        return Side::Sell;
+    }
+    else if (aSide == "Buy" || aSide == "buy")
+    {
+        return Side::Buy;
+    }
+    else
+    {
+        throw std::invalid_argument{"String '" + aSide + "' does not match to a Side value."};
+    }
+}
+
+
 } // namespace tradebot
 } // namespace ad
