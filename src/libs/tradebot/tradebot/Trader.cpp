@@ -94,22 +94,28 @@ bool Trader::cancel(Order & aOrder)
 }
 
 
-bool Trader::completeOrder(const Order & aOrder, const Fulfillment & aFulfillment)
+bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 {
-    Json orderJson = exchange.queryOrder(aOrder);
-    bool result = database.onFillOrder(fulfill(aOrder, orderJson, aFulfillment));
+    bool result = database.onFillOrder(aFulfilledOrder);
     if (result)
     {
         spdlog::info("Recorded completion of {} order '{}' for {} {} at a price of {} {}.",
-                boost::lexical_cast<std::string>(aOrder.side),
-                aOrder.getIdentity(),
-                aOrder.amount,
-                aOrder.base,
-                aOrder.executionRate,
-                aOrder.quote
+                boost::lexical_cast<std::string>(aFulfilledOrder.side),
+                aFulfilledOrder.getIdentity(),
+                aFulfilledOrder.amount,
+                aFulfilledOrder.base,
+                aFulfilledOrder.executionRate,
+                aFulfilledOrder.quote
         );
     }
     return result;
+}
+
+
+bool Trader::completeOrder(Order & aOrder, const Fulfillment & aFulfillment)
+{
+    Json orderJson = exchange.queryOrder(aOrder);
+    return completeFulfilledOrder(fulfill(aOrder, orderJson, aFulfillment));
 }
 
 
@@ -140,6 +146,20 @@ void Trader::cleanup()
     }
     // Cancel all other orders which are not marked fulfilled
     cancelLiveOrders();
+}
+
+
+FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
+{
+    // No need to go through the Inactive state
+    database.insert(aOrder.setStatus(Order::Status::Sending));
+
+    std::optional<FulfilledOrder> fulfilled;
+    while(!(fulfilled = exchange.fillMarketOrder(aOrder)).has_value())
+    {}
+
+    completeFulfilledOrder(*fulfilled);
+    return *fulfilled;
 }
 
 

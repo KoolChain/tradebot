@@ -73,7 +73,7 @@ binance::Response placeOrderImpl(const T_order & aBinanceOrder, Order & aOrder, 
 }
 
 // Place order returns 400 -1013 if the price is above the symbol limit.
-Order Exchange::placeOrder(Order & aOrder, Execution aExecution)
+Order & Exchange::placeOrder(Order & aOrder, Execution aExecution)
 {
     binance::Response response;
     switch(aExecution)

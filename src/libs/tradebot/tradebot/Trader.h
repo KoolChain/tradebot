@@ -14,6 +14,8 @@ struct Trader
 private:
     void sendExistingOrder(Execution aExecution, Order & aOrder);
 
+    bool completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder);
+
 public:
     void placeNewOrder(Execution aExecution, Order & aOrder);
 
@@ -36,12 +38,15 @@ public:
     ///
     /// \return `true` if the order was completed by this invocation, `false` otherwise.
     /// (It might be false if the order was already recorded as completed.)
-    bool completeOrder(const Order & aOrder, const Fulfillment & aFulfillment);
+    bool completeOrder(Order & aOrder, const Fulfillment & aFulfillment);
 
     //
     // High-level API
     //
     void cleanup();
+
+    /// \brief Will place new market orders until it fulfills (by oposition to expiring).
+    FulfilledOrder fillNewMarketOrder(Order & aOrder);
 
 
     std::string name;

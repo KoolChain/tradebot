@@ -1,6 +1,7 @@
 #include "catch.hpp"
 
 #include "testnet_secrets.h"
+#include "Utilities.h"
 
 #include <binance/Api.h>
 #include <binance/Time.h>
@@ -61,6 +62,74 @@ SCENARIO("Radical initialization clean-up", "[trader]")
                 std::vector<binance::ClientId> cancelled = binance.cancelAllOpenOrders(pair);
                 REQUIRE(cancelled.size() == 1);
                 REQUIRE(cancelled.at(0) == id);
+            }
+        }
+    }
+}
+
+
+SCENARIO("Orders completion.", "[trader]")
+{
+    const Pair pair{"BTC", "USDT"};
+
+    GIVEN("A trader instance.")
+    {
+        Trader trader{
+            "tradertest",
+            pair,
+            Database{":memory:"},
+            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+        };
+
+        auto & db = trader.database;
+        auto & exchange = trader.exchange;
+
+        // Sanity check
+        exchange.cancelAllOpenOrders(pair);
+        REQUIRE(exchange.listOpenOrders(pair).empty());
+
+        Decimal averagePrice = exchange.getCurrentAveragePrice(pair);
+
+        THEN("It can directly fulfill a new market order.")
+        {
+            auto before = getTimestamp();
+            Order order = makeOrder(trader.name, pair, Side::Buy);
+            FulfilledOrder filled = trader.fillNewMarketOrder(order);
+
+            REQUIRE(filled == order);
+            REQUIRE_FILLED_MARKET_ORDER(order, Side::Buy, trader.name, pair, averagePrice, before);
+
+            // Revert order
+            {
+                db.insert(order.reverseSide());
+                trader.fillNewMarketOrder(order);
+            }
+        }
+
+        GIVEN("An order filled on the exchange.")
+        {
+            auto before = getTimestamp();
+            Order order = makeOrder(trader.name, pair, Side::Sell);
+            trader.placeNewOrder(Execution::Market, order);
+            auto fulfilled = exchange.fillMarketOrder(order);
+            while(! (fulfilled = exchange.fillMarketOrder(order)))
+            {}
+
+            GIVEN("The corresponding fulfillment.")
+            {
+                Fulfillment fulfillment = exchange.accumulateTradesFor(order);
+
+                THEN("The trader can locally complete the order.")
+                {
+                    trader.completeOrder(order, fulfillment);
+                    REQUIRE_FILLED_MARKET_ORDER(order, Side::Sell, trader.name, pair, averagePrice, before);
+                }
+            }
+
+            // Revert order
+            {
+                db.insert(order.reverseSide());
+                trader.fillNewMarketOrder(order);
             }
         }
     }
