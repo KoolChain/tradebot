@@ -90,10 +90,20 @@ FulfilledOrder fulfill(Order & aOrder,
     {
         if (aOrder.amount != jstod(aQueryStatus["executedQty"]))
         {
-            spdlog::critical("Mismatched order amount and executed quantity: {} vs. {}.",
+            spdlog::critical("Mismatched order '{}' amount and executed quantity: {} vs. {}.",
+                             aOrder.getIdentity(),
                              aOrder.amount,
                              aQueryStatus["executedQty"]);
-            throw std::logic_error("Mismatched original amount and executed quantity on order");
+            throw std::logic_error("Mismatched original amount and executed quantity on order.");
+        }
+
+        if (aOrder.amount != aFulfillment.amountBase)
+        {
+            spdlog::critical("Mismatched order '{}' amount and accumulated fulfillment quantity: {} vs. {}.",
+                             aOrder.getIdentity(),
+                             aOrder.amount,
+                             aFulfillment.amountBase);
+            throw std::logic_error("Mismatched original amount and accumulated fulfillment quantity on order.");
         }
     }
 

@@ -63,7 +63,25 @@ inline void NaiveBot::onCompletion(Json aReport)
 {
     // Complete the order
     onPartialFill(aReport);
-    // TODO sanity check regarding the report amount vs order amount vs fulfill amount?
+
+    // 'z' is cumumative filled quantity
+    if (jstod(aReport.at("z")) != currentOrder->order.amount)
+    {
+        spdlog::critical("Order '{}' has missmatching amount vs. reported cumulative filled quantity: {} vs. {}.",
+            currentOrder->order.getIdentity(),
+            currentOrder->order.amount,
+            jstod(aReport.at("z")));
+        throw std::logic_error{"Mismatched order amount vs. reported cumulative filled quantity."};
+
+    }
+    if (currentOrder->fulfillment.amountBase != currentOrder->order.amount)
+    {
+        spdlog::critical("Order '{}' has missmatching amount vs. accumulated fulfillment: {} vs. {}.",
+            currentOrder->order.getIdentity(),
+            currentOrder->order.amount,
+            currentOrder->fulfillment.amountBase);
+        throw std::logic_error{"Mismatched order amount vs. accumulated fulfillment."};
+    }
 
     trader.completeOrder(currentOrder->order, currentOrder->fulfillment);
 
