@@ -38,6 +38,12 @@ struct NaiveBot
 
 inline void NaiveBot::onPartialFill(Json aReport)
 {
+    // Sanity check
+    if (aReport.at("c") != currentOrder->order.clientId())
+    {
+        throw std::logic_error{"Trying to accumulate trades of different orders."};
+    }
+
     currentOrder->fulfillment.accumulate(
             tradebot::Fulfillment::fromStreamJson(aReport),
             currentOrder->order);
@@ -115,17 +121,26 @@ inline void NaiveBot::run()
 
     auto onReport = [this](Json aExecutionReport)
     {
-        if (aExecutionReport.at("X") == "PARTIALLY_FILLED")
+        if (aExecutionReport.at("c") == currentOrder->order.clientId())
         {
-            boost::asio::post(mainLoop, std::bind(&NaiveBot::onPartialFill, this, aExecutionReport));
+            if (aExecutionReport.at("X") == "PARTIALLY_FILLED")
+            {
+                boost::asio::post(mainLoop, std::bind(&NaiveBot::onPartialFill, this, aExecutionReport));
+            }
+            else if (aExecutionReport.at("X") == "FILLED")
+            {
+                boost::asio::post(mainLoop, std::bind(&NaiveBot::onCompletion, this, aExecutionReport));
+            }
+            else if (aExecutionReport.at("X") == "NEW")
+            {
+                spdlog::info("Exchange accepted new order '{}'.", aExecutionReport.at("c"));
+            }
         }
-        else if (aExecutionReport.at("X") == "FILLED")
+        else
         {
-            boost::asio::post(mainLoop, std::bind(&NaiveBot::onCompletion, this, aExecutionReport));
-        }
-        else if (aExecutionReport.at("X") == "NEW")
-        {
-            spdlog::info("Exchange accepted new order '{}'.", aExecutionReport.at("c"));
+            spdlog::info("Saw a report for external order {} with status {}.",
+                    aExecutionReport.at("c"),
+                    aExecutionReport.at("X"));
         }
     };
 
