@@ -1,4 +1,4 @@
-project(placeorder VERSION "${CMAKE_PROJECT_VERSION}")
+project(binance-cli VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
 )
