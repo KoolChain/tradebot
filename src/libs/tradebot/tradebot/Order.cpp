@@ -2,7 +2,7 @@
 
 #include "Fulfillment.h"
 
-#include <spdlog/spdlog.h>
+#include "Logging.h"
 
 #include <ostream>
 #include <sstream>

@@ -1,6 +1,7 @@
 #include "Exchange.h"
+#include "Logging.h"
 
-#include <spdlog/spdlog.h>
+#include <binance/DecimalLog.h>
 
 #include <boost/asio/post.hpp>
 

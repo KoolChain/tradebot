@@ -5,6 +5,7 @@ set(${PROJECT_NAME}_HEADERS
     Exchange.h
     Fragment.h
     Fulfillment.h
+    Logging.h
     Order.h
     OrmAdaptors-impl.h
     Trader.h

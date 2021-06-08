@@ -2,7 +2,7 @@
 
 #include "Order.h"
 
-#include <spdlog/spdlog.h>
+#include "Logging.h"
 
 #include <experimental/propagate_const>
 

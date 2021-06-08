@@ -33,7 +33,7 @@ SCENARIO("Placing orders", "[exchange]")
 
         WHEN("A buy market order is placed.")
         {
-            Order immediateOrder = makeOrder(traderName, pair, Side::Buy, std::floor(averagePrice));
+            Order immediateOrder = makeOrder(traderName, pair, Side::Buy, floor(averagePrice));
             db.insert(immediateOrder);
             binance.placeOrder(immediateOrder, Execution::Market);
 
@@ -85,7 +85,7 @@ SCENARIO("Placing orders", "[exchange]")
         WHEN("A sell limit order is placed.")
         {
             // we want the sell to be instant, so we discount the average price
-            Decimal price = std::floor(0.8*averagePrice);
+            Decimal price = floor(0.8*averagePrice);
             Order immediateOrder = makeOrder(traderName, pair, Side::Sell, price);
             db.insert(immediateOrder);
             binance.placeOrder(immediateOrder, Execution::Limit);
@@ -215,7 +215,7 @@ SCENARIO("Orders cancellation", "[exchange]")
                 pair.base,
                 pair.quote,
                 0.01,
-                std::floor(averagePrice*4),
+                floor(averagePrice*4),
                 Side::Sell,
                 Order::FulfillResponse::SmallSpread,
             };
@@ -261,7 +261,7 @@ SCENARIO("Orders cancellation", "[exchange]")
                 pair.base,
                 pair.quote,
                 0.001,
-                std::floor(averagePrice),
+                floor(averagePrice),
                 Side::Sell,
                 Order::FulfillResponse::SmallSpread,
             };

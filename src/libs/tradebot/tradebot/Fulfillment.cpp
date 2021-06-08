@@ -1,8 +1,7 @@
 #include "Fulfillment.h"
 
+#include "Logging.h"
 #include "Order.h"
-
-#include <spdlog/spdlog.h>
 
 
 namespace ad {
