@@ -19,16 +19,22 @@ struct OrderTracker
     tradebot::Fulfillment fulfillment;
 };
 
+
+static std::chrono::minutes gMaxFulfillPeriod{5};
+
 struct NaiveBot
 {
     tradebot::Trader trader;
     std::optional<OrderTracker> currentOrder;
     double percentage;
     boost::asio::io_context mainLoop;
+    boost::asio::steady_timer orderTimer{mainLoop, gMaxFulfillPeriod};
 
     void onPartialFill(Json aReport);
 
     void onCompletion(Json aReport);
+
+    void onOrderTimer(const boost::system::error_code & aErrorCode);
 
     void startEventLoop();
 
@@ -97,6 +103,38 @@ inline void NaiveBot::onCompletion(Json aReport)
             tradebot::Fulfillment{}
     });
     trader.placeNewOrder(tradebot::Execution::Limit, currentOrder->order);
+    orderTimer.expires_after(gMaxFulfillPeriod);
+}
+
+
+inline void NaiveBot::onOrderTimer(const boost::system::error_code & aErrorCode)
+{
+    if (aErrorCode == boost::asio::error::operation_aborted)
+    {
+        // This is normal when the timer expiration is explicitly reset after placing an order.
+        spdlog::trace("Order timer reset.");
+    }
+    else if (aErrorCode)
+    {
+        spdlog::error("Interruption of order timer: {}.", aErrorCode.message());
+    }
+    else
+    {
+        spdlog::trace("Order timer event.");
+
+        // Might still be a race with the exchange
+        if (currentOrder->fulfillment.tradeCount == 0)
+        {
+            trader.cancel(currentOrder->order);
+            trader.fillNewMarketOrder(currentOrder->order);
+        }
+        else
+        {
+            spdlog::warn("Order timer fired, but there are already trades in the fulfillment. Keep on waiting.");
+        }
+    }
+
+    orderTimer.async_wait(std::bind(&NaiveBot::onOrderTimer, this, std::placeholders::_1));
 }
 
 
@@ -113,6 +151,7 @@ inline void NaiveBot::startEventLoop()
 
     mainLoop.run();
 }
+
 
 inline void NaiveBot::run()
 {
@@ -146,6 +185,8 @@ inline void NaiveBot::run()
 
     trader.exchange.openUserStream(onReport);
     trader.fillNewMarketOrder(currentOrder->order);
+
+    orderTimer.async_wait(std::bind(&NaiveBot::onOrderTimer, this, std::placeholders::_1));
 
     startEventLoop();
 }
