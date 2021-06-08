@@ -141,6 +141,12 @@ inline void NaiveBot::onOrderTimer(const boost::system::error_code & aErrorCode)
         {
             spdlog::warn("Order timer fired, but there are already trades in the fulfillment. Keep on waiting.");
         }
+
+        // It is required to set expiration in the future before calling wait, otherwise the
+        // callback would be immediatly queued again.
+        // Note: It does not really matter which duration is put here in case of normal timer event:
+        // the market order completion report will reset the timer.
+        orderTimer.expires_after(gMaxFulfillPeriod);
     }
 
     orderTimer.async_wait(std::bind(&NaiveBot::onOrderTimer, this, std::placeholders::_1));
