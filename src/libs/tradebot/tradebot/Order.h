@@ -76,6 +76,10 @@ struct Order
         return *this;
     }
 
+    // \brief Only keeps the client controlled values, effectively preparing a new inactive order
+    // from the client values.
+    Order & resetAsInactive();
+
     std::string getIdentity() const;
 };
 

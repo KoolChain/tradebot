@@ -22,12 +22,27 @@ const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
     throw std::logic_error("Unhandled web API response."); \
 }
 
+
+#define assertExchangeIdConsistency(dOrder, dJson) \
+{                                                                               \
+    if ((dOrder).exchangeId != -1 /* -1 could happend for a 'Sending' order */  \
+        && (dOrder).exchangeId != (dJson).at("orderId"))                        \
+    {                                                                           \
+        spdlog::critical("Order instance '{}' does not match the id returned by the exchange: {}.", \
+                         (dOrder).getIdentity(),                                \
+                         (dJson)["orderId"].get<long>());                    \
+        throw std::logic_error("Recorded order exchange id does not match with the id returned by the exchange.");  \
+    }                                                                           \
+}
+
+
 std::string Exchange::getOrderStatus(const Order & aOrder)
 {
     binance::Response response = restApi.queryOrder(aOrder.symbol(), aOrder.clientId());
 
     if (response.status == 200)
     {
+        assertExchangeIdConsistency(aOrder, (*response.json));
         return (*response.json)["status"];
     }
     else if ((response.status == 400)
@@ -241,6 +256,7 @@ Json Exchange::queryOrder(const Order & aOrder)
     binance::Response response = restApi.queryOrder(aOrder.symbol(), aOrder.clientId());
     if (response.status == 200)
     {
+        assertExchangeIdConsistency(aOrder, (*response.json));
         return *response.json;
     }
     else

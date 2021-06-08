@@ -19,8 +19,8 @@ void Trader::sendExistingOrder(Execution aExecution, Order & aOrder)
 
 void Trader::placeNewOrder(Execution aExecution, Order & aOrder)
 {
-    aOrder.status = Order::Status::Inactive;
-    database.insert(aOrder);
+    // Insert a new order in database, after reseting all "non-client" data members at defaults.
+    database.insert(aOrder.resetAsInactive());
     sendExistingOrder(aExecution, aOrder);
 }
 
@@ -44,7 +44,22 @@ bool Trader::cancel(Order & aOrder)
     database.update(aOrder.setStatus(Order::Status::Cancelling));
     bool result = exchange.cancelOrder(aOrder);
 
-    if (const std::string status = exchange.getOrderStatus(aOrder); status != "FILLED")
+    const std::string status = exchange.getOrderStatus(aOrder);
+    spdlog::debug("Order '{}' is being cancelled, current status on the exchange: {}.",
+            aOrder.getIdentity(),
+            status);
+
+    // The order was received by the exchange, but the exchange ID was not recorded back
+    // (i.e. a 'Sending' order).
+    // Note that all orders are marked 'Cancelling' from this point, don't assert it to be 'Sending'.
+    if (status != "NOTEXISTING" && aOrder.exchangeId == -1)
+    {
+        aOrder.exchangeId = exchange.queryOrder(aOrder).at("orderId");
+        database.update(aOrder);
+        spdlog::debug("Filled-in exchange id for order '{}'.", aOrder.getIdentity());
+    }
+
+    if (status != "FILLED")
     {
         // TODO Handle partially filled orders properly instead of throwing
         if (status != "NOTEXISTING")
@@ -152,7 +167,7 @@ void Trader::cleanup()
 FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
 {
     // No need to go through the Inactive state
-    database.insert(aOrder.setStatus(Order::Status::Sending));
+    database.insert(aOrder.resetAsInactive().setStatus(Order::Status::Sending));
 
     std::optional<FulfilledOrder> fulfilled;
     while(!(fulfilled = exchange.fillMarketOrder(aOrder)).has_value())

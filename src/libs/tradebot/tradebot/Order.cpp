@@ -71,6 +71,21 @@ std::ostream & operator<<(std::ostream & aOut, const Order & aRhs)
 }
 
 
+Order & Order::resetAsInactive()
+{
+    activationTime = 0;
+    status = Status::Inactive;
+    fulfillTime = 0;
+    executionRate = 0;
+    commission = 0;
+    commissionAsset.clear();
+    takenHome = 0;
+    exchangeId = -1;
+    id = -1;
+
+    return *this;
+}
+
 std::string Order::getIdentity() const
 {
     std::ostringstream oss;
