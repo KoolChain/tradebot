@@ -440,12 +440,15 @@ Exchange::Stream::~Stream()
             intendedClose = true;
         });
 
-    if (restApi.closeSpotListenKey(listenKey).status != 200)
-    {
-        spdlog::critical("Cannot close the current spot listen key, cannot throw in a destructor.");
-        // See note below.
-        //websocket.async_close();
-    }
+    // IMPORTANT: It is likely better to **never** close a listen key.
+    // The listen key seems to be account-wide, being only one installed at any given time.
+    // So, one application closing the listen key would close it for any other application also using it.
+    //if (restApi.closeSpotListenKey(listenKey).status != 200)
+    //{
+    //    spdlog::critical("Cannot close the current spot listen key, cannot throw in a destructor.");
+    //    // See note below.
+    //    //websocket.async_close();
+    //}
     // The close above should result in the websocket closing, so the thread terminating.
     // NOTE: I expected that closing the listen key would have the server close the websocket.
     //       Apparently this is not the case, so close it manually anyway.
