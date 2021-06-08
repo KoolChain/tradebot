@@ -47,6 +47,9 @@ inline void NaiveBot::onPartialFill(Json aReport)
     // Sanity check
     if (aReport.at("c") != currentOrder->order.clientId())
     {
+        spdlog::critical("Trying to accumulate a trade report for order {} with order '{}'.",
+                         aReport.at("c"),
+                         currentOrder->order.getIdentity());
         throw std::logic_error{"Trying to accumulate trades of different orders."};
     }
 
@@ -73,10 +76,14 @@ tradebot::Order & transformOrder(tradebot::Order & aOrder, double aPercentage)
 
 inline void NaiveBot::onCompletion(Json aReport)
 {
+    spdlog::trace("Completion report handler for order {}, current order: '{}'.",
+                  aReport.at("c"),
+                  currentOrder->order.getIdentity());
+
     // Complete the order
     onPartialFill(aReport);
 
-    // 'z' is cumumative filled quantity
+    // 'z' is cumulative filled quantity
     if (jstod(aReport.at("z")) != currentOrder->order.amount)
     {
         spdlog::critical("Order '{}' has missmatching amount vs. reported cumulative filled quantity: {} vs. {}.",
@@ -160,6 +167,8 @@ inline void NaiveBot::run()
 
     auto onReport = [this](Json aExecutionReport)
     {
+        // TODO should be done in each posted callback, otherwise the check occurs in a different thread
+        // leading to potential races.
         if (aExecutionReport.at("c") == currentOrder->order.clientId())
         {
             if (aExecutionReport.at("X") == "PARTIALLY_FILLED")

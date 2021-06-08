@@ -28,6 +28,7 @@ void configureLogging()
 
     auto logger = std::make_shared<spdlog::logger>(spdlog::logger{"multi_sink", {consoleSink, fileSink}});
     logger->set_level(spdlog::level::trace);
+    logger->set_pattern("[%t][%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
 
     spdlog::set_default_logger(logger);
 }

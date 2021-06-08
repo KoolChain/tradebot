@@ -290,10 +290,12 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
             {
                 Fulfillment fill = Fulfillment::fromTradeJson(trade);
                 result.accumulate(fill, aOrder);
-                spdlog::trace("Trade {} for {} {} matching order '{}'.",
+                spdlog::trace("Trade {} for {} {} / {} {} matching order '{}'.",
                               trade.at("id").get<long>(),
                               fill.amountBase,
                               aOrder.base,
+                              fill.amountQuote,
+                              aOrder.quote,
                               aOrder.getIdentity());
             }
             lastTradeId = trade.at("id");
