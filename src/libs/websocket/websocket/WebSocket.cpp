@@ -268,6 +268,7 @@ void WebSocket::impl::async_close()
 {
     if (! mClosing.exchange(true))
     {
+        spdlog::trace("Request for websocket to close.");
         mStream.async_close(
             beast::websocket::close_code::normal,
             std::bind(&impl::onClose, this, std::placeholders::_1));
@@ -301,6 +302,7 @@ void WebSocket::run(const std::string & aHost, const std::string & aPort, const 
 {
     mImpl->run(aHost, aPort, aTarget);
     mImpl->mIoc.run();
+    spdlog::trace("Websocket run completed.");
 }
 
 

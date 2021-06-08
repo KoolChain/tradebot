@@ -47,12 +47,13 @@ int main(int argc, char * argv[])
         tradebot::Order::FulfillResponse::SmallSpread,
     };
 
-    spdlog::info("Reconstructed order for {} {} at {} {}. Client order id: '{}', executed quantity: {}",
+    spdlog::info("Reconstructed order for {} {} at {} {}. Client order id: '{}', exchange status: {}, executed quantity: {}",
             epochOrder.amount,
             epochOrder.base,
             epochOrder.executionRate,
             epochOrder.quote,
             orderJson.at("clientOrderId"),
+            orderJson.at("status"),
             orderJson.at("executedQty")
     );
 

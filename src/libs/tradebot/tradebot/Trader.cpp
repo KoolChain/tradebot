@@ -78,8 +78,8 @@ bool Trader::cancel(Order & aOrder)
         Decimal executed = jstod(exchange.queryOrder(aOrder)["executedQty"]);
         if (executed != aOrder.amount)
         {
-            spdlog::critical("Order {} was marked 'FILLED' but partially filled for {}/{} {}.",
-                             static_cast<const std:: string &>(aOrder.clientId()),
+            spdlog::critical("Order '{}' was marked 'FILLED' but partially filled for {}/{} {}.",
+                             aOrder.getIdentity(),
                              executed,
                              aOrder.amount,
                              aOrder.base);
