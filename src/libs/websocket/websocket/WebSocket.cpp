@@ -59,7 +59,11 @@ void logFailure(beast::error_code aErrorCode, const std::string & aWhat)
            //|| aErrorCode == ::net::ssl::error::stream_truncated
           ))
     {
-        spdlog::error("{}: {}", aWhat, aErrorCode.message());
+        spdlog::error("{} error: {}", aWhat, aErrorCode.message());
+    }
+    else
+    {
+        spdlog::trace("{} operation aborted: {}.", aWhat, aErrorCode.message());
     }
 }
 
@@ -157,7 +161,7 @@ void WebSocket::impl::onHandshake(beast::error_code aErrorCode)
 {
     if(aErrorCode)
     {
-        logFailure(aErrorCode, "Websocket handshake error");
+        logFailure(aErrorCode, "Websocket handshake");
     }
     else
     {
@@ -181,7 +185,7 @@ void WebSocket::impl::onClose(beast::error_code aErrorCode)
 {
     if(aErrorCode)
     {
-        logFailure(aErrorCode, "Websocket close error");
+        logFailure(aErrorCode, "Websocket close");
     }
     else
     {
@@ -198,7 +202,7 @@ void WebSocket::impl::onRead(beast::error_code aErrorCode, std::size_t aBytesTra
 {
     if(aErrorCode)
     {
-        logFailure(aErrorCode, "Websocket read error");
+        logFailure(aErrorCode, "Websocket read");
     }
     else
     {
@@ -225,7 +229,7 @@ void WebSocket::impl::onWrite(beast::error_code aErrorCode, std::size_t aBytesTr
 {
     if(aErrorCode)
     {
-        logFailure(aErrorCode, "Websocket write error");
+        logFailure(aErrorCode, "Websocket write");
     }
     else
     {
