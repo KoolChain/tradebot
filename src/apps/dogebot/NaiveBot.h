@@ -20,7 +20,7 @@ struct OrderTracker
 };
 
 
-static std::chrono::minutes gMaxFulfillPeriod{5};
+static std::chrono::minutes gMaxFulfillPeriod{3};
 
 struct NaiveBot
 {
@@ -33,6 +33,8 @@ struct NaiveBot
     void onPartialFill(Json aReport);
 
     void onCompletion(Json aReport);
+
+    void onReport(Json aExecutionReport);
 
     void onOrderTimer(const boost::system::error_code & aErrorCode);
 
@@ -145,6 +147,32 @@ inline void NaiveBot::onOrderTimer(const boost::system::error_code & aErrorCode)
 }
 
 
+inline void NaiveBot::onReport(Json aExecutionReport)
+{
+    if (aExecutionReport.at("c") == currentOrder->order.clientId())
+    {
+        if (aExecutionReport.at("X") == "PARTIALLY_FILLED")
+        {
+            onPartialFill(aExecutionReport);
+        }
+        else if (aExecutionReport.at("X") == "FILLED")
+        {
+            onCompletion(aExecutionReport);
+        }
+        else if (aExecutionReport.at("X") == "NEW")
+        {
+            spdlog::info("Exchange accepted new order '{}'.", aExecutionReport.at("c"));
+        }
+    }
+    else
+    {
+        spdlog::info("Saw a report for external order {} with status {}.",
+                aExecutionReport.at("c"),
+                aExecutionReport.at("X"));
+    }
+}
+
+
 inline void NaiveBot::startEventLoop()
 {
     // io_context run returns as soon as there is no work left.
@@ -165,34 +193,10 @@ inline void NaiveBot::run()
     // Initial cleanup
     trader.cleanup();
 
-    auto onReport = [this](Json aExecutionReport)
+    trader.exchange.openUserStream([this](Json aExecutionReport)
     {
-        // TODO should be done in each posted callback, otherwise the check occurs in a different thread
-        // leading to potential races.
-        if (aExecutionReport.at("c") == currentOrder->order.clientId())
-        {
-            if (aExecutionReport.at("X") == "PARTIALLY_FILLED")
-            {
-                boost::asio::post(mainLoop, std::bind(&NaiveBot::onPartialFill, this, aExecutionReport));
-            }
-            else if (aExecutionReport.at("X") == "FILLED")
-            {
-                boost::asio::post(mainLoop, std::bind(&NaiveBot::onCompletion, this, aExecutionReport));
-            }
-            else if (aExecutionReport.at("X") == "NEW")
-            {
-                spdlog::info("Exchange accepted new order '{}'.", aExecutionReport.at("c"));
-            }
-        }
-        else
-        {
-            spdlog::info("Saw a report for external order {} with status {}.",
-                    aExecutionReport.at("c"),
-                    aExecutionReport.at("X"));
-        }
-    };
-
-    trader.exchange.openUserStream(onReport);
+        boost::asio::post(mainLoop, std::bind(&NaiveBot::onReport, this, aExecutionReport));
+    });
     trader.fillNewMarketOrder(currentOrder->order);
 
     orderTimer.async_wait(std::bind(&NaiveBot::onOrderTimer, this, std::placeholders::_1));
