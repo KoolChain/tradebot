@@ -62,10 +62,12 @@ struct Exchange
         // so we refer back into the parent instance.
         binance::Api & restApi;
         std::string listenKey;
-        net::WebSocket websocket;
+        boost::asio::io_context listenKeyIoContext;
         boost::asio::steady_timer keepListenKeyAlive;
+        std::thread listenKeyThread;
+        net::WebSocket websocket;
         bool intendedClose{false};
-        std::thread thread;
+        std::thread websocketThread;
     };
 
     /// \return "NOTEXISTING" if the exchange engine does not know the order, otherwise returns

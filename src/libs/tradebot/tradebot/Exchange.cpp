@@ -12,7 +12,8 @@ namespace ad {
 namespace tradebot {
 
 
-const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
+//const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
+const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{10};
 // Good for testing
 //const std::chrono::milliseconds LISTEN_KEY_REFRESH_PERIOD{100};
 
@@ -431,7 +432,7 @@ void onStreamReceive(const std::string & aMessage, Exchange::UserStreamCallback 
 }
 
 
-// IMPORTANT: Will execute the HTTP PUT query on the websocket io_context thread
+// IMPORTANT: Will execute the HTTP PUT query on the timer io_context thread
 // So it introduces concurrent execution of http requests
 // (potentially complicating proper implementation of "quotas observation and waiting periods").
 // TODO potentially have it post the request to be executed on the main thread.
@@ -469,6 +470,16 @@ Exchange::Stream::Stream(binance::Api & aRestApi,
                          Exchange::UserStreamCallback aOnExecutionReport) :
     restApi{aRestApi},
     listenKey{restApi.createSpotListenKey().json->at("listenKey")},
+    keepListenKeyAlive{
+        listenKeyIoContext,
+        LISTEN_KEY_REFRESH_PERIOD
+    },
+    listenKeyThread{
+        [this]()
+        {
+            listenKeyIoContext.run();
+        }
+    },
     websocket{
         // On connect
         [this]()
@@ -492,20 +503,18 @@ Exchange::Stream::Stream(binance::Api & aRestApi,
             onStreamReceive(aMessage, onReport);
         }
     },
-    keepListenKeyAlive{
-        websocket.exposeContextDetail(),
-        LISTEN_KEY_REFRESH_PERIOD},
-    thread{
+    websocketThread{
         [this]()
         {
             websocket.run(restApi.getEndpoints().websocketHost,
                           restApi.getEndpoints().websocketPort,
                           "/ws/" + listenKey);
 
-            if (! intendedClose)
-            {
-                spdlog::warn("User data stream websocket closed without application consent.");
-            }
+            // It is now racing with the listen key thread...
+            //if (! intendedClose)
+            //{
+            //    spdlog::warn("User data stream websocket closed without application consent.");
+            //}
 
             {
                 std::scoped_lock<std::mutex> lock{mutex};
@@ -545,11 +554,13 @@ Exchange::Stream::~Stream()
     //    // See note below.
     //    //websocket.async_close();
     //}
+
+    listenKeyThread.join();
     // The close above should result in the websocket closing, so the thread terminating.
     // NOTE: I expected that closing the listen key would have the server close the websocket.
     //       Apparently this is not the case, so close it manually anyway.
     websocket.async_close();
-    thread.join();
+    websocketThread.join();
     spdlog::debug("User stream closed successfully.");
 }
 
