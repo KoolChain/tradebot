@@ -47,7 +47,7 @@ int main(int argc, char * argv[])
 
     std::string secretsfile{argv[1]};
     tradebot::Pair pair{argv[2], argv[3]};
-    Decimal amount{std::stod(argv[4])};
+    Decimal amount{argv[4]};
     double percentage{std::stod(argv[5])};
 
     if (percentage < 0. || percentage > 1.)

@@ -16,7 +16,7 @@ using Json = nlohmann::json;
 /// removing the ambiguity of using std::stod directly.
 inline Decimal jstod(const std::string & aString)
 {
-    return Decimal(aString);
+    return Decimal{aString};
 };
 
 } // namespace ad

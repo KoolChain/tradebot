@@ -73,7 +73,7 @@ int main(int argc, char * argv[])
 
         tradebot::Pair pair{argv[3], argv[4]};
         tradebot::Side side{tradebot::readSide(argv[2])};
-        Decimal amount = std::stod(argv[5]);
+        Decimal amount{argv[5]};
 
         spdlog::info("Placing market {} order for {} {}.",
                 boost::lexical_cast<std::string>(side),

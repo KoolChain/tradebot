@@ -63,7 +63,7 @@ Decimal Exchange::getCurrentAveragePrice(const Pair & aPair)
     if (response.status == 200)
     {
         const Json & json = *response.json;
-        return std::stod(json["price"].get<std::string>());
+        return jstod(json["price"]);
     }
     else
     {
@@ -310,7 +310,7 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
     {
         unhandledResponse(response, "accumulates order trades");
     }
-    else if (result.amountBase != aOrder.amount)
+    else if (! isEqual(result.amountBase, aOrder.amount))
     {
         spdlog::critical("Accumulated trades for order '{}' amount to {} {}, but the order was for {} {}.",
                          aOrder.getIdentity(),

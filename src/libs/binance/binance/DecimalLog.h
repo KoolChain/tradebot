@@ -28,8 +28,11 @@ struct fmt::formatter<ad::Decimal>
   auto format(const ad::Decimal & aDecimal, FormatContext& ctx)
   {
     std::ostringstream os;
-    auto previous = os.precision(std::numeric_limits<ad::Decimal>::digits10);
-    os << std::showpoint << std::fixed << aDecimal;
+    // This is used in logs, we need all the meaningfull digits to actually understand the problem.
+    auto previous = os.precision(std::numeric_limits<ad::Decimal>::max_digits10);
+    // showpoint or fixed would also display trailing zeros.
+    //os << std::showpoint << std::fixed << aDecimal;
+    os << aDecimal;
     os.precision(previous);
 
     // ctx.out() is an output iterator to write to.

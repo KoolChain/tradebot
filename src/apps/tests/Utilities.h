@@ -11,8 +11,8 @@ namespace ad {
 inline tradebot::Order makeOrder(const std::string aTraderName,
                                  const tradebot::Pair & aPair,
                                  tradebot::Side aSide,
-                                 Decimal aPrice = 0.,
-                                 Decimal aAmount = 0.001)
+                                 Decimal aPrice = Decimal{"0"},
+                                 Decimal aAmount = Decimal{"0.001"})
 {
     return tradebot::Order{
         aTraderName,
