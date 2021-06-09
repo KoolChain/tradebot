@@ -11,7 +11,7 @@ using namespace ad;
 
 SCENARIO("Decimal precision tests.", "[decimal][math]")
 {
-    GIVEN("Two decimal values.")
+    GIVEN("Two decimal values instantiated from lesser precision strings.")
     {
         Decimal a{"0.000991"};
         Decimal b{"0.000009"};
@@ -26,16 +26,14 @@ SCENARIO("Decimal precision tests.", "[decimal][math]")
         }
     }
 
-    GIVEN("Decimal values with a precision of 8.")
+    GIVEN("A decimal instantiated from floating point (with inexact representation).")
     {
-        Decimal a = 0.00099103;
-        Decimal b = 0.00000897;
+        Decimal fromFloating{0.001};
 
-        THEN("Their addition is exact.")
+        THEN("Its string output is truncated to the correct precision.")
         {
-            Decimal expected = 0.001;
-
-            REQUIRE(a + b == expected);
+            CHECK(to_str(fromFloating) == "0.001");
+            CHECK(Decimal{to_str(fromFloating)} == Decimal{"0.001"});
         }
     }
 }
