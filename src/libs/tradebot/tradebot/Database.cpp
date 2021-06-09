@@ -192,6 +192,19 @@ void Database::assignAvailableFragments(const Order & aOrder)
 }
 
 
+Decimal Database::sumAllFragments()
+{
+    using namespace sqlite_orm;
+    std::unique_ptr<Decimal> result = mImpl->storage.sum(&Fragment::amount);
+    if (!result)
+    {
+        spdlog::critical("Cannot sum all fragments.");
+        throw std::logic_error("Unable to sum all fragments.");
+    }
+    return fromFP(*result);
+}
+
+
 Decimal Database::sumFragmentsOfOrder(const Order & aOrder)
 {
     using namespace sqlite_orm;
@@ -200,13 +213,12 @@ Decimal Database::sumFragmentsOfOrder(const Order & aOrder)
                 where(is_equal(&Fragment::composedOrder, aOrder.id)));
     if (!result)
     {
-        spdlog::critical("Cannot sum fragments for order {}", aOrder.id);
+        spdlog::critical("Cannot sum fragments for order {}.", aOrder.id);
         throw std::logic_error("Unable to sum fragments.");
     }
-    return *result;
-
-    int id = 1;
-    auto & storage = mImpl->storage;
+    // Note: Surprisingly, calling sum on the amount Decimal field does not go through
+    // row_extractor<ad::Decimal>. So we fix for exact precision explicitly.
+    return fromFP(*result);
 }
 
 
@@ -256,7 +268,7 @@ Order Database::prepareOrder(const std::string & aTraderName,
         aTraderName,
         aPair.base,
         aPair.quote,
-        0, // amount
+        Decimal{"0"}, // amount
         aFragmentsRate,
         aSide,
         aFulfillResponse

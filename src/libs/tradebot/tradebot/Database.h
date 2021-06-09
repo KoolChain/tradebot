@@ -56,6 +56,11 @@ public:
 
     void assignAvailableFragments(const Order & aOrder);
 
+    /// \brief Sum the amounts of all fragments in the database.
+    ///
+    /// Notably usefull for tests.
+    Decimal sumAllFragments();
+
     Decimal sumFragmentsOfOrder(const Order & aOrder);
 
     std::vector<Order> selectOrders(const Pair & aPair, Order::Status aStatus);
