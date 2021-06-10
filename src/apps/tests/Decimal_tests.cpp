@@ -77,6 +77,14 @@ SCENARIO("Decimal precision tests.", "[decimal][math]")
         }
     }
 
+    GIVEN("A division with a result extactly representable.")
+    {
+        THEN("The result is exact.")
+        {
+            CHECK(Decimal{"123.6708"} / Decimal{"0.0033"} == Decimal{"37476"});
+            CHECK(Decimal{"123.357234"} / Decimal{"0.0033"} == Decimal{"37380.98"});
+        }
+    }
     // Not sure this is relevant, or how this should really be handled at all
     //GIVEN("Two decimal values instantiated from more precise strings.")
     //{

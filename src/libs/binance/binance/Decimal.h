@@ -6,16 +6,17 @@
 
 namespace ad {
 
-constexpr std::size_t DECIMALS = 8;
+constexpr std::size_t EXCHANGE_DECIMALS = 8;
+constexpr std::size_t PRECISION_DECIMALS = EXCHANGE_DECIMALS;
 
-using Decimal = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<DECIMALS>>;
+using Decimal = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<PRECISION_DECIMALS>>;
 
 
 template <class T_floating>
 Decimal fromFP(T_floating aFloating)
 {
     std::ostringstream oss;
-    oss.precision(DECIMALS);
+    oss.precision(EXCHANGE_DECIMALS);
     oss << std::fixed << aFloating;
     return Decimal{oss.str()};
 }
@@ -29,7 +30,7 @@ inline std::string to_str(Decimal aDecimal)
     // If a decimal is constructed from a string of <= precision, this is probably useless.
     // Yet, when constructed from a double, the approximation after the 8th appear in the string
     // when the "digits" argument is not provided.
-    return aDecimal.str(DECIMALS, std::ios_base::fixed);
+    return aDecimal.str(EXCHANGE_DECIMALS, std::ios_base::fixed);
 }
 
 
