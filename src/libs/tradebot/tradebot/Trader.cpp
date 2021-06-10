@@ -44,17 +44,18 @@ bool Trader::cancel(Order & aOrder)
     database.update(aOrder.setStatus(Order::Status::Cancelling));
     bool result = exchange.cancelOrder(aOrder);
 
-    const std::string status = exchange.getOrderStatus(aOrder);
+    std::optional<Json> orderJson = exchange.tryQueryOrder(aOrder);
+    const std::string status = (orderJson ? orderJson->at("status") : "NOTEXISTING");
     spdlog::debug("Order '{}' is being cancelled, current status on the exchange: {}.",
-            aOrder.getIdentity(),
-            status);
+                  aOrder.getIdentity(),
+                  status);
 
     // The order was received by the exchange, but the exchange ID was not recorded back
     // (i.e. a 'Sending' order).
     // Note that all orders are marked 'Cancelling' from this point, don't assert it to be 'Sending'.
-    if (status != "NOTEXISTING" && aOrder.exchangeId == -1)
+    if (orderJson && aOrder.exchangeId == -1)
     {
-        aOrder.exchangeId = exchange.queryOrder(aOrder).at("orderId");
+        aOrder.exchangeId = orderJson->at("orderId");
         database.update(aOrder);
         spdlog::debug("Filled-in exchange id for order '{}'.", aOrder.getIdentity());
     }
@@ -64,7 +65,7 @@ bool Trader::cancel(Order & aOrder)
         // TODO Handle partially filled orders properly instead of throwing
         if (status != "NOTEXISTING")
         {
-            Decimal partialFill = jstod(exchange.queryOrder(aOrder)["executedQty"]);
+            Decimal partialFill = jstod(orderJson->at("executedQty"));
             if (partialFill != 0.)
             {
                 spdlog::critical("Order {} was cancelled but partially filled for {}/{} {}.",
@@ -90,7 +91,7 @@ bool Trader::cancel(Order & aOrder)
         // I exected that it would not be possible to have partial fills when status is "FILLED"
         // but I think I observed the opposite during some runs of the tests.
 
-        Decimal executed = jstod(exchange.queryOrder(aOrder)["executedQty"]);
+        Decimal executed = jstod(orderJson->at("executedQty"));
         if (executed != aOrder.amount)
         {
             spdlog::critical("Order '{}' was marked 'FILLED' but partially filled for {}/{} {}.",
@@ -129,8 +130,18 @@ bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 
 bool Trader::completeOrder(Order & aOrder, const Fulfillment & aFulfillment)
 {
-    Json orderJson = exchange.queryOrder(aOrder);
-    return completeFulfilledOrder(fulfill(aOrder, orderJson, aFulfillment));
+    std::optional<Json> orderJson = exchange.tryQueryOrder(aOrder);
+    if (orderJson)
+    {
+        return completeFulfilledOrder(fulfill(aOrder, *orderJson, aFulfillment));
+    }
+    else
+    {
+        spdlog::critical("Unable to complete order '{}', as it cannot be queried on the exchange.",
+                         aOrder.getIdentity());
+        throw std::logic_error("Order could not be queried on the exchange,"
+                               " it cannot be completed.");
+    }
 }
 
 

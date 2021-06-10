@@ -25,6 +25,15 @@ inline tradebot::Order makeOrder(const std::string aTraderName,
     };
 }
 
+inline tradebot::Order makeImpossibleOrder(tradebot::Exchange & aExchange,
+                                           const std::string aTraderName,
+                                           const tradebot::Pair & aPair,
+                                           tradebot::Side aSide = tradebot::Side::Sell, // if it still fulfills, might as well make us rich!
+                                           Decimal aAmount = Decimal{"0.001"})
+{
+    Decimal averagePrice = aExchange.getCurrentAveragePrice(aPair);
+    return makeOrder(aTraderName, aPair, aSide, floor(averagePrice*4), aAmount);
+}
 
 template <class T_exchange>
 inline void fulfillMarketOrder(T_exchange & aExchange, tradebot::Order & aOrder)

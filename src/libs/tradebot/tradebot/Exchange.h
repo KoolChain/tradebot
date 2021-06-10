@@ -91,6 +91,23 @@ struct Exchange
 
     Json queryOrder(const Order & aOrder);
 
+    /// \brief Try to query the order in a loop, up to `aAttempts` times.
+    ///
+    /// It was observed during development that the exchange might report an order acceptation
+    /// (via user data stream, or rest API response), yet it is not ready to be queried on the rest
+    /// API.
+    /// Introducing repeated attempts with timers is a pragmatic workaround.
+    //
+    /// \param aAttempts Should be >= 1 to make any sense.
+    ///
+    /// \attention This will always tries at least once, even for 0 or negative `aAttempts`.
+    ///
+    /// \throw std::logic_error on unexpected http response status, or when
+    /// no attempts are left but the exchange-id of `aOrder` still does not match the json response.
+    std::optional<Json> tryQueryOrder(const Order & aOrder,
+                                      int aAttempts = 5,
+                                      std::chrono::milliseconds aDelay = std::chrono::milliseconds{60});
+
     /// \param aPageSize The number of trades fetched with each API request.
     ///        Mainly usefull for writing tests.
     Fulfillment accumulateTradesFor(const Order & aOrder, int aPageSize=1000);

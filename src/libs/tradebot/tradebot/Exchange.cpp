@@ -267,6 +267,58 @@ Json Exchange::queryOrder(const Order & aOrder)
 }
 
 
+std::optional<Json> Exchange::tryQueryOrder(const Order & aOrder,
+                                            int aAttempts,
+                                            std::chrono::milliseconds aDelay)
+{
+    --aAttempts;
+
+    binance::Response response = restApi.queryOrder(aOrder.symbol(), aOrder.clientId());
+    if (response.status == 200)
+    {
+        Json json = (*response.json);
+        // Will exit by throwing when no attempts are left and the exchange ids still don't match
+        if (aAttempts <= 0
+            || aOrder.exchangeId == -1 /* -1 could happend for a 'Sending' order */
+            || aOrder.exchangeId == json.at("orderId"))
+        {
+            assertExchangeIdConsistency(aOrder, (*response.json));
+            return json;
+        }
+        else
+        {
+            spdlog::warn("Order instance '{}' does not match the id returned by the exchange: {}."
+                         " {} attempt(s) left.",
+                         aOrder.getIdentity(),
+                         json.at("orderId"),
+                         aAttempts);
+        }
+    }
+    else if (response.status == 400
+             && response.json->at("code") == -2013)
+    {
+        spdlog::warn("Order instance '{}' could not be queried, exchange returned: {}."
+                     " {} attempt(s) left.",
+                     aOrder.getIdentity(),
+                     response.json->at("msg"),
+                     aAttempts);
+    }
+    else
+    {
+        unhandledResponse(response, "try query order");
+    }
+
+    if (aAttempts > 0)
+    {
+        std::this_thread::sleep_for(aDelay);
+        return tryQueryOrder(aOrder, aAttempts, aDelay);
+    }
+    else
+    {
+        return {};
+    }
+}
+
 // listAccountTrades* return an empty array (not an error status) when there are no trades matching
 Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
 {

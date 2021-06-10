@@ -475,3 +475,98 @@ SCENARIO("Listening to SPOT user data stream.")
         }
     }
 }
+
+
+SCENARIO("Retrying query order.", "[exchange]")
+{
+    const Pair pair{"BTC", "USDT"};
+    const std::string traderName{"exchangetest"};
+
+    GIVEN("An exchange instance.")
+    {
+        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto db = Database{":memory:"};
+
+        // Sanity check
+        exchange.cancelAllOpenOrders(pair);
+        REQUIRE(exchange.listOpenOrders(pair).empty());
+
+        GIVEN("An order not present on the exchange.")
+        {
+            Order notInExchange = makeOrder("NeverSendingTrader", pair, Side::Sell);
+            db.insert(notInExchange);
+
+            WHEN("The order is queried via tryQueryOrder.")
+            {
+                auto before = getTimestamp();
+                int attempts = 3;
+                auto waitFor = std::chrono::milliseconds{500};
+                std::optional<Json> orderJson = exchange.tryQueryOrder(notInExchange, attempts, waitFor);
+
+                THEN("The order absence is signaled after all attempts.")
+                {
+                    REQUIRE_FALSE(orderJson);
+                    // Note: I don't know how to properly test that the 3 attempts were made
+                    // without a mocked-up exchange. So check if timing is consistent.
+                    REQUIRE(getTimestamp()-before > ((attempts-1) * waitFor).count());
+                }
+            }
+        }
+
+        GIVEN("An order ready to be sent.")
+        {
+            auto before = getTimestamp();
+            // The order client id is made unique, to avoid colliding with an already filled order.
+            // Otherwise the already filled previous order would be found on first attempt.
+            Order impossible = makeImpossibleOrder(exchange, traderName + std::to_string(before), pair);
+            db.insert(impossible);
+
+            WHEN("The order is queried via tryQueryOrder, but the order is only placed after some time.")
+            {
+                int attempts = 3;
+                auto waitFor = std::chrono::milliseconds{500};
+
+                std::thread sender([&]()
+                {
+                    std::this_thread::sleep_for(waitFor);
+                    exchange.placeOrder(impossible, Execution::Limit);
+                });
+
+                std::optional<Json> orderJson = exchange.tryQueryOrder(impossible, attempts, waitFor);
+
+                // Make sure the place order response was received before making tests.
+                // Maybe this is still a race condition by the standard, since there is no explicit synchronization
+                // yet I hope it will not be the case in practice. (otherwise, add explicit sync).
+                sender.join();
+
+                THEN("The order is eventually found, after some (more) time.")
+                {
+                    REQUIRE(orderJson);
+                    REQUIRE(impossible.exchangeId != 1); // Otherwise, did it race?
+                    CHECK(orderJson->at("orderId") == impossible.exchangeId);
+                    CHECK(orderJson->at("status") == "NEW");
+                    // Note: I don't know how to properly test that the 3 attempts were made
+                    // without a mocked-up exchange. So check if timing is consistent.
+                    REQUIRE(getTimestamp()-before > waitFor.count());
+
+                    // Let's use the opportunity to not wait for another loop.
+                    // The order has been sent, so its client ID is present on the exchange.
+                    GIVEN("A made-up order with same client ID as above, but not matching exchange ID.")
+                    {
+                        Order sameClientId = impossible;
+                        ++sameClientId.exchangeId;
+
+                        THEN("An exception will be thrown trying to query the order, after all attempts are exhausted.")
+                        {
+                            before = getTimestamp();
+                            REQUIRE_THROWS(exchange.tryQueryOrder(sameClientId));
+                            REQUIRE(getTimestamp() > (attempts * waitFor).count());
+                        }
+                    }
+                }
+
+                REQUIRE(exchange.cancelOrder(impossible));
+            }
+        }
+    }
+}
