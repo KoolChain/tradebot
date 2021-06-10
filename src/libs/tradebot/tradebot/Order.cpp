@@ -124,29 +124,37 @@ FulfilledOrder fulfill(Order & aOrder,
 
     aOrder.status = Order::Status::Fulfilled;
 
-    aOrder.executionRate = jstod(aQueryStatus["price"]);
+    // Note: Initially, prefered to trust the global price reported in the query order Json,
+    // maybe small rounding errors would accumulate when partial fills are involved.
+    // Yet, it turns out that sometimes a limit order fulfills at a different price than the requested price,
+    // (hopefully always at more adavantageous prices).
+    // Since this difference might be very large compared to rounding erros,
+    // now the accumulated fulfillment price is trusted over the global price.
+    //aOrder.executionRate = jstod(aQueryStatus["price"]);
+    aOrder.executionRate = aFulfillment.price();
     if (aOrder.executionRate > 0.)
     {
-        if (! isEqual(aOrder.executionRate, aFulfillment.price()))
+        Decimal globalPrice = jstod(aQueryStatus["price"]);
+        if (globalPrice > 0.
+            && (! isEqual(aOrder.executionRate, globalPrice)))
         {
-            // Just warning, and use the order global price.
-            spdlog::warn("Order '{}' global price {} is different from the price averaged from {} trade(s) {}.",
+            // Just warning, and use the fulfillment averaged price.
+            spdlog::warn("Order '{}' global price {} is different from the fulfillment price {}, averaged from {} trade(s)."
+                         " Use fulfillment price, difference is {}.",
                          aOrder.getIdentity(),
+                         globalPrice,
                          aOrder.executionRate,
                          aFulfillment.tradeCount,
-                         aFulfillment.price());
+                         aOrder.executionRate - jstod(aQueryStatus["price"])
+            );
 
         }
     }
-    else if (aFulfillment.price() > 0.)
-    {
-        aOrder.executionRate = aFulfillment.price();
-    }
     else
     {
-        spdlog::critical("Cannot get the aFulfillment price for order '{}'.",
+        spdlog::critical("Cannot get the fulfillment price for order '{}'.",
                          aOrder.getIdentity());
-        throw std::logic_error{"Cannot get the price while aFulfillmenting an order."};
+        throw std::logic_error{"Cannot get its price while fulfilling an order."};
     }
 
     // In case of a market order, the "trade" response returns the fills (without any time attached)
