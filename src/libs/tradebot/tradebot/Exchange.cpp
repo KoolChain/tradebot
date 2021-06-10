@@ -326,7 +326,10 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
     // It sporadically occured that the accumulated trades did not reach the total amount of the order.
     // I am not sure what causes it, so let's start listing trades from some time before the recorded
     // order activatin time, see if that situation ever occurs again.
-    static const MillisecondsSinceEpoch TRADE_MARGIN = 10000;
+    //static const MillisecondsSinceEpoch TRADE_MARGIN = 10000;
+    // TODO can we remove it?
+    // Causes an issue with "sending" order (for which the activation time will be 0)
+    static const MillisecondsSinceEpoch TRADE_MARGIN = 0;
 
     Fulfillment result;
     binance::Response response =
