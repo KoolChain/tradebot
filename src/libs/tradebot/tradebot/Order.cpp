@@ -130,8 +130,10 @@ FulfilledOrder fulfill(Order & aOrder,
         if (! isEqual(aOrder.executionRate, aFulfillment.price()))
         {
             // Just warning, and use the order global price.
-            spdlog::warn("The order global price {} is different from the price averaged from trades {}.",
+            spdlog::warn("Order '{}' global price {} is different from the price averaged from {} trade(s) {}.",
+                         aOrder.getIdentity(),
                          aOrder.executionRate,
+                         aFulfillment.tradeCount,
                          aFulfillment.price());
 
         }

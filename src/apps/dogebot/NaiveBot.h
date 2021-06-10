@@ -60,16 +60,23 @@ inline void NaiveBot::onPartialFill(Json aReport)
 }
 
 
+Decimal applyTickSize(Decimal aValue, Decimal aTickSize = Decimal{"0.01"})
+{
+    auto count = trunc(aValue/aTickSize);
+    return aTickSize*count;
+}
+
+
 tradebot::Order & transformOrder(tradebot::Order & aOrder, double aPercentage)
 {
     aOrder.reverseSide();
     if (aOrder.side == tradebot::Side::Buy)
     {
-        aOrder.fragmentsRate = (1.0 - aPercentage) * aOrder.executionRate;
+        aOrder.fragmentsRate = applyTickSize((1.0 - aPercentage) * aOrder.executionRate);
     }
     else
     {
-        aOrder.fragmentsRate = (1.0 + aPercentage) * aOrder.executionRate;
+        aOrder.fragmentsRate = applyTickSize((1.0 + aPercentage) * aOrder.executionRate);
     }
     return aOrder;
 }
@@ -94,6 +101,8 @@ inline void NaiveBot::onCompletion(Json aReport)
         throw std::logic_error{"Mismatched order amount vs. reported cumulative filled quantity."};
 
     }
+    // TODO: add attempt to retrieves all trades for the order (might have missed some partially_filled reports)
+    // to make it a bit more robust to network errors, 24h reconnections, etc.
     if (currentOrder->fulfillment.amountBase != currentOrder->order.amount)
     {
         spdlog::critical("Order '{}' has missmatching amount vs. accumulated fulfillment: {} vs. {}.",
