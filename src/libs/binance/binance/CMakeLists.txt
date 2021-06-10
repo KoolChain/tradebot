@@ -4,6 +4,7 @@ set(${PROJECT_NAME}_HEADERS
     Api.h
     Cryptography.h
     Decimal.h
+    DecimalLog.h
     Json.h
     Orders.h
     Time.h

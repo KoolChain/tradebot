@@ -2,7 +2,7 @@
 
 #include "Fulfillment.h"
 
-#include <spdlog/spdlog.h>
+#include "Logging.h"
 
 #include <ostream>
 #include <sstream>
@@ -36,16 +36,16 @@ bool operator==(const Order & aLhs, const Order & aRhs)
         aLhs.traderName == aRhs.traderName
         && aLhs.base == aRhs.base
         && aLhs.quote == aRhs.quote
-        && aLhs.amount == aRhs.amount
-        && aLhs.fragmentsRate == aRhs.fragmentsRate
+        && isEqual(aLhs.amount, aRhs.amount)
+        && isEqual(aLhs.fragmentsRate, aRhs.fragmentsRate)
         && aLhs.side == aRhs.side
         && aLhs.fulfillResponse == aRhs.fulfillResponse
         && aLhs.activationTime == aRhs.activationTime
         && aLhs.status == aRhs.status
         && aLhs.fulfillTime == aRhs.fulfillTime
-        && aLhs.executionRate== aRhs.executionRate
-        && aLhs.takenHome == aRhs.takenHome
-        && aLhs.commission == aRhs.commission
+        && isEqual(aLhs.executionRate, aRhs.executionRate)
+        && isEqual(aLhs.takenHome, aRhs.takenHome)
+        && isEqual(aLhs.commission, aRhs.commission)
         && aLhs.commissionAsset == aRhs.commissionAsset
         && aLhs.exchangeId == aRhs.exchangeId
         ;
@@ -103,7 +103,7 @@ FulfilledOrder fulfill(Order & aOrder,
 {
     // Sanity check
     {
-        if (aOrder.amount != jstod(aQueryStatus["executedQty"]))
+        if (! isEqual(aOrder.amount, jstod(aQueryStatus["executedQty"])))
         {
             spdlog::critical("Mismatched order '{}' amount and executed quantity: {} vs. {}.",
                              aOrder.getIdentity(),
@@ -112,7 +112,7 @@ FulfilledOrder fulfill(Order & aOrder,
             throw std::logic_error("Mismatched original amount and executed quantity on order.");
         }
 
-        if (aOrder.amount != aFulfillment.amountBase)
+        if (! isEqual(aOrder.amount, aFulfillment.amountBase))
         {
             spdlog::critical("Mismatched order '{}' amount and accumulated fulfillment quantity: {} vs. {}.",
                              aOrder.getIdentity(),
@@ -127,7 +127,7 @@ FulfilledOrder fulfill(Order & aOrder,
     aOrder.executionRate = jstod(aQueryStatus["price"]);
     if (aOrder.executionRate > 0.)
     {
-        if (aOrder.executionRate != aFulfillment.price())
+        if (! isEqual(aOrder.executionRate, aFulfillment.price()))
         {
             // Just warning, and use the order global price.
             spdlog::warn("The order global price {} is different from the price averaged from trades {}.",

@@ -54,7 +54,7 @@ SCENARIO("Radical initialization clean-up", "[trader]")
                 binance::Side::SELL,
                 0.01, // qty
                 id,
-                std::floor(averagePrice * 4),  // price
+                floor(averagePrice * 4),  // price
             };
             binance.restApi.placeOrderTrade(impossibleOrder);
             THEN("The open orders can be cancelled")
@@ -157,12 +157,12 @@ SCENARIO("Trader low-level functions.", "[trader]")
         REQUIRE(exchange.listOpenOrders(pair).empty());
 
         Decimal averagePrice = exchange.getCurrentAveragePrice(pair);
-        Decimal impossiblePrice = std::floor(4*averagePrice);
+        Decimal impossiblePrice = floor(4*averagePrice);
 
         WHEN("Matching fragments exist in database")
         {
-            db.insert(Fragment{pair.base, pair.quote, 0.001, impossiblePrice, Side::Sell});
-            db.insert(Fragment{pair.base, pair.quote, 0.002, impossiblePrice, Side::Sell});
+            db.insert(Fragment{pair.base, pair.quote, fromFP(0.001), impossiblePrice, Side::Sell});
+            db.insert(Fragment{pair.base, pair.quote, fromFP(0.002), impossiblePrice, Side::Sell});
 
             THEN("A limit order can be placed")
             {
@@ -180,7 +180,9 @@ SCENARIO("Trader low-level functions.", "[trader]")
                 REQUIRE(impossible.traderName == trader.name);
                 REQUIRE(impossible.base     == pair.base);
                 REQUIRE(impossible.quote    == pair.quote);
-                REQUIRE(impossible.amount   == 0.001 + 0.002);
+                // Is not strictly equal: the is an exact Decimal
+                REQUIRE(isEqual(impossible.amount, 0.001 + 0.002));
+                REQUIRE(impossible.amount == Decimal{"0.001"} + Decimal{"0.002"});
                 REQUIRE(impossible.fragmentsRate == impossiblePrice);
                 REQUIRE(impossible.side     == Side::Sell);
                 REQUIRE(impossible.fulfillResponse == Order::FulfillResponse::SmallSpread);
@@ -293,7 +295,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
         REQUIRE(exchange.listOpenOrders(pair).empty());
 
         Decimal averagePrice = exchange.getCurrentAveragePrice(pair);
-        Decimal impossiblePrice = std::floor(4*averagePrice);
+        Decimal impossiblePrice = floor(4*averagePrice);
 
         WHEN("No orders are present.")
         {
@@ -362,7 +364,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
             }
 
             // Active fulfilled LIMIT order
-            Decimal limitGenerous = std::floor(1.1 * averagePrice);
+            Decimal limitGenerous = floor(1.1 * averagePrice);
             Fragment limitFulfilledFragment =
                 db.getFragment(db.insert(Fragment{pair.base,
                                                   pair.quote,

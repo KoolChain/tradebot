@@ -1,9 +1,8 @@
 #include <binance/Api.h>
+
 #include <tradebot/Exchange.h>
+#include <tradebot/Logging.h>
 #include <tradebot/Order.h>
-
-
-#include <spdlog/spdlog.h>
 
 #include <fstream>
 #include <iostream>

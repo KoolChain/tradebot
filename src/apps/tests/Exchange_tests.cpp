@@ -33,7 +33,7 @@ SCENARIO("Placing orders", "[exchange]")
 
         WHEN("A buy market order is placed.")
         {
-            Order immediateOrder = makeOrder(traderName, pair, Side::Buy, std::floor(averagePrice));
+            Order immediateOrder = makeOrder(traderName, pair, Side::Buy, floor(averagePrice));
             db.insert(immediateOrder);
             binance.placeOrder(immediateOrder, Execution::Market);
 
@@ -62,9 +62,9 @@ SCENARIO("Placing orders", "[exchange]")
                     REQUIRE(orderJson["clientOrderId"] == immediateOrder.clientId());
                     // For a market order, the price is created at 0,
                     // and apparently not updated once the order is filled.
-                    REQUIRE(std::stod(orderJson["price"].get<std::string>()) == 0.);
-                    REQUIRE(std::stod(orderJson["origQty"].get<std::string>()) == immediateOrder.amount);
-                    REQUIRE(std::stod(orderJson["executedQty"].get<std::string>()) == immediateOrder.amount);
+                    REQUIRE(jstod(orderJson["price"]) == 0.);
+                    REQUIRE(jstod(orderJson["origQty"]) == immediateOrder.amount);
+                    REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.amount);
                     REQUIRE(orderJson["type"] == "MARKET");
                     REQUIRE(orderJson["side"] == "BUY");
                 }
@@ -85,7 +85,7 @@ SCENARIO("Placing orders", "[exchange]")
         WHEN("A sell limit order is placed.")
         {
             // we want the sell to be instant, so we discount the average price
-            Decimal price = std::floor(0.8*averagePrice);
+            Decimal price = floor(0.8*averagePrice);
             Order immediateOrder = makeOrder(traderName, pair, Side::Sell, price);
             db.insert(immediateOrder);
             binance.placeOrder(immediateOrder, Execution::Limit);
@@ -110,9 +110,9 @@ SCENARIO("Placing orders", "[exchange]")
                     REQUIRE(orderJson["symbol"] == pair.symbol());
                     REQUIRE(orderJson["orderId"] == immediateOrder.exchangeId);
                     REQUIRE(orderJson["clientOrderId"] == immediateOrder.clientId());
-                    REQUIRE(std::stod(orderJson["price"].get<std::string>()) == immediateOrder.fragmentsRate);
-                    REQUIRE(std::stod(orderJson["origQty"].get<std::string>()) == immediateOrder.amount);
-                    REQUIRE(std::stod(orderJson["executedQty"].get<std::string>()) == immediateOrder.amount);
+                    REQUIRE(jstod(orderJson["price"]) == immediateOrder.fragmentsRate);
+                    REQUIRE(jstod(orderJson["origQty"]) == immediateOrder.amount);
+                    REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.amount);
                     REQUIRE(orderJson["type"] == "LIMIT");
                     REQUIRE(orderJson["side"] == "SELL");
                 }
@@ -215,7 +215,7 @@ SCENARIO("Orders cancellation", "[exchange]")
                 pair.base,
                 pair.quote,
                 0.01,
-                std::floor(averagePrice*4),
+                floor(averagePrice*4),
                 Side::Sell,
                 Order::FulfillResponse::SmallSpread,
             };
@@ -261,7 +261,7 @@ SCENARIO("Orders cancellation", "[exchange]")
                 pair.base,
                 pair.quote,
                 0.001,
-                std::floor(averagePrice),
+                floor(averagePrice),
                 Side::Sell,
                 Order::FulfillResponse::SmallSpread,
             };
@@ -309,7 +309,7 @@ SCENARIO("Orders cancellation", "[exchange]")
 SCENARIO("Listing trades.", "[exchange]")
 {
     const Pair pair{"BTC", "USDT"};
-    const Decimal amount = 0.02;
+    const Decimal amount{"0.02"};
     const std::string traderName{"exchangetest"};
 
     GIVEN("An exchange instance.")
@@ -325,7 +325,7 @@ SCENARIO("Listing trades.", "[exchange]")
 
         WHEN("A buy market order is placed.")
         {
-            Order buyLarge = makeOrder(traderName, pair, Side::Buy, 0, amount);
+            Order buyLarge = makeOrder(traderName, pair, Side::Buy, Decimal{"0"}, amount);
             db.insert(buyLarge);
             fulfillMarketOrder(exchange, buyLarge);
 
@@ -403,7 +403,7 @@ SCENARIO("Listening to SPOT user data stream.")
 
             WHEN("A market order is placed.")
             {
-                Order immediateOrder = makeOrder(traderName, pair, Side::Buy, 0., 0.02);
+                Order immediateOrder = makeOrder(traderName, pair, Side::Buy, 0, Decimal{"0.02"});
                 db.insert(immediateOrder);
                 exchange.placeOrder(immediateOrder, Execution::Market);
 

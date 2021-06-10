@@ -12,8 +12,8 @@ bool operator==(const Fragment & aLhs, const Fragment & aRhs)
     return
         aLhs.base == aRhs.base
         && aLhs.quote == aRhs.quote
-        && aLhs.amount == aRhs.amount
-        && aLhs.targetRate == aRhs.targetRate
+        && isEqual(aLhs.amount, aRhs.amount)
+        && isEqual(aLhs.targetRate, aRhs.targetRate)
         && aLhs.side == aRhs.side
         && aLhs.spawningOrder == aRhs.spawningOrder
         && aLhs.composedOrder == aRhs.composedOrder

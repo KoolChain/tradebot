@@ -1,5 +1,7 @@
 #pragma once
 
+#include <binance/Decimal.h>
+
 #include <string>
 
 
@@ -8,9 +10,6 @@ namespace tradebot {
 
 
 using Coin = std::string;
-
-
-using Decimal = double;
 
 
 enum class Side

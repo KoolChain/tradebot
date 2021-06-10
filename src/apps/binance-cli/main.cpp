@@ -31,7 +31,7 @@ int main(int argc, char * argv[])
     if (argc < 3)
     {
         std::cerr << "Usage: " << argv[0] << " secretsfile action args... \n"
-            << "\taction might be: buy, sell, exchange-info\n"
+            << "\taction might be: buy, sell, query-order, exchange-info\n"
             ;
         return EXIT_FAILURE;
     }
@@ -48,13 +48,12 @@ int main(int argc, char * argv[])
 
         spdlog::info("Retrieving exchange information.");
 
-
         tradebot::Exchange exchange{getExchange(secretsFile)};
 
         binance::Response exchangeInfo = exchange.restApi.getExchangeInformation();
         if (exchangeInfo.status == 200)
         {
-            std::cout << exchangeInfo.json->dump(4);
+            std::cout << exchangeInfo.json->dump(4) << '\n';
         }
         else
         {
@@ -73,7 +72,7 @@ int main(int argc, char * argv[])
 
         tradebot::Pair pair{argv[3], argv[4]};
         tradebot::Side side{tradebot::readSide(argv[2])};
-        Decimal amount = std::stod(argv[5]);
+        Decimal amount{argv[5]};
 
         spdlog::info("Placing market {} order for {} {}.",
                 boost::lexical_cast<std::string>(side),
@@ -99,6 +98,34 @@ int main(int argc, char * argv[])
         trader.fillNewMarketOrder(order);
 
         spdlog::info("Executed at price: {} {}.", order.executionRate, order.quote);
+    }
+    else if (argv[2] == std::string{"query-order"})
+    {
+        if (argc != 6)
+        {
+            std::cerr << "Usage: " << argv[0] << " secretsfile query-order base quote client-id\n";
+            return EXIT_FAILURE;
+        }
+
+        tradebot::Pair pair{argv[3], argv[4]};
+        const std::string orderId{argv[5]};
+
+        spdlog::info("Querying order {} for symbol {}.", orderId, pair.symbol());
+
+        tradebot::Exchange exchange{getExchange(secretsFile)};
+
+        binance::Response exchangeInfo =
+            exchange.restApi.queryOrder(pair.symbol(), binance::ClientId{orderId});
+        if (exchangeInfo.status == 200)
+        {
+            std::cout << exchangeInfo.json->dump(4) << '\n';
+        }
+        else
+        {
+            spdlog::critical("Could not query order.");
+            return EXIT_FAILURE;
+        }
+
     }
 
     return EXIT_SUCCESS;

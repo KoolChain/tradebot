@@ -2,7 +2,7 @@
 
 #include "Order.h"
 
-#include <spdlog/spdlog.h>
+#include "Logging.h"
 
 #include <experimental/propagate_const>
 
@@ -55,6 +55,11 @@ public:
     std::vector<Decimal> getBuyRatesBelow(Decimal aRateLimit, const Pair & aPair);
 
     void assignAvailableFragments(const Order & aOrder);
+
+    /// \brief Sum the amounts of all fragments in the database.
+    ///
+    /// Notably usefull for tests.
+    Decimal sumAllFragments();
 
     Decimal sumFragmentsOfOrder(const Order & aOrder);
 

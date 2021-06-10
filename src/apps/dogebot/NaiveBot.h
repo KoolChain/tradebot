@@ -2,10 +2,9 @@
 
 
 #include<tradebot/Fulfillment.h>
+#include <tradebot/Logging.h>
 #include<tradebot/Order.h>
 #include<tradebot/Trader.h>
-
-#include <spdlog/spdlog.h>
 
 #include <boost/asio/post.hpp>
 #include <boost/asio/deadline_timer.hpp>
@@ -66,11 +65,11 @@ tradebot::Order & transformOrder(tradebot::Order & aOrder, double aPercentage)
     aOrder.reverseSide();
     if (aOrder.side == tradebot::Side::Buy)
     {
-        aOrder.fragmentsRate = std::floor((1.0 - aPercentage) * aOrder.executionRate);
+        aOrder.fragmentsRate = (1.0 - aPercentage) * aOrder.executionRate;
     }
     else
     {
-        aOrder.fragmentsRate = std::ceil((1.0 + aPercentage) * aOrder.executionRate);
+        aOrder.fragmentsRate = (1.0 + aPercentage) * aOrder.executionRate;
     }
     return aOrder;
 }

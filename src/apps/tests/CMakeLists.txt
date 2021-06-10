@@ -17,6 +17,7 @@ set(${PROJECT_NAME}_SOURCES
     Binance_tests.cpp
     Cryptography_tests.cpp
     Database_tests.cpp
+    Decimal_tests.cpp
     Exchange_tests.cpp
     Order_tests.cpp
     Tradebot_tests.cpp
