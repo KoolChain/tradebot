@@ -83,6 +83,17 @@ binance::Response placeOrderImpl(const T_order & aBinanceOrder, Order & aOrder, 
         aOrder.status = Order::Status::Active;
         aOrder.activationTime = json["transactTime"];
         aOrder.exchangeId = json["orderId"];
+
+        // Sanity check
+        {
+            if (json.at("clientOrderId") != aOrder.clientId())
+            {
+                spdlog::critical("New order response contains client-id {}, while \"{}\" was placed.",
+                                 json.at("clientOrderId"),
+                                 static_cast<const std::string &>(aOrder.clientId()));
+                throw std::runtime_error{"Inconsistant new order response, client-id is not matching."};
+            }
+        }
     }
 
     return response;
