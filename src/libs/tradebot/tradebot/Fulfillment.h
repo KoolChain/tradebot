@@ -80,5 +80,8 @@ inline Fulfillment Fulfillment::fromStreamJson(const Json & aTrade)
 }
 
 
+std::ostream & operator<<(std::ostream & aOut, const Fulfillment & aFulfillment);
+
+
 } // namespace tradebot
 } // namespace ad

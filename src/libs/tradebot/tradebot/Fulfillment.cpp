@@ -34,5 +34,13 @@ Fulfillment & Fulfillment::accumulate(const Fulfillment & aRhs, const Order & aC
 }
 
 
+std::ostream & operator<<(std::ostream & aOut, const Fulfillment & aFulfillment)
+{
+    return aOut << "Fulfillment over " << aFulfillment.tradeCount << " trade(s),"
+                << " for " << aFulfillment.amountBase << " @ " << aFulfillment.amountQuote
+                << " (price: " << aFulfillment.price() << ")."
+                << " Fee: " << aFulfillment.fee << " " << aFulfillment.feeAsset << ".";
+}
+
 } // namespace tradebot
 } // namespace ad

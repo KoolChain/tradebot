@@ -60,7 +60,9 @@ int main(int argc, char * argv[])
     epochOrder.exchangeId = exchangeId;
     epochOrder.id = 0; // Dummy impossible DB id, so it does not throw on clientId();
 
-    exchange.accumulateTradesFor(epochOrder);
+    tradebot::Fulfillment fulfill = exchange.accumulateTradesFor(epochOrder);
+
+    spdlog::info("Result: {}", boost::lexical_cast<std::string>(fulfill));
 
     return EXIT_SUCCESS;
 }
