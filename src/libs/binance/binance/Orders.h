@@ -1,8 +1,9 @@
 #pragma once
 
 
-#include "Decimal.h"
 #include "Json.h"
+
+#include <trademath/Decimal.h>
 
 #include <string>
 

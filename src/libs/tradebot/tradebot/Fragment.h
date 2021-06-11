@@ -1,6 +1,6 @@
 #pragma once
 
-#include <binance/Decimal.h>
+#include <trademath/Decimal.h>
 
 #include <string>
 
