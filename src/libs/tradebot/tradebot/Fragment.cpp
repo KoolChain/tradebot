@@ -15,6 +15,7 @@ bool operator==(const Fragment & aLhs, const Fragment & aRhs)
         && isEqual(aLhs.amount, aRhs.amount)
         && isEqual(aLhs.targetRate, aRhs.targetRate)
         && aLhs.side == aRhs.side
+        && isEqual(aLhs.takenHome, aRhs.takenHome)
         && aLhs.spawningOrder == aRhs.spawningOrder
         && aLhs.composedOrder == aRhs.composedOrder
         ;

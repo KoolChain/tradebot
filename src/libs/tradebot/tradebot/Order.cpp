@@ -44,7 +44,6 @@ bool operator==(const Order & aLhs, const Order & aRhs)
         && aLhs.status == aRhs.status
         && aLhs.fulfillTime == aRhs.fulfillTime
         && isEqual(aLhs.executionRate, aRhs.executionRate)
-        && isEqual(aLhs.takenHome, aRhs.takenHome)
         && isEqual(aLhs.commission, aRhs.commission)
         && aLhs.commissionAsset == aRhs.commissionAsset
         && aLhs.exchangeId == aRhs.exchangeId
@@ -79,7 +78,6 @@ Order & Order::resetAsInactive()
     executionRate = 0;
     commission = 0;
     commissionAsset.clear();
-    takenHome = 0;
     exchangeId = -1;
     id = -1;
 

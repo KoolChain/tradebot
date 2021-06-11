@@ -34,7 +34,6 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("execution_rate", &Order::executionRate),
                        make_column("commission", &Order::commission),
                        make_column("commissionAsset", &Order::commissionAsset),
-                       make_column("taken_home", &Order::takenHome),
                        make_column("exchange_id", &Order::exchangeId)
             ),
             make_table("Fragments",
@@ -45,6 +44,7 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("amount", &Fragment::amount),
                        make_column("target_rate", &Fragment::targetRate),
                        make_column("side", &Fragment::side),
+                       make_column("taken_home", &Fragment::takenHome),
                        make_column("spawning_order", &Fragment::spawningOrder),
                        make_column("composed_order", &Fragment::composedOrder)
             ));

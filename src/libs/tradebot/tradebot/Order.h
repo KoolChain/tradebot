@@ -59,7 +59,6 @@ struct Order
     Decimal executionRate{"0"};
     Decimal commission{"0"};
     Coin commissionAsset;
-    Decimal takenHome{"0"};
     long exchangeId{-1}; // assigned by Binance
     long id{-1}; // auto-increment by ORM
 
