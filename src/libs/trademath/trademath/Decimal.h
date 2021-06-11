@@ -6,6 +6,7 @@
 
 namespace ad {
 
+
 constexpr std::size_t EXCHANGE_DECIMALS = 8;
 constexpr std::size_t PRECISION_DECIMALS = EXCHANGE_DECIMALS;
 
@@ -20,6 +21,7 @@ Decimal fromFP(T_floating aFloating)
     oss << std::fixed << aFloating;
     return Decimal{oss.str()};
 }
+
 
 /// \brief Returns a string representation with the exact amount of fixed decimals.
 ///

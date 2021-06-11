@@ -1,10 +1,12 @@
 project(trademath VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
+    Ladder.h
     Spawner.h
 )
 
 set(${PROJECT_NAME}_SOURCES
+    Ladder.cpp
     Spawner.cpp
 )
 
@@ -22,6 +24,8 @@ cmc_target_current_include_directory(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
         Boost::boost
+    PRIVATE
+        spdlog::libspdlog
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

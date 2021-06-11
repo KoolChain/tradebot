@@ -20,6 +20,7 @@ set(${PROJECT_NAME}_SOURCES
     Decimal_tests.cpp
     Exchange_tests.cpp
     Order_tests.cpp
+    Spawn_tests.cpp
     Tradebot_tests.cpp
     Websocket_tests.cpp
 )

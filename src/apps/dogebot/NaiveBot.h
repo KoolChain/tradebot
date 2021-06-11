@@ -1,10 +1,12 @@
 #pragma once
 
 
-#include<tradebot/Fulfillment.h>
+#include <tradebot/Fulfillment.h>
 #include <tradebot/Logging.h>
-#include<tradebot/Order.h>
-#include<tradebot/Trader.h>
+#include <tradebot/Order.h>
+#include <tradebot/Trader.h>
+
+#include <trademath/FilterUtilities.h>
 
 #include <boost/asio/post.hpp>
 #include <boost/asio/deadline_timer.hpp>
@@ -60,23 +62,16 @@ inline void NaiveBot::onPartialFill(Json aReport)
 }
 
 
-Decimal applyTickSize(Decimal aValue, Decimal aTickSize = Decimal{"0.01"})
-{
-    auto count = trunc(aValue/aTickSize);
-    return aTickSize*count;
-}
-
-
 tradebot::Order & transformOrder(tradebot::Order & aOrder, double aPercentage)
 {
     aOrder.reverseSide();
     if (aOrder.side == tradebot::Side::Buy)
     {
-        aOrder.fragmentsRate = applyTickSize((1.0 - aPercentage) * aOrder.executionRate);
+        aOrder.fragmentsRate = trade::applyTickSize((1.0 - aPercentage) * aOrder.executionRate);
     }
     else
     {
-        aOrder.fragmentsRate = applyTickSize((1.0 + aPercentage) * aOrder.executionRate);
+        aOrder.fragmentsRate = trade::applyTickSize((1.0 + aPercentage) * aOrder.executionRate);
     }
     return aOrder;
 }
