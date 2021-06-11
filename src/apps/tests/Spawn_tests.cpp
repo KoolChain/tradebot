@@ -3,7 +3,12 @@
 #include "Utilities.h"
 
 #include <tradebot/Trader.h>
+
+#include <trademath/Function.h>
 #include <trademath/Ladder.h>
+#include <trademath/Spawner.h>
+
+#include <cmath>
 
 
 using namespace ad;
@@ -98,6 +103,130 @@ SCENARIO("Ladder generation", "[spawn]")
                 {
                     REQUIRE(expect == ladder.at(i++));
                 }
+            }
+        }
+    }
+}
+
+
+SCENARIO("Spawning from function.", "[spawn]")
+{
+    GIVEN("A ladder and a distribution function.")
+    {
+        Ladder ladder = trade::makeLadder(Decimal{"0.2"}, Decimal{"1.03"}, 55, Decimal{"0.0001"});
+        // Sanity check
+        REQUIRE(ladder.back() == Decimal{"0.9798"});
+
+        Function initialDistribution{
+            [](Decimal aValue)
+            {
+                return Decimal("31465.715") * log(aValue);
+            }
+        };
+
+        THEN("We can integrate the distribution over the whole interval.")
+        {
+            Decimal integral = initialDistribution.integrate(ladder.front(), ladder.back());
+
+            // The factor was tailored to distribute just below 50000
+            REQUIRE(integral > Decimal{"49999.99"});
+            REQUIRE(integral < Decimal{"50000"});
+
+            WHEN("A distribution over the ladder can be computed.")
+            {
+                std::vector<Spawn> spawnee = spawn(ladder, initialDistribution);
+
+                THEN("There is one spawn per stop, excluding first.")
+                {
+                    // Spawning on intervals, so numbers of stops - 1
+                    REQUIRE(spawnee.size() == ladder.size() - 1);
+
+                    REQUIRE(std::equal(spawnee.begin(), spawnee.end(),
+                                       ladder.begin()+1, ladder.end(),
+                                       [](auto spawn, auto stop)
+                                       {
+                                        return spawn.rate == stop;
+                                       }));
+                }
+
+                THEN("The distributed value over the ladder is equal to the integral over the interval.")
+                {
+                    Decimal sum = std::accumulate(spawnee.begin(), spawnee.end(), Decimal{"0"},
+                                                  accumulateAmount);
+                    REQUIRE(sum == integral);
+                }
+            }
+        }
+    }
+}
+
+
+SCENARIO("Spawning from proportions.", "[spawn]")
+{
+    GIVEN("A ladder and proportions.")
+    {
+        Ladder ladder = trade::makeLadder(Decimal{"1"}, Decimal{"2"}, 5);
+
+        const std::vector<Decimal> proportions = {
+            Decimal{"0.5"},
+            Decimal{"0.3"},
+            Decimal{"0.2"},
+        };
+
+        WHEN("Amounts are spawned upward from base.")
+        {
+            Base amount{1000};
+            auto [spawned, totalSpawned] =
+                spawnProportions(amount,
+                                 ladder.begin()+1, ladder.end(),
+                                 proportions.begin(), proportions.end());
+
+            THEN("It results in expected amounts.")
+            {
+                REQUIRE(spawned.size() == 3);
+                CHECK(totalSpawned == amount);
+                CHECK(spawned.at(0) == Spawn{ladder.at(1), Base{500}});
+                CHECK(spawned.at(1) == Spawn{ladder.at(2), Base{300}});
+                CHECK(spawned.at(2) == Spawn{ladder.at(3), Base{(Decimal)amount * proportions[2]}});
+            }
+        }
+
+        WHEN("Amounts are spawned downward from base.")
+        {
+            Base amount{500};
+            auto [spawned, totalSpawned] =
+                spawnProportions(amount,
+                                 ladder.rbegin()+1, ladder.rend(),
+                                 proportions.begin(), proportions.end());
+
+            THEN("It results in expected amounts.")
+            {
+                REQUIRE(spawned.size() == 3);
+                CHECK(totalSpawned == amount);
+                CHECK(spawned.at(0) == Spawn{ladder.at(3), Base{(Decimal)amount * proportions[0]}});
+                CHECK(spawned.at(1) == Spawn{ladder.at(2), Base{(Decimal)amount * proportions[1]}});
+                CHECK(spawned.at(2) == Spawn{ladder.at(1), Base{(Decimal)amount * proportions[2]}});
+            }
+        }
+
+        WHEN("Amounts are spawned upward from quote.")
+        {
+            Quote amount{Decimal{"0.1"}};
+            auto [spawned, totalSpawned] =
+                spawnProportions(amount,
+                                 ladder.begin()+2, ladder.end(),
+                                 proportions.begin(), proportions.end());
+
+            THEN("It results in expected amounts.")
+            {
+                REQUIRE(spawned.size() == 3);
+                CHECK(totalSpawned == amount);
+                REQUIRE(ladder.at(2) == 4);
+                CHECK(spawned.at(0) == Spawn{ladder.at(2), Base{Decimal{"0.05"} / 4}});
+                REQUIRE(ladder.at(3) == 8);
+                CHECK(spawned.at(1) == Spawn{ladder.at(3), Base{Decimal{"0.03"} / 8}});
+                REQUIRE(ladder.at(4) == 16);
+                CHECK(spawned.at(2) == Spawn{ladder.at(4), Base{Decimal{"0.02"} / 16}});
             }
         }
     }
