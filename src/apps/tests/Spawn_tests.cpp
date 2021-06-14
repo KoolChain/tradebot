@@ -109,7 +109,7 @@ SCENARIO("Ladder generation", "[spawn]")
 }
 
 
-SCENARIO("Spawning from function.", "[spawn]")
+SCENARIO("Spawning from function, hardcoded 50K.", "[spawn]")
 {
     GIVEN("A ladder and a distribution function.")
     {
@@ -160,6 +160,127 @@ SCENARIO("Spawning from function.", "[spawn]")
                     REQUIRE(sum == totalSpawned);
                 }
             }
+        }
+    }
+}
+
+
+SCENARIO("Spawning from function.", "[spawn]")
+{
+    GIVEN("A ladder and a distribution function.")
+    {
+        Ladder ladder = trade::makeLadder(Decimal{"1"}, Decimal{"2"}, 5);
+        // Sanity check, value computed offline
+        REQUIRE(ladder.back() == Decimal{"16"});
+
+        Function distribution{
+            [](Decimal aValue)
+            {
+                // Primitive of f(x) -> x
+                return pow(aValue, 2) / Decimal{"2"};
+            }
+        };
+
+        THEN("We can integrate the distribution over the whole interval.")
+        {
+            Decimal integral = distribution.integrate(ladder.front(), ladder.back());
+
+            REQUIRE(integral == Decimal{"127.5"});
+
+            WHEN("Amounts are spawned upward from base.")
+            {
+                Base amount{100};
+                auto [spawned, totalSpawned] =
+                    spawnIntegration(amount,
+                                     ladder.begin(), ladder.end(),
+                                     distribution);
+
+                THEN("It results in expected amounts.")
+                {
+                    REQUIRE(spawned.size() == 4);
+                    CHECK(totalSpawned == Base{(Decimal)amount * integral});
+
+                    CHECK(spawned.at(0) == Spawn{ladder.at(1), Base{150}});
+                    CHECK(spawned.at(1) == Spawn{ladder.at(2), Base{600}});
+                    CHECK(spawned.at(2) == Spawn{ladder.at(3), Base{2400}});
+                    CHECK(spawned.at(3) == Spawn{ladder.at(4), Base{9600}});
+                }
+            }
+
+            WHEN("Amounts are spawned downward from base.")
+            {
+                Base amount{100};
+                auto [spawned, totalSpawned] =
+                    spawnIntegration(amount,
+                                     ladder.rbegin(), ladder.rend(),
+                                     distribution);
+
+                THEN("It results in expected amounts.")
+                {
+                    REQUIRE(spawned.size() == 4);
+                    CHECK(totalSpawned == Base{(Decimal)amount * integral});
+
+                    CHECK(spawned.at(0) == Spawn{ladder.at(3), Base{9600}});
+                    CHECK(spawned.at(1) == Spawn{ladder.at(2), Base{2400}});
+                    CHECK(spawned.at(2) == Spawn{ladder.at(1), Base{600}});
+                    CHECK(spawned.at(3) == Spawn{ladder.at(0), Base{150}});
+                }
+            }
+
+            WHEN("Amounts are spawned upward from quote.")
+            {
+                Quote amount{10};
+                auto [spawned, totalSpawned] =
+                    spawnIntegration(amount,
+                                     ladder.begin(), ladder.end(),
+                                     distribution);
+
+                THEN("It results in expected amounts.")
+                {
+                    REQUIRE(spawned.size() == 4);
+                    CHECK(totalSpawned == Quote{(Decimal)amount * integral});
+
+                    std::vector<Base> expectedBases = {
+                        Base{Decimal{15} / 2},
+                        Base{Decimal{60} / 4},
+                        Base{Decimal{240} / 8},
+                        Base{Decimal{960} / 16},
+                    };
+
+                    CHECK(spawned.at(0) == Spawn{ladder.at(1), expectedBases.at(0)});
+                    CHECK(spawned.at(1) == Spawn{ladder.at(2), expectedBases.at(1)});
+                    CHECK(spawned.at(2) == Spawn{ladder.at(3), expectedBases.at(2)});
+                    CHECK(spawned.at(3) == Spawn{ladder.at(4), expectedBases.at(3)});
+                }
+            }
+
+            WHEN("Amounts are spawned downward from quote.")
+            {
+                Quote amount{10};
+                auto [spawned, totalSpawned] =
+                    spawnIntegration(amount,
+                                     ladder.rbegin(), ladder.rend(),
+                                     distribution);
+
+                THEN("It results in expected amounts.")
+                {
+                    REQUIRE(spawned.size() == 4);
+                    CHECK(totalSpawned == Quote{(Decimal)amount * integral});
+
+                    std::vector<Base> expectedBases = {
+                        Base{Decimal{960} / 8},
+                        Base{Decimal{240} / 4},
+                        Base{Decimal{60} / 2},
+                        Base{Decimal{15} / 1},
+                    };
+
+                    CHECK(spawned.at(0) == Spawn{ladder.at(3), expectedBases.at(0)});
+                    CHECK(spawned.at(1) == Spawn{ladder.at(2), expectedBases.at(1)});
+                    CHECK(spawned.at(2) == Spawn{ladder.at(1), expectedBases.at(2)});
+                    CHECK(spawned.at(3) == Spawn{ladder.at(0), expectedBases.at(3)});
+                }
+            }
+
         }
     }
 }
@@ -233,5 +354,28 @@ SCENARIO("Spawning from proportions.", "[spawn]")
                 CHECK(spawned.at(2) == Spawn{ladder.at(4), Base{Decimal{"0.02"} / 16}});
             }
         }
+
+        WHEN("Amounts are spawned downward from quote.")
+        {
+            Quote amount{Decimal{"0.1"}};
+            auto [spawned, totalSpawned] =
+                spawnProportions(amount,
+                                 ladder.rbegin()+2, ladder.rend(),
+                                 proportions.begin(), proportions.end());
+
+            THEN("It results in expected amounts.")
+            {
+                REQUIRE(spawned.size() == 3);
+                CHECK(totalSpawned == amount);
+                REQUIRE(ladder.at(2) == 4);
+                CHECK(spawned.at(0) == Spawn{ladder.at(2), Base{Decimal{"0.05"} / 4}});
+                REQUIRE(ladder.at(1) == 2);
+                CHECK(spawned.at(1) == Spawn{ladder.at(1), Base{Decimal{"0.03"} / 2}});
+                REQUIRE(ladder.at(0) == 1);
+                CHECK(spawned.at(2) == Spawn{ladder.at(0), Base{Decimal{"0.02"} / 1}});
+            }
+        }
+    }
+}
     }
 }
