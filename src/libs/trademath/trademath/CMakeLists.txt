@@ -8,7 +8,6 @@ set(${PROJECT_NAME}_HEADERS
 
 set(${PROJECT_NAME}_SOURCES
     Ladder.cpp
-    Spawner.cpp
 )
 
 cmc_find_dependencies()

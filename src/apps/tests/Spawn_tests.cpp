@@ -114,7 +114,7 @@ SCENARIO("Spawning from function.", "[spawn]")
     GIVEN("A ladder and a distribution function.")
     {
         Ladder ladder = trade::makeLadder(Decimal{"0.2"}, Decimal{"1.03"}, 55, Decimal{"0.0001"});
-        // Sanity check
+        // Sanity check, value computed offline
         REQUIRE(ladder.back() == Decimal{"0.9798"});
 
         Function initialDistribution{
@@ -134,7 +134,10 @@ SCENARIO("Spawning from function.", "[spawn]")
 
             WHEN("A distribution over the ladder can be computed.")
             {
-                std::vector<Spawn> spawnee = spawn(ladder, initialDistribution);
+                auto [spawnee, totalSpawned] = spawnIntegration(
+                        Base{1},
+                        ladder.begin(), ladder.end(),
+                        initialDistribution);
 
                 THEN("There is one spawn per stop, excluding first.")
                 {
@@ -154,6 +157,7 @@ SCENARIO("Spawning from function.", "[spawn]")
                     Decimal sum = std::accumulate(spawnee.begin(), spawnee.end(), Decimal{"0"},
                                                   accumulateAmount);
                     REQUIRE(sum == integral);
+                    REQUIRE(sum == totalSpawned);
                 }
             }
         }

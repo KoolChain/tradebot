@@ -56,23 +56,28 @@ inline Decimal accumulateAmount(Decimal aLhs, const Spawn & aRhs)
 }
 
 
-template <class T_function>
-std::vector<Spawn> spawn(const Ladder & aLadder, T_function aFunction)
+template <class T_amount, class T_ladderIt, class T_function>
+std::pair<std::vector<Spawn>, T_amount/*accumulation*/>
+spawnIntegration(const T_amount aAmount,
+                 T_ladderIt aStopBegin, const T_ladderIt aStopEnd,
+                 T_function aFunction)
 {
-    if (aLadder.size() < 2)
+    if (std::distance(aStopBegin, aStopEnd) < 1)
     {
         return {};
     }
 
     std::vector<Spawn> result;
-    for(Ladder::const_iterator low = aLadder.begin(), high = low+1;
-        high != aLadder.end();
-        ++low, ++high)
+    Decimal accumulation{0};
+    for(T_ladderIt nextStop = aStopBegin+1;
+        nextStop != aStopEnd;
+        ++aStopBegin, ++nextStop)
     {
-        result.emplace_back(*high, Base{aFunction.integrate(*low, *high)});
+        Decimal amount = Base{abs(aFunction.integrate(*aStopBegin, *nextStop))};
+        accumulation += amount;
+        result.emplace_back(*nextStop, T_amount{amount});
     }
-
-    return result;
+    return {result, T_amount{accumulation}};
 }
 
 
