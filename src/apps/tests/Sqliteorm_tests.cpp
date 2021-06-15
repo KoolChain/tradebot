@@ -79,3 +79,83 @@ SCENARIO("Sqlite_orm unique constraint.", "[orm]")
         }
     }
 }
+
+
+
+SCENARIO("Sqlite_orm transactions.", "[orm]")
+{
+    GIVEN("An Sqlite table.")
+    {
+        auto storage = make_storage(":memory:",
+                            make_table("uniquetest",
+                                       make_column("id", &Blob::id, autoincrement(), primary_key()),
+                                       make_column("integer", &Blob::integer),
+                                       make_column("decimal", &Blob::decimal),
+                                       make_column("text", &Blob::text))
+                       );
+        storage.sync_schema();
+
+        // Sanity check
+        REQUIRE(storage.count<Blob>() == 0);
+
+        THEN("Entries added in a transaction section that is commited are stored in DB.")
+        {
+            {
+                auto guard = storage.transaction_guard();
+
+                Blob a{
+                    1,
+                    1,
+                    "un"
+                };
+
+                storage.insert(a);
+
+                guard.commit();
+            }
+
+            REQUIRE(storage.count<Blob>() == 1);
+        }
+
+        THEN("Entries added in a transaction section that is NOT commited are not stored in DB.")
+        {
+            {
+                auto guard = storage.transaction_guard();
+
+                Blob a{
+                    1,
+                    1,
+                    "un"
+                };
+
+                storage.insert(a);
+                //guard.commit();
+            }
+
+            REQUIRE(storage.count<Blob>() == 0);
+        }
+
+        THEN("Entries added in a guarded section exited via throw are not actually added.")
+        {
+            auto addThenThrow = [&]()
+            {
+                auto guard = storage.transaction_guard();
+
+                Blob a{
+                    1,
+                    1,
+                    "un"
+                };
+
+                storage.insert(a);
+
+                throw std::exception{};
+
+                guard.commit();
+            };
+
+            REQUIRE_THROWS(addThenThrow());
+            REQUIRE(storage.count<Blob>() == 0);
+        }
+    }
+}
