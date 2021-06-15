@@ -76,47 +76,6 @@ SCENARIO("Order and fragment records.", "[db]")
 }
 
 
-SCENARIO("Fragment unique constraint.", "[db]")
-{
-    GIVEN("A tradebot database")
-    {
-        tradebot::Database db{":memory:"};
-
-        THEN("New fragments can be inserted.")
-        {
-            tradebot::Fragment fragment{
-                "DOGE",
-                "BUSD",
-                10.,
-                1,
-                tradebot::Side::Sell,
-            };
-
-
-            auto id = db.insert(fragment);
-            REQUIRE(id > 0);
-
-            tradebot::Fragment fragment_2 = fragment;
-            fragment_2.targetRate += 2;
-            auto id_2 = db.insert(fragment_2);
-            REQUIRE(id_2 > id);
-
-            THEN("Trying to insert the fragment again, it violate the unique constraint.")
-            {
-                REQUIRE_THROWS(db.insert(fragment));
-            }
-
-            THEN("Trying to insert another fragment with matching pair violate the unique constraint.")
-            {
-                tradebot::Fragment fragment_violates = fragment;
-                fragment_violates.amount += 200;
-                REQUIRE_THROWS(db.insert(fragment_violates));
-            }
-        }
-    }
-}
-
-
 SCENARIO("Orders selection", "[db]")
 {
     GIVEN("A tradebot database")

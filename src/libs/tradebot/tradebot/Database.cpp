@@ -46,10 +46,7 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("side", &Fragment::side),
                        make_column("taken_home", &Fragment::takenHome),
                        make_column("spawning_order", &Fragment::spawningOrder),
-                       make_column("composed_order", &Fragment::composedOrder),
-                       // Implement at the DB level the self-imposed constraint
-                       // that a given order can only spawn a single Fragment per target rate.
-                       unique(&Fragment::targetRate, &Fragment::spawningOrder)
+                       make_column("composed_order", &Fragment::composedOrder)
             ));
 }
 
