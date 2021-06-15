@@ -21,6 +21,7 @@ set(${PROJECT_NAME}_SOURCES
     Exchange_tests.cpp
     Order_tests.cpp
     Spawn_tests.cpp
+    Sqliteorm_tests.cpp
     Tradebot_tests.cpp
     Websocket_tests.cpp
 )
@@ -36,6 +37,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 find_package(spdlog REQUIRED COMPONENTS libspdlog)
+find_package(SqliteOrm REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
@@ -44,6 +46,7 @@ target_link_libraries(${PROJECT_NAME}
         ad::websocket
 
         spdlog::libspdlog
+        sqlite_orm::sqlite_orm
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

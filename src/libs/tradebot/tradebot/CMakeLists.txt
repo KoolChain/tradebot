@@ -8,6 +8,7 @@ set(${PROJECT_NAME}_HEADERS
     Logging.h
     Order.h
     OrmAdaptors-impl.h
+    OrmDecimalAdaptor-impl.h
     Spawner.h
     Trader.h
 
