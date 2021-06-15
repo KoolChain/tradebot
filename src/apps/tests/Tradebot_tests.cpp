@@ -378,7 +378,11 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                                                       Order::FulfillResponse::SmallSpread);
             while(exchange.getOrderStatus(limitFulfilled) == "EXPIRED")
             {
-                exchange.placeOrder(limitFulfilled, Execution::Market);
+                exchange.placeOrder(limitFulfilled, Execution::Limit);
+            }
+            while(exchange.getOrderStatus(limitFulfilled) == "PARTIALLY_FILLED")
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds{50});
             }
 
             // Cancelling never received
@@ -466,7 +470,9 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                     db.reload(limitFulfilled);
                     REQUIRE(limitFulfilled.status == Order::Status::Fulfilled);
-                    REQUIRE(limitFulfilled.executionRate == limitFulfilledFragment.targetRate);
+                    // Note the execution rate might not be at the limit exactly it seems
+                    // I suspect only if advantageous (so for a buy, we might buy at a lower rate).
+                    REQUIRE(limitFulfilled.executionRate <= limitFulfilledFragment.targetRate);
                     REQUIRE(limitFulfilled.fulfillTime >= limitFulfilled.activationTime);
 
                     db.reload(limitFulfilledFragment);

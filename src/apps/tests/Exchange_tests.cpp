@@ -93,11 +93,13 @@ SCENARIO("Placing orders", "[exchange]")
             REQUIRE(immediateOrder.status == Order::Status::Active);
             REQUIRE(immediateOrder.exchangeId != -1);
 
-            auto goOnValues = {"EXPIRED", "PARTIALLY_FILLED"};
-            while(std::find(goOnValues.begin(), goOnValues.end(),
-                            binance.getOrderStatus(immediateOrder)) != goOnValues.end())
+            while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
             {
-                binance.placeOrder(immediateOrder, Execution::Market);
+                binance.placeOrder(immediateOrder, Execution::Limit);
+            }
+            while(binance.getOrderStatus(immediateOrder) == "PARTIALLY_FILLED")
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds{50});
             }
 
             WHEN("The order is completed.")
