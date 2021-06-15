@@ -3,7 +3,7 @@
 
 #include "Database.h"
 #include "Exchange.h"
-
+#include "Spawner.h"
 
 namespace ad {
 namespace tradebot {
@@ -33,12 +33,19 @@ public:
     /// This might differ from the number of orders which are removed from the database.
     int cancelLiveOrders();
 
-    /// \brief To be called when an order did complete on the exchange, with its already accumulated
-    /// fulfillment.
+
+    /// \brief Spawn all counter-fragments required by the completion of `aOrder`.
     ///
-    /// \return `true` if the order was completed by this invocation, `false` otherwise.
-    /// (It might be false if the order was already recorded as completed.)
-    bool completeOrder(Order & aOrder, const Fulfillment & aFulfillment);
+    /// It takes care of spawning from each fragment composing aOrder, while recording their
+    /// taken home.
+    ///
+    /// \important: A given order is only allowed to spawn a single fragment per target rate.
+    /// (It can spawns an arbitrary number of fragments in total, just one max per target rate.)
+    /// This is imposed to avoid potential explosion in number of spawned fragments while the coin prices
+    /// might cycle between the same target rates.
+    /// To follow this requirement, this member function will consolidate all the spawns from different
+    /// fragments targeting the same rate into a single resulting Fragment stored in database.
+    void spawnFragments(const FulfilledOrder & aOrder);
 
     //
     // High-level API
@@ -48,11 +55,18 @@ public:
     /// \brief Will place new market orders until it fulfills (by oposition to expiring).
     FulfilledOrder fillNewMarketOrder(Order & aOrder);
 
+    /// \brief To be called when an order did complete on the exchange, with its already accumulated
+    /// fulfillment.
+    ///
+    /// \return `true` if the order was completed by this invocation, `false` otherwise.
+    /// (It might be false if the order was already recorded as completed.)
+    bool completeOrder(Order & aOrder, const Fulfillment & aFulfillment);
 
     std::string name;
     Pair pair;
     Database database;
     Exchange exchange;
+    std::unique_ptr<SpawnerBase> spawner{std::make_unique<NullSpawner>()};
 };
 
 

@@ -3,10 +3,11 @@
 #include "Utilities.h"
 
 #include <tradebot/Trader.h>
+#include <tradebot/spawners/NaiveDownSpread.h>
 
 #include <trademath/Function.h>
 #include <trademath/Ladder.h>
-#include <trademath/Spawner.h>
+#include <trademath/Spawn.h>
 
 #include <cmath>
 
@@ -154,10 +155,10 @@ SCENARIO("Spawning from function, hardcoded 50K.", "[spawn]")
 
                 THEN("The distributed value over the ladder is equal to the integral over the interval.")
                 {
-                    Decimal sum = std::accumulate(spawnee.begin(), spawnee.end(), Decimal{"0"},
-                                                  accumulateAmount);
+                    Decimal sum = sumSpawnBase(spawnee);
                     REQUIRE(sum == integral);
                     REQUIRE(sum == totalSpawned);
+                    REQUIRE(sum != sumSpawnQuote(spawnee));
                 }
             }
         }
@@ -377,5 +378,79 @@ SCENARIO("Spawning from proportions.", "[spawn]")
         }
     }
 }
+
+
+SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
+{
+    const Ladder ladder = {
+        Decimal{"0.01"},
+        Decimal{"0.1"},
+        Decimal{"1"},
+        Decimal{"10"},
+        Decimal{"100"},
+        Decimal{"1000"},
+        Decimal{"10000"},
+        Decimal{"100000"},
+    };
+
+    const std::vector<Decimal> proportions = {
+        Decimal{"0.05"},
+        Decimal{"0.10"},
+        Decimal{"0.20"},
+        Decimal{"0.25"},
+    };
+
+    GIVEN("A trader with a NaiveDownSpread spawner.")
+    {
+        Pair pair{"BTC", "USDT"};
+        Trader trader = makeTrader("spawntest", pair);
+        trader.spawner = std::make_unique<spawner::NaiveDownSpread>(ladder, proportions);
+
+        auto & db = trader.database;
+        auto & binance = trader.exchange;
+
+        GIVEN("A Sell fragment and its corresponding order.")
+        {
+            Decimal amount{"1000"};
+            Decimal rate{"100"};
+            Fragment fragment{
+                pair.base,
+                pair.quote,
+                amount,
+                rate,
+                Side::Sell,
+            };
+            db.insert(fragment);
+
+            Order order = db.prepareOrder(
+                    trader.name,
+                    Side::Sell,
+                    rate,
+                    pair,
+                    Order::FulfillResponse::SmallSpread);
+            db.reload(fragment);
+
+            // Sanity check
+            REQUIRE(order.amount == amount);
+            REQUIRE(fragment.composedOrder == order.id);
+
+            WHEN("The order is completed.")
+            {
+                mockupFulfillOrder(order, order.fragmentsRate);
+
+                THEN("Resulting 'spawns' can be computed directly on the spawner.")
+                {
+                    auto [spawns, takenHome] =
+                        trader.spawner->computeResultingFragments(fragment, order, db);
+
+                    REQUIRE(spawns.size() == 4);
+                    CHECK(spawns.at(0) == Spawn{10, Base{amount * Decimal{"0.05"}}});
+                    CHECK(spawns.at(3) == Spawn{Decimal{"0.01"}, Base{amount * Decimal{"0.25"}}});
+
+                    Decimal reinvestedQuote = amount * (0.05*10 + 0.1*1 + 0.2*0.1 + 0.25*0.01);
+                    CHECK(isEqual(takenHome, order.executionQuoteAmount() - reinvestedQuote));
+                }
+            }
+        }
     }
 }

@@ -29,6 +29,7 @@ struct Order
 {
     std::string symbol() const;
     binance::ClientId clientId() const;
+    Decimal executionQuoteAmount() const;
 
     enum class Status
     {

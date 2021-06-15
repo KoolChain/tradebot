@@ -73,9 +73,34 @@ inline bool operator!=(const Spawn aLhs, const Spawn aRhs)
 
 
 /// \brief Helper function to accumulate the base amounts of a range of Spawn instances.
-inline Decimal accumulateAmount(Decimal aLhs, const Spawn & aRhs)
+inline Decimal accumulateBaseAmount(Decimal aLhs, const Spawn & aRhs)
 {
     return aLhs + aRhs.base;
+}
+
+
+template <class T_spawnRange>
+inline Decimal sumSpawnBase(const T_spawnRange & aSpawn)
+{
+    return std::accumulate(aSpawn.begin(), aSpawn.end(),
+                           Decimal{0},
+                           accumulateBaseAmount);
+}
+
+
+/// \brief Helper function to accumulate the quote amounts of a range of Spawn instances.
+inline Decimal accumulateQuoteAmount(Decimal aLhs, const Spawn & aRhs)
+{
+    return aLhs + aRhs.base*aRhs.rate;
+}
+
+
+template <class T_spawnRange>
+inline Decimal sumSpawnQuote(const T_spawnRange & aSpawn)
+{
+    return std::accumulate(aSpawn.begin(), aSpawn.end(),
+                           Decimal{0},
+                           accumulateQuoteAmount);
 }
 
 

@@ -24,9 +24,25 @@ binance::ClientId Order::clientId() const
     // Right now we rely on runtime checks.
     if (id == -1)
     {
+        spdlog::critical("Cannot retrieve the client id for an order ({} {})"
+                          " which is not matched in database.",
+                          amount,
+                          symbol());
         throw std::logic_error{"Cannot retrieve the client id for an order not matched in database."};
     }
     return binance::ClientId{traderName + '-' + std::to_string(id)};
+}
+
+
+Decimal Order::executionQuoteAmount() const
+{
+    if (status != Status::Fulfilled)
+    {
+        spdlog::critical("Cannot get execution quote amount for order '{}' since it is not fulfilled.",
+                          getIdentity());
+        throw std::logic_error{"Cannot get execution quote amount for an order which is not fulfilled."};
+    }
+    return amount * executionRate;
 }
 
 

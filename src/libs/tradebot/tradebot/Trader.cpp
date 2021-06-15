@@ -110,6 +110,40 @@ bool Trader::cancel(Order & aOrder)
 }
 
 
+struct SpawnMap
+{
+    template <class T_iterator>
+    void appendFrom(FragmentId aParent, T_iterator aBegin, const T_iterator aEnd)
+    {
+        for(; aBegin != aEnd; ++aBegin)
+        {
+            data[aBegin->rate].emplace_back(aParent, aBegin->base);
+        }
+    }
+
+    std::map<
+        Decimal /*target price*/,
+        std::vector<
+            std::pair<FragmentId /*parent*/, Decimal /*spawned base amount*/>
+        >
+    > data;
+};
+
+
+void Trader::spawnFragments(const FulfilledOrder & aOrder)
+{
+    SpawnMap spawnMap;
+
+    for(Fragment & fragment : database.getFragmentsComposing(aOrder))
+    {
+        auto [resultingFragments, takenHome] =
+            spawner->computeResultingFragments(fragment, aOrder, database);
+        fragment.takenHome = std::move(takenHome);
+        spawnMap.appendFrom(fragment.id, resultingFragments.begin(), resultingFragments.end());
+    }
+}
+
+
 bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 {
     bool result = database.onFillOrder(aFulfilledOrder);
@@ -123,6 +157,8 @@ bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
                 aFulfilledOrder.executionRate,
                 aFulfilledOrder.quote
         );
+
+        spawnFragments(aFulfilledOrder);
     }
     return result;
 }

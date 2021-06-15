@@ -3,7 +3,7 @@ project(trademath VERSION "${CMAKE_PROJECT_VERSION}")
 set(${PROJECT_NAME}_HEADERS
     Function.h
     Ladder.h
-    Spawner.h
+    Spawn.h
 )
 
 set(${PROJECT_NAME}_SOURCES
