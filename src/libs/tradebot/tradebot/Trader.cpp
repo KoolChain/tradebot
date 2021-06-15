@@ -130,6 +130,31 @@ struct SpawnMap
 };
 
 
+std::vector<Fragment> consolidate(const SpawnMap & aSpawnMap,
+                                  Pair aPair,
+                                  Side aSide)
+{
+    std::vector<Fragment> result;
+    for (const auto & rateEntry : aSpawnMap.data)
+    {
+        Decimal accumulatedBaseAmount = std::accumulate(
+                rateEntry.second.begin(), rateEntry.second.end(),
+                Decimal{0},
+                [](const Decimal & acc, const auto & pair)
+                {
+                    return acc + pair.second;
+                });
+        result.push_back(Fragment{
+                aPair.base,
+                aPair.quote,
+                accumulatedBaseAmount,
+                rateEntry.first,
+                aSide});
+    }
+    return result;
+}
+
+
 void Trader::spawnFragments(const FulfilledOrder & aOrder)
 {
     // TODO Everything happening on the database in this member function
@@ -146,6 +171,25 @@ void Trader::spawnFragments(const FulfilledOrder & aOrder)
         database.update(fragment);
 
         spawnMap.appendFrom(fragment.id, resultingFragments.begin(), resultingFragments.end());
+    }
+
+    for (Fragment & newFragment : consolidate(spawnMap,
+                                              aOrder.pair(),
+                                              reverse(aOrder.side)))
+    {
+        // Use isEqual to remove rounding errors that would make it just above zero
+        // and also discard invalid negative amounts, in case they arise.
+        if (! isEqual(newFragment.amount, 0) && newFragment.amount > 0)
+        {
+            database.insert(newFragment);
+        }
+        else
+        {
+            spdlog::warn("Spawning fragments for order '{}' proposed a fragment with invalid amount {}."
+                          " Ignoring it.",
+                          aOrder.getIdentity(),
+                          newFragment.amount);
+        }
     }
 }
 

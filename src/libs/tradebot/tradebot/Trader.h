@@ -37,7 +37,8 @@ public:
     /// \brief Spawn all counter-fragments required by the completion of `aOrder`.
     ///
     /// It takes care of spawning from each fragment composing aOrder, while recording their
-    /// taken home.
+    /// taken home. The spawning policy is controlled via `spawner` data member.
+    /// Any proposed fragment with a null or negative amount will be discarded.
     ///
     /// \important: A given order is only allowed to spawn a single fragment per target rate.
     /// (It can spawns an arbitrary number of fragments in total, just one max per target rate.)

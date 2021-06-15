@@ -31,7 +31,7 @@ SpawnerBase::Result NaiveDownSpread::computeResultingFragments(const Fragment & 
                                         // reverseStop+1 because no fagment should be assigned to the current stop.
                                         reverseStop+1, ladder.rend(),
                                         proportions.begin(), proportions.end());
-            return {result, aOrder.executionQuoteAmount()-sumSpawnQuote(result)};
+            return {result, aFilledFragment.amount * aOrder.executionRate - sumSpawnQuote(result)};
         }
         case Side::Buy:
         {

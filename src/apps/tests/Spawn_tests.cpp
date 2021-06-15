@@ -537,22 +537,175 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
             // Sanity check
             REQUIRE(order.amount == amount);
             REQUIRE(fragment.composedOrder == order.id);
+            REQUIRE(db.countFragments() == 1);
 
             WHEN("The order is completed.")
             {
-                FulfilledOrder fulfilled = mockupFulfill(order, order.fragmentsRate);
+                Decimal fulfillRate = 2*rate;
+                FulfilledOrder fulfilled = mockupFulfill(order, fulfillRate);
+                Decimal reinvestedQuote = amount * (0.05*10 + 0.1*1 + 0.2*0.1 + 0.25*0.01);
+                Decimal expectedTakenHome = order.executionQuoteAmount() - reinvestedQuote;
 
-                THEN("Resulting 'spawns' can be computed directly on the spawner.")
+                Decimal reboughtBase = amount * (0.05 + 0.1 + 0.2 + 0.25);
+
+                // Note: single fragment on the order, so the expected taken home will
+                // apply to both the order and its fragment.
+
+                WHEN("Resulting 'spawns' are computed directly from the spawner.")
                 {
                     auto [spawns, takenHome] =
                         trader.spawner->computeResultingFragments(fragment, fulfilled, db);
 
-                    REQUIRE(spawns.size() == 4);
-                    CHECK(spawns.at(0) == Spawn{10, Base{amount * Decimal{"0.05"}}});
-                    CHECK(spawns.at(3) == Spawn{Decimal{"0.01"}, Base{amount * Decimal{"0.25"}}});
+                    THEN("The expected spawns and taken home are obtained.")
+                    {
+                        REQUIRE(spawns.size() == 4);
+                        CHECK(spawns.at(0) == Spawn{10, Base{amount * Decimal{"0.05"}}});
+                        CHECK(spawns.at(3) == Spawn{Decimal{"0.01"}, Base{amount * Decimal{"0.25"}}});
 
-                    Decimal reinvestedQuote = amount * (0.05*10 + 0.1*1 + 0.2*0.1 + 0.25*0.01);
-                    CHECK(isEqual(takenHome, order.executionQuoteAmount() - reinvestedQuote));
+                        CHECK(isEqual(takenHome, expectedTakenHome));
+                    }
+                }
+
+                WHEN("The trader is spawning fragments.")
+                {
+                    trader.spawnFragments(fulfilled);
+
+                    THEN("It does spawn expected fragments, and reports correct taken home.")
+                    {
+                        // spawned 1 fragment per proportion
+                        CHECK(db.countFragments() == 1 + proportions.size());
+                        CHECK(isEqual(db.sumAllFragments(), amount + reboughtBase));
+
+                        THEN("The spawned fragments can be obtained from the database.")
+                        {
+                            {
+                                REQUIRE(ladder.at(2) == 1);
+                                auto unassociated =
+                                    db.getUnassociatedFragments(reverse(fragment.side),
+                                                                ladder.at(2),
+                                                                order.pair());
+
+                                CHECK(unassociated.size() == 1);
+
+                                Fragment frag = unassociated.at(0);
+                                CHECK(frag.amount == Decimal{"0.1"}*amount);
+                            }
+                            {
+                                REQUIRE(ladder.at(1) == Decimal{"0.1"});
+                                auto unassociated =
+                                    db.getUnassociatedFragments(reverse(fragment.side),
+                                                                ladder.at(1),
+                                                                order.pair());
+
+                                CHECK(unassociated.size() == 1);
+
+                                Fragment frag = unassociated.at(0);
+                                CHECK(frag.amount == Decimal{"0.2"}*amount);
+                            }
+                        }
+
+                        db.reload(fragment);
+                        CHECK(isEqual(fragment.takenHome, expectedTakenHome));
+
+                        CHECK(isEqual(db.sumTakenHome(order), expectedTakenHome));
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+SCENARIO("Consolidation of counter-fragments.", "[spawn]")
+{
+    const Ladder ladder = {
+        Decimal{"1"},
+        Decimal{"2"},
+        Decimal{"3"},
+        Decimal{"4"},
+        Decimal{"5"},
+    };
+
+    const std::vector<Decimal> proportions = {
+        Decimal{"0.0"},
+        Decimal{"0.25"},
+        Decimal{"0.25"},
+        Decimal{"0.25"},
+    };
+
+    GIVEN("A trader with a NaiveDownSpread spawner.")
+    {
+        Pair pair{"BTC", "USDT"};
+        Trader trader = makeTrader("spawntest", pair);
+        trader.spawner = std::make_unique<spawner::NaiveDownSpread>(ladder, proportions);
+
+        auto & db = trader.database;
+        auto & binance = trader.exchange;
+
+        GIVEN("2 Sell fragments in one order.")
+        {
+            Decimal amount{"120"};
+            Decimal rate{"5"};
+
+            Fragment fragment_1{
+                pair.base,
+                pair.quote,
+                amount,
+                rate,
+                Side::Sell,
+            };
+            db.insert(fragment_1);
+
+            Fragment fragment_2{
+                pair.base,
+                pair.quote,
+                amount,
+                rate,
+                Side::Sell,
+            };
+            db.insert(fragment_2);
+
+            Order order = db.prepareOrder(
+                    trader.name,
+                    Side::Sell,
+                    rate,
+                    pair,
+                    Order::FulfillResponse::SmallSpread);
+            db.reload(fragment_1);
+            db.reload(fragment_2);
+
+            // Sanity check
+            REQUIRE(order.amount == 2 * amount);
+            REQUIRE(fragment_1.composedOrder == order.id);
+            REQUIRE(fragment_2.composedOrder == order.id);
+            REQUIRE(db.countFragments() == 2);
+            REQUIRE(db.sumAllFragments() == 2 * amount);
+
+            WHEN("The order is completed.")
+            {
+                Decimal fulfillRate{"6.6"};
+                FulfilledOrder fulfilled = mockupFulfill(order, fulfillRate);
+                Decimal reinvestedQuote = amount * (0.25*3 + 0.25*2 + 0.25*1);
+
+                WHEN("The trader is spawning fragments.")
+                {
+                    trader.spawnFragments(fulfilled);
+
+                    THEN("It does spawn consolidated fragments.")
+                    {
+                        // No spawn for the 0 proportion, thus
+                        // each fragment spawned 3 values at identical rates.
+                        // The identical rates are consolidated.
+                        CHECK(db.countFragments() == 2 + 3);
+
+                        CHECK(isEqual(db.sumAllFragments(),
+                                      2 * (amount + amount * Decimal{"0.75"} /*sum of proportions*/)));
+
+                        db.reload(fragment_1);
+                        CHECK(isEqual(fragment_1.takenHome, amount * fulfillRate - reinvestedQuote));
+
+                        CHECK(isEqual(db.sumTakenHome(order), 2*fragment_1.takenHome));
+                    }
                 }
             }
         }
