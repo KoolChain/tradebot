@@ -1,18 +1,13 @@
-project(binance VERSION "${CMAKE_PROJECT_VERSION}")
+project(trademath VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
-    Api.h
-    Cryptography.h
-    Json.h
-    Orders.h
-    Time.h
-
-    detail/OrdersHelpers.h
+    Function.h
+    Ladder.h
+    Spawn.h
 )
 
 set(${PROJECT_NAME}_SOURCES
-    Api.cpp
-    Cryptography.cpp
+    Ladder.cpp
 )
 
 cmc_find_dependencies()
@@ -28,13 +23,8 @@ cmc_target_current_include_directory(${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
-        ad::trademath
-        ad::websocket
-        jsonformoderncpp::jsonformoderncpp
-    PRIVATE
         Boost::boost
-        cpr::cpr
-        OpenSSL::Crypto
+    PRIVATE
         spdlog::libspdlog
 )
 

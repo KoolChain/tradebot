@@ -28,7 +28,9 @@ struct Pair
 struct Order
 {
     std::string symbol() const;
+    Pair pair() const;
     binance::ClientId clientId() const;
+    Decimal executionQuoteAmount() const;
 
     enum class Status
     {
@@ -59,7 +61,6 @@ struct Order
     Decimal executionRate{"0"};
     Decimal commission{"0"};
     Coin commissionAsset;
-    Decimal takenHome{"0"};
     long exchangeId{-1}; // assigned by Binance
     long id{-1}; // auto-increment by ORM
 
@@ -72,7 +73,7 @@ struct Order
 
     Order & reverseSide()
     {
-        side = (side == Side::Sell ? Side::Buy : Side::Sell);
+        side = reverse(side);
         return *this;
     }
 

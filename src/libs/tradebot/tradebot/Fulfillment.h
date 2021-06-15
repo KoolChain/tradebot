@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include <binance/Decimal.h>
+#include <trademath/Decimal.h>
 #include <binance/Json.h>
 #include <binance/Time.h>
 

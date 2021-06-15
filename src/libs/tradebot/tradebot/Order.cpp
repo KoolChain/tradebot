@@ -18,15 +18,37 @@ std::string Order::symbol() const
 }
 
 
+Pair Order::pair() const
+{
+    return {base, quote};
+}
+
+
 binance::ClientId Order::clientId() const
 {
     // TODO Ideally we would have separate types to model orders matched in DB or not.
     // Right now we rely on runtime checks.
     if (id == -1)
     {
+        spdlog::critical("Cannot retrieve the client id for an order ({} {})"
+                          " which is not matched in database.",
+                          amount,
+                          symbol());
         throw std::logic_error{"Cannot retrieve the client id for an order not matched in database."};
     }
     return binance::ClientId{traderName + '-' + std::to_string(id)};
+}
+
+
+Decimal Order::executionQuoteAmount() const
+{
+    if (status != Status::Fulfilled)
+    {
+        spdlog::critical("Cannot get execution quote amount for order '{}' since it is not fulfilled.",
+                          getIdentity());
+        throw std::logic_error{"Cannot get execution quote amount for an order which is not fulfilled."};
+    }
+    return amount * executionRate;
 }
 
 
@@ -44,7 +66,6 @@ bool operator==(const Order & aLhs, const Order & aRhs)
         && aLhs.status == aRhs.status
         && aLhs.fulfillTime == aRhs.fulfillTime
         && isEqual(aLhs.executionRate, aRhs.executionRate)
-        && isEqual(aLhs.takenHome, aRhs.takenHome)
         && isEqual(aLhs.commission, aRhs.commission)
         && aLhs.commissionAsset == aRhs.commissionAsset
         && aLhs.exchangeId == aRhs.exchangeId
@@ -79,7 +100,6 @@ Order & Order::resetAsInactive()
     executionRate = 0;
     commission = 0;
     commissionAsset.clear();
-    takenHome = 0;
     exchangeId = -1;
     id = -1;
 

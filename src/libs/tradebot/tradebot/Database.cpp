@@ -34,7 +34,6 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("execution_rate", &Order::executionRate),
                        make_column("commission", &Order::commission),
                        make_column("commissionAsset", &Order::commissionAsset),
-                       make_column("taken_home", &Order::takenHome),
                        make_column("exchange_id", &Order::exchangeId)
             ),
             make_table("Fragments",
@@ -45,6 +44,7 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("amount", &Fragment::amount),
                        make_column("target_rate", &Fragment::targetRate),
                        make_column("side", &Fragment::side),
+                       make_column("taken_home", &Fragment::takenHome),
                        make_column("spawning_order", &Fragment::spawningOrder),
                        make_column("composed_order", &Fragment::composedOrder)
             ));
@@ -222,6 +222,23 @@ Decimal Database::sumFragmentsOfOrder(const Order & aOrder)
 }
 
 
+Decimal Database::sumTakenHome(const Order & aOrder)
+{
+    using namespace sqlite_orm;
+    std::unique_ptr<Decimal> result =
+        mImpl->storage.sum(&Fragment::takenHome,
+                where(is_equal(&Fragment::composedOrder, aOrder.id)));
+    if (!result)
+    {
+        spdlog::critical("Cannot sum taken home for fragments composing order {}.", aOrder.id);
+        throw std::logic_error("Unable to sum taken home.");
+    }
+    // Note: Surprisingly, calling sum on the amount Decimal field does not go through
+    // row_extractor<ad::Decimal>. So we fix for exact precision explicitly.
+    return fromFP(*result);
+}
+
+
 std::vector<Fragment> Database::getFragmentsComposing(const Order & aOrder)
 {
     using namespace sqlite_orm;
@@ -255,6 +272,28 @@ std::vector<Order> Database::selectOrders(const Pair & aPair, Order::Status aSta
                   && (c(&Order::base) = aPair.base)
                   && (c(&Order::quote) = aPair.quote)
             ));
+}
+
+
+struct Database::TransactionGuard::Impl
+{
+    decltype(Database::mImpl->storage.transaction_guard()) guard;
+};
+
+
+Database::TransactionGuard::~TransactionGuard() = default;
+
+Database::TransactionGuard Database::startTransaction()
+{
+    return TransactionGuard{std::unique_ptr<TransactionGuard::Impl>{
+        new TransactionGuard::Impl{mImpl->storage.transaction_guard()},
+    }};
+}
+
+
+void Database::commit(TransactionGuard && aGuard)
+{
+    aGuard.mImpl->guard.commit();
 }
 
 

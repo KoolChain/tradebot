@@ -8,7 +8,13 @@ set(${PROJECT_NAME}_HEADERS
     Logging.h
     Order.h
     OrmAdaptors-impl.h
+    OrmDecimalAdaptor-impl.h
+    Spawner.h
     Trader.h
+
+    spawners/Helpers.h
+    spawners/NaiveDownSpread.h
+    spawners/StableDownSpread.h
 )
 
 set(${PROJECT_NAME}_SOURCES
@@ -18,6 +24,8 @@ set(${PROJECT_NAME}_SOURCES
     Fragment.cpp
     Fulfillment.cpp
     Trader.cpp
+
+    spawners/NaiveDownSpread.cpp
 )
 
 cmc_find_dependencies()

@@ -110,8 +110,97 @@ bool Trader::cancel(Order & aOrder)
 }
 
 
+struct SpawnMap
+{
+    template <class T_iterator>
+    void appendFrom(FragmentId aParent, T_iterator aBegin, const T_iterator aEnd)
+    {
+        for(; aBegin != aEnd; ++aBegin)
+        {
+            data[aBegin->rate].emplace_back(aParent, aBegin->base);
+        }
+    }
+
+    std::map<
+        Decimal /*target price*/,
+        std::vector<
+            std::pair<FragmentId /*parent*/, Decimal /*spawned base amount*/>
+        >
+    > data;
+};
+
+
+std::vector<Fragment> consolidate(const SpawnMap & aSpawnMap,
+                                  Pair aPair,
+                                  Side aSide)
+{
+    std::vector<Fragment> result;
+    for (const auto & rateEntry : aSpawnMap.data)
+    {
+        Decimal accumulatedBaseAmount = std::accumulate(
+                rateEntry.second.begin(), rateEntry.second.end(),
+                Decimal{0},
+                [](const Decimal & acc, const auto & pair)
+                {
+                    return acc + pair.second;
+                });
+        result.push_back(Fragment{
+                aPair.base,
+                aPair.quote,
+                accumulatedBaseAmount,
+                rateEntry.first,
+                aSide});
+    }
+    return result;
+}
+
+
+void Trader::spawnFragments(const FulfilledOrder & aOrder)
+{
+    SpawnMap spawnMap;
+
+    for(Fragment & fragment : database.getFragmentsComposing(aOrder))
+    {
+        auto [resultingFragments, takenHome] =
+            spawner->computeResultingFragments(fragment, aOrder, database);
+
+        fragment.takenHome = std::move(takenHome);
+        database.update(fragment);
+
+        spawnMap.appendFrom(fragment.id, resultingFragments.begin(), resultingFragments.end());
+    }
+
+    for (Fragment & newFragment : consolidate(spawnMap,
+                                              aOrder.pair(),
+                                              reverse(aOrder.side)))
+    {
+        // Use isEqual to remove rounding errors that would make it just above zero
+        // and also discard invalid negative amounts, in case they arise.
+        if (! isEqual(newFragment.amount, 0) && newFragment.amount > 0)
+        {
+            database.insert(newFragment);
+        }
+        else
+        {
+            spdlog::warn("Spawning fragments for order '{}' proposed a fragment with invalid amount {}."
+                          " Ignoring it.",
+                          aOrder.getIdentity(),
+                          newFragment.amount);
+        }
+    }
+}
+
+
 bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 {
+    // Important: Everything happening on the database in this member function
+    // is guarded as a single transaction.
+    // This way, in case of crash, the order would not be marked fulfilled
+    // and no fragments would have been spawned to the DB.
+    // (and the whole process will restart from scratch on next launch)
+
+    auto transaction = database.startTransaction();
+
     bool result = database.onFillOrder(aFulfilledOrder);
     if (result)
     {
@@ -123,7 +212,11 @@ bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
                 aFulfilledOrder.executionRate,
                 aFulfilledOrder.quote
         );
+
+        spawnFragments(aFulfilledOrder);
     }
+
+    database.commit(std::move(transaction));
     return result;
 }
 

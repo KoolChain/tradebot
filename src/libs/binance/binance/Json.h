@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Decimal.h"
+#include <trademath/Decimal.h>
 
 #include <nlohmann/json.hpp>
 

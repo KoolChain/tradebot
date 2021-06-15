@@ -63,7 +63,25 @@ public:
 
     Decimal sumFragmentsOfOrder(const Order & aOrder);
 
+    /// \brief Sum taken home for all fragments associated to the order.
+    Decimal sumTakenHome(const Order & aOrder);
+
     std::vector<Order> selectOrders(const Pair & aPair, Order::Status aStatus);
+
+
+    //
+    // Transaction API
+    //
+    struct TransactionGuard
+    {
+        ~TransactionGuard();
+        struct Impl;
+        std::unique_ptr<Impl> mImpl;
+    };
+
+    [[nodiscard]] TransactionGuard startTransaction();
+
+    void commit(TransactionGuard && aGuard);
 
     //
     // High level API

@@ -1,14 +1,17 @@
 #pragma once
 
+#include "testnet_secrets.h"
+
 #include <tradebot/Database.h>
 #include <tradebot/Exchange.h>
 #include <tradebot/Order.h>
+#include <tradebot/Trader.h>
 
 
 namespace ad {
 
 
-inline tradebot::Order makeOrder(const std::string aTraderName,
+inline tradebot::Order makeOrder(const std::string & aTraderName,
                                  const tradebot::Pair & aPair,
                                  tradebot::Side aSide,
                                  Decimal aPrice = Decimal{"0"},
@@ -26,7 +29,7 @@ inline tradebot::Order makeOrder(const std::string aTraderName,
 }
 
 inline tradebot::Order makeImpossibleOrder(tradebot::Exchange & aExchange,
-                                           const std::string aTraderName,
+                                           const std::string & aTraderName,
                                            const tradebot::Pair & aPair,
                                            tradebot::Side aSide = tradebot::Side::Sell, // if it still fulfills, might as well make us rich!
                                            Decimal aAmount = Decimal{"0.001"})
@@ -34,6 +37,29 @@ inline tradebot::Order makeImpossibleOrder(tradebot::Exchange & aExchange,
     Decimal averagePrice = aExchange.getCurrentAveragePrice(aPair);
     return makeOrder(aTraderName, aPair, aSide, floor(averagePrice*4), aAmount);
 }
+
+
+inline tradebot::Trader makeTrader(const std::string & aTraderName,
+                                   tradebot::Pair aPair = tradebot::Pair{"BTC", "USDT"})
+{
+    return tradebot::Trader{
+        aTraderName,
+        aPair,
+        tradebot::Database{":memory:"},
+        tradebot::Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+    };
+}
+
+
+inline tradebot::FulfilledOrder mockupFulfill(tradebot::Order & aOrder, Decimal aExecutionRate)
+{
+    aOrder.status = tradebot::Order::Status::Fulfilled;
+    aOrder.fulfillTime = getTimestamp();
+    aOrder.executionRate = aExecutionRate;
+
+    return {aOrder};
+}
+
 
 template <class T_exchange>
 inline void fulfillMarketOrder(T_exchange & aExchange, tradebot::Order & aOrder)

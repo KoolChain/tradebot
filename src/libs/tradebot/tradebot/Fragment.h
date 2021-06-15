@@ -1,6 +1,6 @@
 #pragma once
 
-#include <binance/Decimal.h>
+#include <trademath/Decimal.h>
 
 #include <string>
 
@@ -19,6 +19,14 @@ enum class Side
 };
 
 
+inline Side reverse(Side aSide)
+{
+    return (aSide == Side::Sell ? Side::Buy : Side::Sell);
+}
+
+
+using FragmentId = long;
+
 struct Fragment
 {
     Coin base;
@@ -27,9 +35,10 @@ struct Fragment
     Decimal targetRate;
     Side side;
 
+    Decimal takenHome{"0"};
     long spawningOrder{-1};
     long composedOrder{-1};
-    long id{-1}; // auto-increment by ORM
+    FragmentId id{-1}; // auto-increment by ORM
 };
 
 

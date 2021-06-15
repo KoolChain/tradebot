@@ -1,6 +1,6 @@
 #include "catch.hpp"
 
-#include <binance/Decimal.h>
+#include <trademath/Decimal.h>
 
 #include <tradebot/Database.h>
 #include <tradebot/Fragment.h>
