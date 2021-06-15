@@ -51,13 +51,13 @@ inline tradebot::Trader makeTrader(const std::string & aTraderName,
 }
 
 
-inline tradebot::Order & mockupFulfillOrder(tradebot::Order & aOrder, Decimal aExecutionRate)
+inline tradebot::FulfilledOrder mockupFulfill(tradebot::Order & aOrder, Decimal aExecutionRate)
 {
     aOrder.status = tradebot::Order::Status::Fulfilled;
     aOrder.fulfillTime = getTimestamp();
     aOrder.executionRate = aExecutionRate;
 
-    return aOrder;
+    return {aOrder};
 }
 
 

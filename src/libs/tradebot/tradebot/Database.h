@@ -63,6 +63,9 @@ public:
 
     Decimal sumFragmentsOfOrder(const Order & aOrder);
 
+    /// \brief Sum taken home for all fragments associated to the order.
+    Decimal sumTakenHome(const Order & aOrder);
+
     std::vector<Order> selectOrders(const Pair & aPair, Order::Status aStatus);
 
     //

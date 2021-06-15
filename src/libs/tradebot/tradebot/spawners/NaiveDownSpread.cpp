@@ -17,7 +17,7 @@ NaiveDownSpread::NaiveDownSpread(trade::Ladder aLadder, std::vector<Decimal> aPr
 
 
 SpawnerBase::Result NaiveDownSpread::computeResultingFragments(const Fragment & aFilledFragment,
-                                                               const Order & aOrder,
+                                                               const FulfilledOrder & aOrder,
                                                                Database & aDatabase)
 {
     switch (aFilledFragment.side)

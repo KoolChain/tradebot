@@ -18,6 +18,12 @@ std::string Order::symbol() const
 }
 
 
+Pair Order::pair() const
+{
+    return {base, quote};
+}
+
+
 binance::ClientId Order::clientId() const
 {
     // TODO Ideally we would have separate types to model orders matched in DB or not.

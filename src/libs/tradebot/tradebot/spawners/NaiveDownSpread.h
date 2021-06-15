@@ -21,7 +21,7 @@ public:
 
     Result
     computeResultingFragments(const Fragment & aFilledFragment,
-                              const Order & aOrder,
+                              const FulfilledOrder & aOrder,
                               Database & aDatabase) override;
 
 

@@ -28,6 +28,7 @@ struct Pair
 struct Order
 {
     std::string symbol() const;
+    Pair pair() const;
     binance::ClientId clientId() const;
     Decimal executionQuoteAmount() const;
 
@@ -72,7 +73,7 @@ struct Order
 
     Order & reverseSide()
     {
-        side = (side == Side::Sell ? Side::Buy : Side::Sell);
+        side = reverse(side);
         return *this;
     }
 

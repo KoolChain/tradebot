@@ -17,12 +17,14 @@ SCENARIO("Order usage.", "[order]")
             "ordertest",
             pair.base,
             pair.quote,
-            0.02,
-            1.1,
+            Decimal{"0.02"},
+            Decimal{"1.1"},
             Side::Buy,
         };
 
         REQUIRE(order.side == Side::Buy);
+        REQUIRE(order.amount == Decimal{"0.02"});
+
 
         THEN("Its side can be reversed.")
         {
@@ -33,6 +35,29 @@ SCENARIO("Order usage.", "[order]")
             REQUIRE(order.reverseSide().side == Side::Buy);
             // The order is changed in place
             REQUIRE(order.side == Side::Buy);
+        }
+
+
+        THEN("Its symbol can be obtained.")
+        {
+            CHECK(order.symbol() == "DOGEDAI");
+        }
+
+
+        WHEN("The order has an execution rate.")
+        {
+            order.status = Order::Status::Fulfilled;
+            THEN("Its execution quote amount can be obtained.")
+            {
+                order.executionRate = Decimal(3);
+                CHECK(order.executionQuoteAmount() == order.amount * 3);
+            }
+
+            THEN("Its execution quote amount can be obtained.")
+            {
+                order.executionRate = Decimal("0.02");
+                CHECK(order.executionQuoteAmount() == order.amount * Decimal{"0.02"});
+            }
         }
     }
 }

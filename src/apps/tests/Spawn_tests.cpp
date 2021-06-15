@@ -380,6 +380,110 @@ SCENARIO("Spawning from proportions.", "[spawn]")
 }
 
 
+SCENARIO("Not spawning counter-fragments with default NullSpawner.", "[spawn]")
+{
+    GIVEN("A trader with default NullSpawner.")
+    {
+        Pair pair{"BTC", "USDT"};
+        Trader trader = makeTrader("spawntest", pair);
+
+        auto & db = trader.database;
+        auto & binance = trader.exchange;
+
+        GIVEN("Two Sell fragments assigned to a single order.")
+        {
+            Decimal amount{"1000"};
+            Decimal rate{"100"};
+            Fragment fragment_1{
+                pair.base,
+                pair.quote,
+                amount,
+                rate,
+                Side::Sell,
+            };
+            db.insert(fragment_1);
+
+            Fragment fragment_2{
+                pair.base,
+                pair.quote,
+                amount,
+                rate,
+                Side::Sell,
+            };
+            db.insert(fragment_2);
+
+            Order order = db.prepareOrder(
+                    trader.name,
+                    Side::Sell,
+                    rate,
+                    pair,
+                    Order::FulfillResponse::SmallSpread);
+            db.reload(fragment_1);
+            db.reload(fragment_2);
+
+            // Sanity check
+            REQUIRE(order.amount == 2*amount);
+            REQUIRE(fragment_1.composedOrder == order.id);
+            REQUIRE(fragment_2.composedOrder == order.id);
+            REQUIRE(db.countFragments() == 2);
+
+            WHEN("The order is (mockingly) fulfilled.")
+            {
+                Decimal executionRate{200};
+                FulfilledOrder fulfilled = mockupFulfill(order, executionRate);
+
+                WHEN("The spawner is used directly.")
+                {
+                    THEN("It does not spawn new fragment, and reports full taken home.")
+                    {
+                        Decimal takenAccumulation{0};
+                        {
+                            auto [spawns, takenHome] =
+                                trader.spawner->computeResultingFragments(fragment_1, fulfilled, db);
+
+                            CHECK(spawns.size() == 0);
+                            CHECK(takenHome == amount * executionRate);
+                            takenAccumulation += takenHome;
+                        }
+
+                        {
+                            auto [spawns, takenHome] =
+                                trader.spawner->computeResultingFragments(fragment_2, fulfilled, db);
+
+                            CHECK(spawns.size() == 0);
+                            CHECK(takenHome == amount * executionRate);
+                            takenAccumulation += takenHome;
+                        }
+                        CHECK(takenAccumulation == order.executionQuoteAmount());
+                    }
+                }
+
+                WHEN("The trader is spawning fragments.")
+                {
+                    trader.spawnFragments(fulfilled);
+
+                    THEN("It does not spawn new fragment, and reports full taken home.")
+                    {
+                        // Still two initial fragments, not more
+                        CHECK(db.countFragments() == 2);
+
+                        REQUIRE(fragment_1.takenHome == 0); // Sanity check
+                        db.reload(fragment_1);
+                        CHECK(fragment_1.takenHome == fragment_1.amount * executionRate);
+
+                        REQUIRE(fragment_2.takenHome == 0); // Sanity check
+                        db.reload(fragment_2);
+                        CHECK(fragment_2.takenHome == fragment_2.amount * executionRate);
+
+                        CHECK(db.sumTakenHome(order) == order.executionQuoteAmount());
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
 {
     const Ladder ladder = {
@@ -436,12 +540,12 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
 
             WHEN("The order is completed.")
             {
-                mockupFulfillOrder(order, order.fragmentsRate);
+                FulfilledOrder fulfilled = mockupFulfill(order, order.fragmentsRate);
 
                 THEN("Resulting 'spawns' can be computed directly on the spawner.")
                 {
                     auto [spawns, takenHome] =
-                        trader.spawner->computeResultingFragments(fragment, order, db);
+                        trader.spawner->computeResultingFragments(fragment, fulfilled, db);
 
                     REQUIRE(spawns.size() == 4);
                     CHECK(spawns.at(0) == Spawn{10, Base{amount * Decimal{"0.05"}}});

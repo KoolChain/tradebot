@@ -222,6 +222,23 @@ Decimal Database::sumFragmentsOfOrder(const Order & aOrder)
 }
 
 
+Decimal Database::sumTakenHome(const Order & aOrder)
+{
+    using namespace sqlite_orm;
+    std::unique_ptr<Decimal> result =
+        mImpl->storage.sum(&Fragment::takenHome,
+                where(is_equal(&Fragment::composedOrder, aOrder.id)));
+    if (!result)
+    {
+        spdlog::critical("Cannot sum taken home for fragments composing order {}.", aOrder.id);
+        throw std::logic_error("Unable to sum taken home.");
+    }
+    // Note: Surprisingly, calling sum on the amount Decimal field does not go through
+    // row_extractor<ad::Decimal>. So we fix for exact precision explicitly.
+    return fromFP(*result);
+}
+
+
 std::vector<Fragment> Database::getFragmentsComposing(const Order & aOrder)
 {
     using namespace sqlite_orm;

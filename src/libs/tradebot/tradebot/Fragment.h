@@ -19,6 +19,12 @@ enum class Side
 };
 
 
+inline Side reverse(Side aSide)
+{
+    return (aSide == Side::Sell ? Side::Buy : Side::Sell);
+}
+
+
 using FragmentId = long;
 
 struct Fragment

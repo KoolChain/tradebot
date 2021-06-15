@@ -27,7 +27,7 @@ public:
 
     virtual Result
     computeResultingFragments(const Fragment & aFilledFragment,
-                              const Order & aOrder,
+                              const FulfilledOrder & aOrder,
                               Database & aDatabase) = 0;
 };
 
@@ -38,15 +38,15 @@ class NullSpawner : public SpawnerBase
 public:
     Result
     computeResultingFragments(const Fragment & aFilledFragment,
-                              const Order & aOrder,
+                              const FulfilledOrder & aOrder,
                               Database & aDatabase) override
     {
         switch (aFilledFragment.side)
         {
             case Side::Buy:
-                return {{}, aOrder.amount};
+                return {{}, aFilledFragment.amount};
             case Side::Sell:
-                return {{}, aOrder.executionQuoteAmount()};
+                return {{}, aFilledFragment.amount * aOrder.executionRate};
         }
     }
 };

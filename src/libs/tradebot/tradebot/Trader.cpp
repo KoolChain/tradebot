@@ -132,13 +132,19 @@ struct SpawnMap
 
 void Trader::spawnFragments(const FulfilledOrder & aOrder)
 {
+    // TODO Everything happening on the database in this member function
+    // should be guarded as a single transaction.
+
     SpawnMap spawnMap;
 
     for(Fragment & fragment : database.getFragmentsComposing(aOrder))
     {
         auto [resultingFragments, takenHome] =
             spawner->computeResultingFragments(fragment, aOrder, database);
+
         fragment.takenHome = std::move(takenHome);
+        database.update(fragment);
+
         spawnMap.appendFrom(fragment.id, resultingFragments.begin(), resultingFragments.end());
     }
 }
