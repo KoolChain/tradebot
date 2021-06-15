@@ -14,6 +14,7 @@ struct Trader
 private:
     void sendExistingOrder(Execution aExecution, Order & aOrder);
 
+public: // should be private, but requires testing
     bool completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder);
 
 public:

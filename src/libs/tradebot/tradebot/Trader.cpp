@@ -157,9 +157,6 @@ std::vector<Fragment> consolidate(const SpawnMap & aSpawnMap,
 
 void Trader::spawnFragments(const FulfilledOrder & aOrder)
 {
-    // TODO Everything happening on the database in this member function
-    // should be guarded as a single transaction.
-
     SpawnMap spawnMap;
 
     for(Fragment & fragment : database.getFragmentsComposing(aOrder))
@@ -196,6 +193,14 @@ void Trader::spawnFragments(const FulfilledOrder & aOrder)
 
 bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 {
+    // Important: Everything happening on the database in this member function
+    // is guarded as a single transaction.
+    // This way, in case of crash, the order would not be marked fulfilled
+    // and no fragments would have been spawned to the DB.
+    // (and the whole process will restart from scratch on next launch)
+
+    auto transaction = database.startTransaction();
+
     bool result = database.onFillOrder(aFulfilledOrder);
     if (result)
     {
@@ -210,6 +215,8 @@ bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 
         spawnFragments(aFulfilledOrder);
     }
+
+    database.commit(std::move(transaction));
     return result;
 }
 

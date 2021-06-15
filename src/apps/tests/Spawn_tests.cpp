@@ -610,6 +610,57 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                         CHECK(isEqual(db.sumTakenHome(order), expectedTakenHome));
                     }
                 }
+
+                WHEN("The trader completeFulfilledOrder() is used.")
+                {
+                    // Sanity check
+                    REQUIRE(db.reload(order).status == Order::Status::Inactive);
+
+                    trader.completeFulfilledOrder(fulfilled);
+
+                    // Sanity check
+                    REQUIRE(db.reload(order).status == Order::Status::Fulfilled);
+
+                    THEN("It does spawn expected fragments, and reports correct taken home.")
+                    {
+                        // spawned 1 fragment per proportion
+                        CHECK(db.countFragments() == 1 + proportions.size());
+                        CHECK(isEqual(db.sumAllFragments(), amount + reboughtBase));
+
+                        THEN("The spawned fragments can be obtained from the database.")
+                        {
+                            {
+                                REQUIRE(ladder.at(2) == 1);
+                                auto unassociated =
+                                    db.getUnassociatedFragments(reverse(fragment.side),
+                                                                ladder.at(2),
+                                                                order.pair());
+
+                                CHECK(unassociated.size() == 1);
+
+                                Fragment frag = unassociated.at(0);
+                                CHECK(frag.amount == Decimal{"0.1"}*amount);
+                            }
+                            {
+                                REQUIRE(ladder.at(1) == Decimal{"0.1"});
+                                auto unassociated =
+                                    db.getUnassociatedFragments(reverse(fragment.side),
+                                                                ladder.at(1),
+                                                                order.pair());
+
+                                CHECK(unassociated.size() == 1);
+
+                                Fragment frag = unassociated.at(0);
+                                CHECK(frag.amount == Decimal{"0.2"}*amount);
+                            }
+                        }
+
+                        db.reload(fragment);
+                        CHECK(isEqual(fragment.takenHome, expectedTakenHome));
+
+                        CHECK(isEqual(db.sumTakenHome(order), expectedTakenHome));
+                    }
+                }
             }
         }
     }

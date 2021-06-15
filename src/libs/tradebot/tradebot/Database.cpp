@@ -275,6 +275,28 @@ std::vector<Order> Database::selectOrders(const Pair & aPair, Order::Status aSta
 }
 
 
+struct Database::TransactionGuard::Impl
+{
+    decltype(Database::mImpl->storage.transaction_guard()) guard;
+};
+
+
+Database::TransactionGuard::~TransactionGuard() = default;
+
+Database::TransactionGuard Database::startTransaction()
+{
+    return TransactionGuard{std::unique_ptr<TransactionGuard::Impl>{
+        new TransactionGuard::Impl{mImpl->storage.transaction_guard()},
+    }};
+}
+
+
+void Database::commit(TransactionGuard && aGuard)
+{
+    aGuard.mImpl->guard.commit();
+}
+
+
 Order Database::prepareOrder(const std::string & aTraderName,
                              Side aSide,
                              Decimal aFragmentsRate,
