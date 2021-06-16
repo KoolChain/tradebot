@@ -104,6 +104,9 @@ inline Decimal sumSpawnQuote(const T_spawnRange & aSpawn)
 }
 
 
+template <class T_amount>
+using SpawnResult = std::pair<std::vector<Spawn>, T_amount/*accumulation*/>;
+
 /// \brief Compute a vector of `Spawn` and the corresponding accumulated base amount from a proportion function.
 ///
 /// It integrates the proportion function `aFunction` over the ladder intervals,
@@ -113,7 +116,7 @@ inline Decimal sumSpawnQuote(const T_spawnRange & aSpawn)
 /// \note For normal iterators, farthest stop is the upper value in the interval,
 /// while for reverse iterators it the the lower value.
 template <class T_amount, class T_ladderIt, class T_function>
-std::pair<std::vector<Spawn>, T_amount/*accumulation*/>
+SpawnResult<T_amount>
 spawnIntegration(const T_amount aAmount,
                  T_ladderIt aStopBegin, const T_ladderIt aStopEnd,
                  T_function aFunction)
@@ -142,7 +145,7 @@ spawnIntegration(const T_amount aAmount,
 /// Applies the proportions in the proportions' range to `aAmount`,
 /// assigning the results to the stops in the ladder range.
 template <class T_amount, class T_ladderIt, class T_proportionsIt>
-std::pair<std::vector<Spawn>, T_amount/*accumulation*/>
+SpawnResult<T_amount>
 spawnProportions(const T_amount aAmount,
                  T_ladderIt aStopBegin, const T_ladderIt aStopEnd,
                  T_proportionsIt aProportionsBegin, const T_proportionsIt aProportionsEnd)

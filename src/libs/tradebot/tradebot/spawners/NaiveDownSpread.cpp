@@ -11,8 +11,10 @@ namespace spawner {
 
 
 NaiveDownSpread::NaiveDownSpread(trade::Ladder aLadder, std::vector<Decimal> aProportions) :
-    ladder{std::move(aLadder)},
-    proportions{std::move(aProportions)}
+    downSpreader{
+        std::move(aLadder),
+        std::move(aProportions)
+    }
 {}
 
 
@@ -24,13 +26,10 @@ SpawnerBase::Result NaiveDownSpread::computeResultingFragments(const Fragment & 
     {
         case Side::Sell:
         {
-            auto reverseStop = getStopFor(ladder.rbegin(), ladder.rend(), aFilledFragment);
-            // reverseStop will never be ladder.rend(): getStopFor() throws when stop is not found.
             auto [result, accumulatedBase] =
-                trade::spawnProportions(trade::Base{aFilledFragment.amount},
-                                        // reverseStop+1 because no fagment should be assigned to the current stop.
-                                        reverseStop+1, ladder.rend(),
-                                        proportions.begin(), proportions.end());
+                downSpreader.spreadDown(trade::Base{aFilledFragment.amount},
+                                        aFilledFragment.targetRate);
+
             return {result, aFilledFragment.amount * aOrder.executionRate - sumSpawnQuote(result)};
         }
         case Side::Buy:

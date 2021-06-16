@@ -2,6 +2,8 @@
 
 #include "../Spawner.h"
 
+#include <trademath/Spreaders.h>
+
 
 namespace ad {
 namespace tradebot {
@@ -25,8 +27,7 @@ public:
                               Database & aDatabase) override;
 
 
-    trade::Ladder ladder;
-    std::vector<Decimal> proportions;
+    trade::ProportionSpreader downSpreader;
 };
 
 

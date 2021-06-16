@@ -47,5 +47,11 @@ Ladder makeLadder(Decimal aFirstRate,
 }
 
 
+void logCritical(const std::string aMessage)
+{
+    spdlog::critical(aMessage);
+}
+
+
 } // namespace trade
 } // namespace ad
