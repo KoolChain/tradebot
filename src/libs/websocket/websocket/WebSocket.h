@@ -3,6 +3,8 @@
 
 #include <experimental/propagate_const>
 
+#include <functional>
+#include <memory>
 #include <mutex>
 #include <queue>
 

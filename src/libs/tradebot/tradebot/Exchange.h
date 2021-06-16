@@ -9,6 +9,7 @@
 
 #include <boost/asio/steady_timer.hpp>
 
+#include <condition_variable>
 #include <thread>
 
 
