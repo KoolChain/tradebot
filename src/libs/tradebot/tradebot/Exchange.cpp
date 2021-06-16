@@ -282,6 +282,15 @@ std::optional<Json> Exchange::tryQueryOrder(const Order & aOrder,
                                             int aAttempts,
                                             std::chrono::milliseconds aDelay)
 {
+    return tryQueryOrder(aOrder, [](const Json &){return true;}, aAttempts, aDelay);
+}
+
+
+std::optional<Json> Exchange::tryQueryOrder(const Order & aOrder,
+                                            std::function<bool(const Json &)> aPredicate,
+                                            int aAttempts,
+                                            std::chrono::milliseconds aDelay)
+{
     --aAttempts;
 
     binance::Response response = restApi.queryOrder(aOrder.symbol(), aOrder.clientId());
@@ -289,20 +298,39 @@ std::optional<Json> Exchange::tryQueryOrder(const Order & aOrder,
     {
         Json json = (*response.json);
         // Will exit by throwing when no attempts are left and the exchange ids still don't match
-        if (aAttempts <= 0
-            || aOrder.exchangeId == -1 /* -1 could happend for a 'Sending' order */
+        if (aOrder.exchangeId == -1 /* -1 could happen for a 'Sending' order */
             || aOrder.exchangeId == json.at("orderId"))
         {
-            assertExchangeIdConsistency(aOrder, (*response.json));
-            return json;
+            if (aPredicate(json))
+            {
+                return json;
+            }
+            else if (aAttempts > 0)
+            {
+                spdlog::warn("Returned JSON for order instance '{}' did not satisfy the predicate."
+                             " {} attempt(s) left.",
+                             aOrder.getIdentity(),
+                             aAttempts);
+            }
+            else // no more attempts
+            {
+                spdlog::critical("Returned JSON for order instance '{}' did not satisfy the predicate.",
+                                 aOrder.getIdentity());
+                throw std::logic_error{"JSON returned by the exchange does not satisfy predicate."};
+            }
         }
-        else
+        else if (aAttempts > 0)
         {
             spdlog::warn("Order instance '{}' does not match the id returned by the exchange: {}."
                          " {} attempt(s) left.",
                          aOrder.getIdentity(),
                          json.at("orderId"),
                          aAttempts);
+        }
+        else // no more attempts
+        {
+            // Will take care of log and exception
+            assertExchangeIdConsistency(aOrder, (*response.json));
         }
     }
     else if (response.status == 400
@@ -319,10 +347,11 @@ std::optional<Json> Exchange::tryQueryOrder(const Order & aOrder,
         unhandledResponse(response, "try query order");
     }
 
+    // If status was still 400 -2013 after all the attempts, will fall to the else
     if (aAttempts > 0)
     {
         std::this_thread::sleep_for(aDelay);
-        return tryQueryOrder(aOrder, aAttempts, aDelay);
+        return tryQueryOrder(aOrder, std::move(aPredicate), aAttempts, aDelay);
     }
     else
     {

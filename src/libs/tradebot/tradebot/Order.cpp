@@ -140,6 +140,14 @@ FulfilledOrder fulfill(Order & aOrder,
                              aFulfillment.amountBase);
             throw std::logic_error("Mismatched original amount and accumulated fulfillment quantity on order.");
         }
+
+        if (aQueryStatus.at("status") != "FILLED")
+        {
+            spdlog::critical("Provided query status for order '{}' indicates status {}, should be \"FILLED\".",
+                             aOrder.getIdentity(),
+                             aQueryStatus.at("status"));
+            throw std::logic_error("Unexpected order status in provided query status json.");
+        }
     }
 
     aOrder.status = Order::Status::Fulfilled;

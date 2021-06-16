@@ -223,7 +223,16 @@ bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 
 bool Trader::completeOrder(Order & aOrder, const Fulfillment & aFulfillment)
 {
-    std::optional<Json> orderJson = exchange.tryQueryOrder(aOrder);
+    // Note: on 2021/06/11, there was a crash of NaiveBot with exception
+    // "Mismatched original amount and executed quantity on order." in fulfill() below.
+    // I suspect this was because the exchange returned an order-JSON that was not yet up to date,
+    // and still at a partially filled state (the order had several trades).
+    auto ensureFulfilled = [](const Json & aOrderJson)
+    {
+        return aOrderJson.at("status") == "FILLED";
+    };
+
+    std::optional<Json> orderJson = exchange.tryQueryOrder(aOrder, ensureFulfilled);
     if (orderJson)
     {
         return completeFulfilledOrder(fulfill(aOrder, *orderJson, aFulfillment));

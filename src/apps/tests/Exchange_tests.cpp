@@ -335,7 +335,10 @@ SCENARIO("Listing trades.", "[exchange]")
             {
                 Fulfillment fulfillment = exchange.accumulateTradesFor(buyLarge, 1);
 
-                Json orderJson = exchange.queryOrder(buyLarge);
+                // There were issues with the API not updating quickly enough and returning
+                // a previous order in some runs. Work around it with the retrying version of
+                // query order.
+                Json orderJson = *exchange.tryQueryOrder(buyLarge);
 
                 CHECK(fulfillment.amountBase == buyLarge.amount);
                 CHECK(fulfillment.amountBase == jstod(orderJson.at("executedQty")));
@@ -537,8 +540,9 @@ SCENARIO("Retrying query order.", "[exchange]")
                 std::optional<Json> orderJson = exchange.tryQueryOrder(impossible, attempts, waitFor);
 
                 // Make sure the place order response was received before making tests.
-                // Maybe this is still a race condition by the standard, since there is no explicit synchronization
-                // yet I hope it will not be the case in practice. (otherwise, add explicit sync).
+                // Maybe this is still a race condition (on `impossible`) by the standard,
+                // since there is no explicit synchronization.
+                // Yet I hope it will not be the case in practice. (otherwise, add explicit sync).
                 sender.join();
 
                 THEN("The order is eventually found, after some (more) time.")
@@ -561,7 +565,24 @@ SCENARIO("Retrying query order.", "[exchange]")
                         THEN("An exception will be thrown trying to query the order, after all attempts are exhausted.")
                         {
                             before = getTimestamp();
-                            REQUIRE_THROWS(exchange.tryQueryOrder(sameClientId));
+                            REQUIRE_THROWS(exchange.tryQueryOrder(sameClientId, attempts, waitFor));
+                            REQUIRE(getTimestamp() > (attempts * waitFor).count());
+                        }
+                    }
+
+                    WHEN("The order is queried via tryQuery order with a predicate that will not match.")
+                    {
+                        auto impossiblePredicate = [](const Json & aJson)
+                        {
+                            return aJson.at("status") == "FILLED";
+                        };
+
+                        THEN("An exception will be thrown trying to query the order, after all attempts are exhausted.")
+                        {
+                            before = getTimestamp();
+                            REQUIRE_THROWS(exchange.tryQueryOrder(impossible,
+                                                                  impossiblePredicate,
+                                                                  attempts, waitFor));
                             REQUIRE(getTimestamp() > (attempts * waitFor).count());
                         }
                     }
