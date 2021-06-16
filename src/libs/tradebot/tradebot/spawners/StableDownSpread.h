@@ -1,6 +1,11 @@
 #pragma once
 
 
+#include "../Spawner.h"
+
+#include <trademath/Spawn.h>
+
+
 namespace ad {
 namespace tradebot {
 namespace spawner {
@@ -18,7 +23,93 @@ namespace spawner {
 // It should be made sure that it does not lead to a lowering cycle: the base amount to sell
 // should provide a quote amount at least equal to the quote amount spent during this `Buy`, plus
 // some if some should be taken home after the `Sell`.
-//
+
+
+#define TMP_PARAM_LIST class T_spawner
+#define TMP_ARGS T_spawner
+
+
+template <TMP_PARAM_LIST>
+class StableDownSpread : public SpawnerBase
+{
+public:
+    Result
+    computeResultingFragments(const Fragment & aFilledFragment,
+                              const FulfilledOrder & aOrder,
+                              Database & aDatabase) override;
+
+    Result onFirstSell(const Fragment & aFilledFragment, const FulfilledOrder & aOrder);
+
+    T_spawner downSpreader;
+};
+
+
+template <TMP_PARAM_LIST>
+SpawnerBase::Result
+StableDownSpread<TMP_ARGS>::computeResultingFragments(const Fragment & aFilledFragment,
+                                                      const FulfilledOrder & aOrder,
+                                                      Database & aDatabase)
+{
+    switch (aFilledFragment.side)
+    {
+        case Side::Sell:
+        {
+            if (aFilledFragment.isInitial())
+            {
+                return onFirstSell();
+            }
+            else
+            {
+                //onSubsequentSell();
+            }
+        }
+        case Side::Buy:
+        {
+            if (aFilledFragment.isInitial())
+            {
+                spdlog::critical("StableDownSpread cannot handle initial Buy fragments: '{}'",
+                    boost::lexical_cast<std::string>(aFilledFragment));
+                throw std::logic_error{"StableDownSpread encountered an initial Buy fragment."};
+            }
+
+            Order parentOrder = aDatabase.getOrder(aFilledFragment.spawningOrder);
+            onSubsequentBuy();
+        }
+    }
+}
+
+
+template <TMP_PARAM_LIST>
+SpawnerBase::Result
+StableDownSpread<TMP_ARGS>::onFirstSell(const Fragment & aFilledFragment,
+                                        const FulfilledOrder & aOrder)
+{
+    trade::Order actualQuoteAmount = aFilledFragment.amount * aOrder.executionRate;
+    auto [spawns, totalSpawnedQuote] =
+        downSpreader.spawnDown(actualQuoteAmount, aFilledFragment.targetRate);
+
+    return {spawns, actualQuoteAmount - totalSpawnedQuote};
+}
+
+
+template <TMP_PARAM_LIST>
+SpawnerBase::Result
+StableDownSpread<TMP_ARGS>::onSubsequentBuy(const Fragment & aFilledFragment,
+                                            const FulfilledOrder & aOrder,
+                                            Database & aDatabase)
+{
+    trade::Base actualBaseAmount = aFilledFragment.amount;
+    Order parentOrder = aDatabase.getOrder(aFilledFragment.spawningOrder);
+
+    trade::Spawn singleSpawn;
+
+    return {{singleSpawn}, actualQuoteAmount - totalSpawnedQuote};
+}
+
+#undef TMP_ARGS
+#undef TMP_PARAM_LIST
+
+
 } // namespace spawner
 } // namespace tradebot
 } // namespace ad

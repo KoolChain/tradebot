@@ -7,6 +7,12 @@ namespace ad {
 namespace tradebot {
 
 
+bool Fragment::isInitial() const
+{
+    return spawningOrder == -1;
+}
+
+
 bool operator==(const Fragment & aLhs, const Fragment & aRhs)
 {
     return

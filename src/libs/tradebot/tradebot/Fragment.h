@@ -29,6 +29,9 @@ using FragmentId = long;
 
 struct Fragment
 {
+    /// \brief Returns `true` if the fragment has no parent order, `false` otherwise.
+    bool isInitial() const;
+
     Coin base;
     Coin quote;
     Decimal amount;
