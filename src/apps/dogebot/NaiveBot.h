@@ -98,16 +98,30 @@ inline void NaiveBot::onCompletion(Json aReport)
         throw std::logic_error{"Mismatched order amount vs. reported cumulative filled quantity."};
 
     }
-    // TODO: add attempt to retrieves all trades for the order (might have missed some partially_filled reports)
-    // to make it a bit more robust to network errors, 24h reconnections, etc.
+
     if (currentOrder->fulfillment.amountBase != currentOrder->order.amount)
     {
-        spdlog::critical("Order '{}' has missmatching amount vs. accumulated fulfillment: {} vs. {}.",
+        spdlog::warn("Order '{}' has missmatching amount vs. fulfillment accumulated over user stream: {} vs. {}."
+                     " Second attempt.",
             currentOrder->order.getIdentity(),
             currentOrder->order.amount,
             currentOrder->fulfillment.amountBase);
-        throw std::logic_error{"Mismatched order amount vs. accumulated fulfillment."};
+
+        // An attempt to retrieves all trades for the order after the fact
+        // (might have missed some partially_filled reports)
+        // This could make it more robust to network errors, 24h reconnections, etc.
+        currentOrder->fulfillment = trader.exchange.accumulateTradesFor(currentOrder->order);
+
+        if (currentOrder->fulfillment.amountBase != currentOrder->order.amount)
+        {
+            spdlog::critical("Order '{}' has missmatching amount vs. fulfillment accumulated via rest API: {} vs. {}.",
+                currentOrder->order.getIdentity(),
+                currentOrder->order.amount,
+                currentOrder->fulfillment.amountBase);
+            throw std::logic_error{"Mismatched order amount vs. accumulated fulfillment."};
+        }
     }
+
 
     trader.completeOrder(currentOrder->order, currentOrder->fulfillment);
 
