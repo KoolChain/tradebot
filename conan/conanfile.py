@@ -27,7 +27,7 @@ class TradebotConan(ConanFile):
         ("boost/1.76.0",),
         ("cpr/1.6.0",),
         ("jsonformoderncpp/3.7.0",),
-        ("openssl/1.1.1j",),
+        ("openssl/1.1.1k",),
         ("spdlog/1.8.5",),
         #("sqlite3/3.35.5",),
         ("sqlite_orm/1.6",),
