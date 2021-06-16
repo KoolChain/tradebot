@@ -67,11 +67,13 @@ tradebot::Order & transformOrder(tradebot::Order & aOrder, double aPercentage)
     aOrder.reverseSide();
     if (aOrder.side == tradebot::Side::Buy)
     {
-        aOrder.fragmentsRate = trade::applyTickSize((1.0 - aPercentage) * aOrder.executionRate);
+        aOrder.fragmentsRate = trade::applyTickSize((1.0 - aPercentage) * aOrder.executionRate,
+                                                    Decimal{"0.01"});
     }
     else
     {
-        aOrder.fragmentsRate = trade::applyTickSize((1.0 + aPercentage) * aOrder.executionRate);
+        aOrder.fragmentsRate = trade::applyTickSize((1.0 + aPercentage) * aOrder.executionRate,
+                                                    Decimal{"0.01"});
     }
     return aOrder;
 }
