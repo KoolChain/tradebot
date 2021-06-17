@@ -276,10 +276,9 @@ void Trader::cleanup()
 }
 
 
-FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
+FulfilledOrder Trader::fillExistingMarketOrder(Order & aOrder)
 {
-    // No need to go through the Inactive state
-    database.insert(aOrder.resetAsInactive().setStatus(Order::Status::Sending));
+    database.update(aOrder.setStatus(Order::Status::Sending));
 
     std::optional<FulfilledOrder> fulfilled;
     while(!(fulfilled = exchange.fillMarketOrder(aOrder)).has_value())
@@ -287,6 +286,46 @@ FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
 
     completeFulfilledOrder(*fulfilled);
     return *fulfilled;
+
+}
+
+
+FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
+{
+    database.insert(aOrder.resetAsInactive());
+    return fillExistingMarketOrder(aOrder);
+}
+
+
+std::pair<std::size_t, std::size_t>
+Trader::makeAndFillProfitableOrders(const Pair & aPair, Decimal aCurrentRate)
+{
+    auto makeAndFill = [&, this](Side aSide) -> std::size_t
+    {
+        std::size_t counter = 0;
+        for (const Decimal rate : database.getProfitableRates(aSide, aCurrentRate, aPair))
+        {
+            ++counter;
+            fillExistingMarketOrder(
+                database.prepareOrder(name, aSide, rate, aPair, Order::FulfillResponse::SmallSpread));
+        }
+        return counter;
+    };
+
+    auto sellCount = makeAndFill(Side::Sell);
+    auto buyCount  = makeAndFill(Side::Buy);
+
+    // Only log if there were matching orders to fill.
+    if (sellCount + buyCount)
+    {
+        spdlog::info("From rate {} on {}, filled {} sell market orders and {} buy market orders.",
+                aCurrentRate,
+                aPair.symbol(),
+                sellCount,
+                buyCount);
+    }
+
+    return {sellCount, buyCount};
 }
 
 

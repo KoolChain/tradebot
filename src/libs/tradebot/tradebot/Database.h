@@ -50,6 +50,7 @@ public:
 
     std::vector<Fragment> getFragmentsComposing(const Order & aOrder);
     std::vector<Fragment> getUnassociatedFragments(Side aSide, Decimal aRate, const Pair & aPair);
+    std::vector<Fragment> getUnassociatedFragments(Side aSide, const Pair & aPair);
 
     std::vector<Decimal> getSellRatesBelow(Decimal aRateLimit, const Pair & aPair);
     std::vector<Decimal> getBuyRatesAbove(Decimal aRateLimit, const Pair & aPair);

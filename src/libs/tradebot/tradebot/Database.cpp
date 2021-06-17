@@ -278,6 +278,18 @@ std::vector<Fragment> Database::getUnassociatedFragments(Side aSide,
 }
 
 
+std::vector<Fragment> Database::getUnassociatedFragments(Side aSide,
+                                                         const Pair & aPair)
+{
+    using namespace sqlite_orm;
+    return mImpl->storage.get_all<Fragment>(
+            where(is_equal(&Fragment::composedOrder, -1l)
+                  && is_equal(&Fragment::base, aPair.base)
+                  && is_equal(&Fragment::quote, aPair.quote)
+                  && is_equal(&Fragment::side, static_cast<int>(aSide))));
+}
+
+
 std::vector<Order> Database::selectOrders(const Pair & aPair, Order::Status aStatus)
 {
     using namespace sqlite_orm;

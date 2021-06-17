@@ -13,6 +13,11 @@ struct Trader
 {
 private:
     void sendExistingOrder(Execution aExecution, Order & aOrder);
+    FulfilledOrder fillExistingMarketOrder(Order & aOrder);
+    FulfilledOrder fillExistingMarketOrder(Order && aOrder)
+    {
+        return fillExistingMarketOrder(aOrder);
+    }
 
 public: // should be private, but requires testing
     bool completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder);
@@ -56,6 +61,17 @@ public:
 
     /// \brief Will place new market orders until it fulfills (by oposition to expiring).
     FulfilledOrder fillNewMarketOrder(Order & aOrder);
+
+    /// \brief High-level operation that create all orders on `aPair` that would be profitable
+    /// at `aRate`, and fill them at market.
+    ///
+    /// Will make separate orders for each available fragment rate on a given side:
+    /// * one sell order per sell fragment rate below the current rate.
+    /// * one buy order per buy fragment rate above the current rate.
+    ///
+    /// \return A pair containing the number of filled sell orders and buy orders.
+    std::pair<std::size_t /*filled sell*/, std::size_t /*filled buy*/>
+    makeAndFillProfitableOrders(const Pair & aPair, Decimal aCurrentRate);
 
     /// \brief To be called when an order did complete on the exchange, with its already accumulated
     /// fulfillment.

@@ -193,7 +193,7 @@ SCENARIO("Trader low-level functions.", "[trader]")
 
                 THEN("This order can be queried in the exchange")
                 {
-                    Json orderJson = exchange.queryOrder(impossible);
+                    Json orderJson = *exchange.tryQueryOrder(impossible);
 
                     REQUIRE(orderJson["status"] == "NEW");
                     REQUIRE(orderJson["symbol"] == impossible.symbol());
@@ -276,7 +276,9 @@ SCENARIO("Trader low-level functions.", "[trader]")
 SCENARIO("Controlled initialization clean-up", "[trader]")
 {
     const Pair pair{"BTC", "USDT"};
-    const std::string traderName = "tradertest";
+    // Make the name a bit more unique, I suspect some collisions when querying order
+    // on the rest API and the exchange is not yet up to date.
+    const std::string traderName = "tradertest_controlledinit";
 
     GIVEN("A trader instance.")
     {
@@ -503,6 +505,84 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                 {
                     exchange.placeOrder(limitFulfilled, Execution::Market);
                 }
+            }
+        }
+    }
+}
+
+
+SCENARIO("Fill profitable orders.", "[trader]")
+{
+    const Pair pair{"BTC", "USDT"};
+
+    GIVEN("A trader instance.")
+    {
+        Trader trader{
+            "tradertest",
+            pair,
+            Database{":memory:"},
+            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+        };
+
+        auto & db = trader.database;
+        auto & binance = trader.exchange;
+
+        // Sanity check
+        binance.cancelAllOpenOrders(pair);
+        REQUIRE(binance.listOpenOrders(pair).empty());
+
+        Decimal averagePrice = binance.getCurrentAveragePrice(pair);
+
+        WHEN("3 sell fragments at 2 different rates below average are written to DB.")
+        {
+            Decimal amount{"0.001"};
+            Fragment f{pair.base, pair.quote, amount, averagePrice/2, Side::Sell};
+            db.insert(f);
+            db.insert(f);
+            f.targetRate = averagePrice/3;
+            db.insert(f);
+
+            // Sanity check
+            REQUIRE(db.getUnassociatedFragments(Side::Sell, pair).size() == 3);
+            REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 0);
+
+            THEN("They can be filled at once as profitable orders.")
+            {
+                auto [sellCount, buyCount] =
+                    trader.makeAndFillProfitableOrders(pair, averagePrice);
+
+                REQUIRE(sellCount == 2);
+                REQUIRE(buyCount == 0);
+
+                REQUIRE(db.getUnassociatedFragments(Side::Sell, pair).size() == 0);
+                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 2);
+            }
+        }
+
+        WHEN("3 buy fragments at 3 different rates above average are written to DB.")
+        {
+            Decimal amount{"0.001"};
+            Fragment f{pair.base, pair.quote, amount, averagePrice*2, Side::Buy};
+            db.insert(f);
+            f.targetRate = averagePrice*3;
+            db.insert(f);
+            f.targetRate = averagePrice*4;
+            db.insert(f);
+
+            // Sanity check
+            REQUIRE(db.getUnassociatedFragments(Side::Buy, pair).size() == 3);
+            REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 0);
+
+            THEN("They can be filled at once as profitable orders.")
+            {
+                auto [sellCount, buyCount] =
+                    trader.makeAndFillProfitableOrders(pair, averagePrice);
+
+                REQUIRE(sellCount == 0);
+                REQUIRE(buyCount == 3);
+
+                REQUIRE(db.getUnassociatedFragments(Side::Buy, pair).size() == 0);
+                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 3);
             }
         }
     }
