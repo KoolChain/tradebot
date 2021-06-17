@@ -61,6 +61,48 @@ inline tradebot::FulfilledOrder mockupFulfill(tradebot::Order & aOrder, Decimal 
 }
 
 
+inline std::pair<tradebot::Order, std::vector<tradebot::Fragment>>
+makeOrderWithFragments(
+        tradebot::Database & aDatabase,
+        const std::string aTraderName,
+        tradebot::Pair aPair,
+        std::initializer_list<Decimal> aFragmentAmounts,
+        Decimal aRate,
+        tradebot::Side aSide,
+        long aSpawningOrderId = -1)
+{
+    std::vector<tradebot::Fragment> fragments;
+    for (const auto amount : aFragmentAmounts)
+    {
+        fragments.push_back(
+            tradebot::Fragment{
+                aPair.base,
+                aPair.quote,
+                amount,
+                aRate,
+                aSide,
+                0, // taken home
+                aSpawningOrderId
+        });
+
+        aDatabase.insert(fragments.back());
+    }
+
+    tradebot::Order order = aDatabase.prepareOrder(
+            aTraderName,
+            aSide,
+            aRate,
+            aPair,
+            tradebot::Order::FulfillResponse::SmallSpread);
+
+    for (auto & fragment : fragments)
+    {
+        aDatabase.reload(fragment);
+    }
+
+    return {order, std::move(fragments)};
+}
+
 template <class T_exchange>
 inline void fulfillMarketOrder(T_exchange & aExchange, tradebot::Order & aOrder)
 {

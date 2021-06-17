@@ -131,8 +131,7 @@ struct SpawnMap
 
 
 std::vector<Fragment> consolidate(const SpawnMap & aSpawnMap,
-                                  Pair aPair,
-                                  Side aSide)
+                                  const FulfilledOrder & aSpawningOrder)
 {
     std::vector<Fragment> result;
     for (const auto & rateEntry : aSpawnMap.data)
@@ -145,11 +144,13 @@ std::vector<Fragment> consolidate(const SpawnMap & aSpawnMap,
                     return acc + pair.second;
                 });
         result.push_back(Fragment{
-                aPair.base,
-                aPair.quote,
+                aSpawningOrder.base,
+                aSpawningOrder.quote,
                 accumulatedBaseAmount,
                 rateEntry.first,
-                aSide});
+                reverse(aSpawningOrder.side),
+                0, /* taken home */
+                aSpawningOrder.id});
     }
     return result;
 }
@@ -161,18 +162,16 @@ void Trader::spawnFragments(const FulfilledOrder & aOrder)
 
     for(Fragment & fragment : database.getFragmentsComposing(aOrder))
     {
-        auto [resultingFragments, takenHome] =
+        auto [spawns, takenHome] =
             spawner->computeResultingFragments(fragment, aOrder, database);
 
         fragment.takenHome = std::move(takenHome);
         database.update(fragment);
 
-        spawnMap.appendFrom(fragment.id, resultingFragments.begin(), resultingFragments.end());
+        spawnMap.appendFrom(fragment.id, spawns.begin(), spawns.end());
     }
 
-    for (Fragment & newFragment : consolidate(spawnMap,
-                                              aOrder.pair(),
-                                              reverse(aOrder.side)))
+    for (Fragment & newFragment : consolidate(spawnMap, aOrder))
     {
         // Use isEqual to remove rounding errors that would make it just above zero
         // and also discard invalid negative amounts, in case they arise.

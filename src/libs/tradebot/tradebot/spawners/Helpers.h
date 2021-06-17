@@ -10,9 +10,10 @@ namespace tradebot {
 namespace spawner {
 
 
+// Note: Duplicates code from Ladder.h, but allows for more specific logging in case of error.
 template <class T_ladderIterator>
-inline T_ladderIterator getStopFor(T_ladderIterator aBegin, const T_ladderIterator aEnd,
-                                   Fragment aFragment)
+T_ladderIterator getStopFor(T_ladderIterator aBegin, const T_ladderIterator aEnd,
+                            Fragment aFragment)
 {
     auto stop = std::find(aBegin, aEnd, aFragment.targetRate);
     if (stop == aEnd)

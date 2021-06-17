@@ -589,6 +589,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
 
                                 Fragment frag = unassociated.at(0);
                                 CHECK(frag.amount == Decimal{"0.1"}*amount);
+                                CHECK(frag.spawningOrder == order.id);
                             }
                             {
                                 REQUIRE(ladder.at(1) == Decimal{"0.1"});
@@ -601,6 +602,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
 
                                 Fragment frag = unassociated.at(0);
                                 CHECK(frag.amount == Decimal{"0.2"}*amount);
+                                CHECK(frag.spawningOrder == order.id);
                             }
                         }
 

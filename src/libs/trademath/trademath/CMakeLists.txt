@@ -1,9 +1,13 @@
 project(trademath VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
+    Decimal.h
+    DecimalLog.h
+    FilterUtilities.h
     Function.h
     Ladder.h
     Spawn.h
+    Spreaders.h
 )
 
 set(${PROJECT_NAME}_SOURCES
