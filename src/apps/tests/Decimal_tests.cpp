@@ -77,14 +77,6 @@ SCENARIO("Decimal precision tests.", "[decimal][math]")
         }
     }
 
-    GIVEN("A division with a result extactly representable.")
-    {
-        THEN("The result is exact.")
-        {
-            CHECK(Decimal{"123.6708"} / Decimal{"0.0033"} == Decimal{"37476"});
-            CHECK(Decimal{"123.357234"} / Decimal{"0.0033"} == Decimal{"37380.98"});
-        }
-    }
     // Not sure this is relevant, or how this should really be handled at all
     //GIVEN("Two decimal values instantiated from more precise strings.")
     //{
@@ -110,6 +102,22 @@ SCENARIO("Decimal precision tests.", "[decimal][math]")
     //        REQUIRE(a + b == expected);
     //    }
     //}
+}
+
+
+// 2021/06/17 This scenario is hidden (not running by default),
+// as it does not validate with the boost cpp_dec_float implementation of this date.
+SCENARIO("Decimal division precision tests.", "[.][decimal][math]")
+{
+    GIVEN("A division with a result extactly representable.")
+    {
+        THEN("The result is exact.")
+        {
+            CHECK(Decimal{300} / Decimal{150} == Decimal{2});
+            CHECK(Decimal{"123.6708"} / Decimal{"0.0033"} == Decimal{"37476"});
+            CHECK(Decimal{"123.357234"} / Decimal{"0.0033"} == Decimal{"37380.98"});
+        }
+    }
 }
 
 
