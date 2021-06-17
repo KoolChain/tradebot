@@ -23,7 +23,7 @@ set(${PROJECT_NAME}_SOURCES
     Spawn_tests.cpp
     StableDownSpread_tests.cpp
     Sqliteorm_tests.cpp
-    Tradebot_tests.cpp
+    Trader_tests.cpp
     Websocket_tests.cpp
 )
 
