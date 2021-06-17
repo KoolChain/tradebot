@@ -224,20 +224,22 @@ SCENARIO("Order high-level creation.", "[db]")
 
         THEN("It is possible to retrieves all sell fragments above a threshold rate.")
         {
-            std::vector<Decimal> rates = db.getSellRatesAbove(1.5, {"DOGE", "BUSD"});
+            std::vector<Decimal> rates = db.getSellRatesBelow(2.5, {"DOGE", "BUSD"});
             REQUIRE(rates.size() == 2);
+            REQUIRE(db.getProfitableRates(Side::Sell, 2.5, {"DOGE", "BUSD"}) == rates);
 
-            REQUIRE(db.getSellRatesAbove(4, {"DOGE", "BUSD"}).size() == 0);
-            REQUIRE(db.getSellRatesAbove(0, {"DOGE", "BUSD"}).size() == 3);
+            REQUIRE(db.getSellRatesBelow(4, {"DOGE", "BUSD"}).size() == 3);
+            REQUIRE(db.getSellRatesBelow(0, {"DOGE", "BUSD"}).size() == 0);
         }
 
         THEN("It is possible to retrieves all buy fragments below a threshold rate.")
         {
-            std::vector<Decimal> rates = db.getBuyRatesBelow(2.5, {"DOGE", "BUSD"});
+            std::vector<Decimal> rates = db.getBuyRatesAbove(1.5, {"DOGE", "BUSD"});
             REQUIRE(rates.size() == 2);
+            REQUIRE(db.getProfitableRates(Side::Buy, 1.5, {"DOGE", "BUSD"}) == rates);
 
-            REQUIRE(db.getBuyRatesBelow(4, {"DOGE", "BUSD"}).size() == 3);
-            REQUIRE(db.getBuyRatesBelow(0, {"DOGE", "BUSD"}).size() == 0);
+            REQUIRE(db.getBuyRatesAbove(4, {"DOGE", "BUSD"}).size() == 0);
+            REQUIRE(db.getBuyRatesAbove(0, {"DOGE", "BUSD"}).size() == 3);
         }
 
         THEN("Matching SELL fragments can be assigned to a new SELL order")
@@ -253,7 +255,7 @@ SCENARIO("Order high-level creation.", "[db]")
                 REQUIRE_THROWS(
                     db.prepareOrder("dbtest", Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
 
-                auto sellRates = db.getSellRatesAbove(0., {"DOGE", "BUSD"});
+                auto sellRates = db.getSellRatesBelow(4., {"DOGE", "BUSD"});
                 REQUIRE(std::find(sellRates.begin(), sellRates.end(), 2.) == sellRates.end());
 
                 REQUIRE(db.getUnassociatedFragments(Side::Sell, 2., {"DOGE", "BUSD"}).empty());
@@ -289,7 +291,7 @@ SCENARIO("Order high-level creation.", "[db]")
                 {
                     REQUIRE(db.getFragmentsComposing(backedOrder).empty());
 
-                    auto sellRates = db.getSellRatesAbove(0., {"DOGE", "BUSD"});
+                    auto sellRates = db.getSellRatesBelow(4., {"DOGE", "BUSD"});
                     REQUIRE(std::find(sellRates.begin(), sellRates.end(), 2.) != sellRates.end());
 
                     REQUIRE(db.getUnassociatedFragments(Side::Sell, 2., {"DOGE", "BUSD"}).size() == 2);
@@ -310,7 +312,7 @@ SCENARIO("Order high-level creation.", "[db]")
                 REQUIRE_THROWS(
                     db.prepareOrder("dbtest", Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
 
-                auto buyRates = db.getBuyRatesBelow(4., {"DOGE", "BUSD"});
+                auto buyRates = db.getBuyRatesAbove(0., {"DOGE", "BUSD"});
                 REQUIRE(std::find(buyRates.begin(), buyRates.end(), 2.) == buyRates.end());
 
                 REQUIRE(db.getUnassociatedFragments(Side::Buy, 2., {"DOGE", "BUSD"}).empty());
@@ -346,7 +348,7 @@ SCENARIO("Order high-level creation.", "[db]")
                 {
                     REQUIRE(db.getFragmentsComposing(backedOrder).empty());
 
-                    auto buyRates = db.getBuyRatesBelow(4., {"DOGE", "BUSD"});
+                    auto buyRates = db.getBuyRatesAbove(0., {"DOGE", "BUSD"});
                     REQUIRE(std::find(buyRates.begin(), buyRates.end(), 2.) != buyRates.end());
 
                     REQUIRE(db.getUnassociatedFragments(Side::Buy, 2., {"DOGE", "BUSD"}).size() == 1);

@@ -147,11 +147,11 @@ std::size_t Database::countFragments()
 }
 
 
-std::vector<Decimal> Database::getSellRatesAbove(Decimal aRateLimit, const Pair & aPair)
+std::vector<Decimal> Database::getSellRatesBelow(Decimal aRateLimit, const Pair & aPair)
 {
     using namespace sqlite_orm;
     return mImpl->storage.select(&Fragment::targetRate,
-            where(   (c(&Fragment::targetRate) > aRateLimit)
+            where(   (c(&Fragment::targetRate) < aRateLimit)
                   && (c(&Fragment::side) = static_cast<int>(Side::Sell))
                   && (c(&Fragment::base) = aPair.base)
                   && (c(&Fragment::quote) = aPair.quote)
@@ -161,17 +161,31 @@ std::vector<Decimal> Database::getSellRatesAbove(Decimal aRateLimit, const Pair 
 }
 
 
-std::vector<Decimal> Database::getBuyRatesBelow(Decimal aRateLimit, const Pair & aPair)
+std::vector<Decimal> Database::getBuyRatesAbove(Decimal aRateLimit, const Pair & aPair)
 {
     using namespace sqlite_orm;
     return mImpl->storage.select(&Fragment::targetRate,
-            where(   (c(&Fragment::targetRate) < aRateLimit)
+            where(   (c(&Fragment::targetRate) > aRateLimit)
                   && (c(&Fragment::side) = static_cast<int>(Side::Buy))
                   && (c(&Fragment::base) = aPair.base)
                   && (c(&Fragment::quote) = aPair.quote)
                   && (c(&Fragment::composedOrder) = -1l) ), // Fragments not already part of an order
             group_by(&Fragment::targetRate)
             );
+}
+
+
+std::vector<Decimal> Database::getProfitableRates(Side aSide,
+                                                  Decimal aRateLimit,
+                                                  const Pair & aPair)
+{
+    switch(aSide)
+    {
+        case Side::Sell:
+            return getSellRatesBelow(aRateLimit, aPair);
+        case Side::Buy:
+            return getBuyRatesAbove(aRateLimit, aPair);
+    }
 }
 
 
