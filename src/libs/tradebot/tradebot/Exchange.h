@@ -66,7 +66,7 @@ struct Exchange
         boost::asio::steady_timer keepListenKeyAlive;
         std::thread listenKeyThread;
         net::WebSocket websocket;
-        bool intendedClose{false};
+        std::atomic<bool> intendedClose{false}; // accessed from both timer and websocket threads
         std::thread websocketThread;
     };
 

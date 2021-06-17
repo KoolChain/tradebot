@@ -506,21 +506,43 @@ Exchange::Stream::Stream(binance::Api & aRestApi,
     websocketThread{
         [this]()
         {
-            websocket.run(restApi.getEndpoints().websocketHost,
-                          restApi.getEndpoints().websocketPort,
-                          "/ws/" + listenKey);
+            try
+            {
+                websocket.run(restApi.getEndpoints().websocketHost,
+                              restApi.getEndpoints().websocketPort,
+                              "/ws/" + listenKey);
 
-            // It is now racing with the listen key thread...
-            //if (! intendedClose)
-            //{
-            //    spdlog::warn("User data stream websocket closed without application consent.");
-            //}
+            }
+            catch (std::exception & aException)
+            {
+                spdlog::error("Websocket run was interrupted by exception: {}.", aException.what());
+            }
 
+            // Mark the stream as Done
+            Status previousStatus;
             {
                 std::scoped_lock<std::mutex> lock{mutex};
+                previousStatus = status;
                 status = Done;
             }
+            // Will unlock openUserStream() in case the websocket never connected.
             statusCondition.notify_one();
+
+            // Note: there is still potential for the websocket to disconnect between the moment
+            // this flag is set to false and the moment websocket.async_close() is called.
+            // Although this would still be an unintended close situation, no special case is made
+            // because the websocket not running anymore is what is wanted.
+            if (! intendedClose)
+            {
+                if (previousStatus == Status::Connected)
+                {
+                    spdlog::warn("User data stream websocket closed without application consent.");
+                }
+                else if (previousStatus == Status::Initialize)
+                {
+                    spdlog::warn("User data stream websocket could not connect.");
+                }
+            }
         }
     }
 {}
@@ -537,7 +559,7 @@ Exchange::Stream::~Stream()
             // Cancel any pending wait on the timer
             // (otherwise the io_context::run() would still block on already waiting handlers)
             keepListenKeyAlive.cancel();
-            // There are conditions where the timer handler might not be waiting anymore
+            // There are situations where the timer handler might not be waiting anymore
             // even though the cancellation in happening in the same thread as the completion handler
             // (notably, completion handler already pending in the io_context queue, just after this lambda)
             // So it would not be cancelled by the call to cancel().
@@ -555,10 +577,12 @@ Exchange::Stream::~Stream()
     //    //websocket.async_close();
     //}
 
-    listenKeyThread.join();
+    listenKeyThread.join(); // From this point, intendedClose is known to be `true`.
+
     // The close above should result in the websocket closing, so the thread terminating.
     // NOTE: I expected that closing the listen key would have the server close the websocket.
     //       Apparently this is not the case, so close it manually anyway.
+    // NOTE: Anyway, the listen key is not closed anymore, the comments are kept to document the situation.
     websocket.async_close();
     websocketThread.join();
     spdlog::debug("User stream closed successfully.");
