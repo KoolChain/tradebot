@@ -13,6 +13,11 @@ bool Fragment::isInitial() const
 }
 
 
+std::string Fragment::getIdentity() const
+{
+    return std::to_string(id);
+}
+
 bool operator==(const Fragment & aLhs, const Fragment & aRhs)
 {
     return

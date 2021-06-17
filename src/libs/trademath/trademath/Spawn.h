@@ -54,6 +54,11 @@ struct Spawn
         base{static_cast<Decimal>(aAmount) / rate}
     {}
 
+    Decimal targetQuote() const
+    {
+        return base * rate;
+    }
+
     Decimal rate;
     Decimal base;
 };
@@ -154,7 +159,7 @@ spawnProportions(const T_amount aAmount,
     Decimal accumulation{0};
     while(aStopBegin != aStopEnd && aProportionsBegin != aProportionsEnd)
     {
-        Decimal amount = (Decimal)aAmount*(*aProportionsBegin);
+        Decimal amount = (Decimal)aAmount * (*aProportionsBegin);
         accumulation += amount;
         result.emplace_back(*aStopBegin, T_amount{amount});
         ++aStopBegin;
