@@ -185,6 +185,18 @@ FulfilledOrder fulfill(Order & aOrder,
         throw std::logic_error{"Cannot get its price while fulfilling an order."};
     }
 
+    // Warn if the order executed at a "loss" compared to a set fragments rate
+    if ( aOrder.fragmentsRate // only check if a fragments rate was explicitly set
+         && (   (aOrder.side == Side::Sell && aOrder.executionRate < aOrder.fragmentsRate)
+             || (aOrder.side == Side::Buy && aOrder.executionRate > aOrder.fragmentsRate)))
+    {
+        spdlog::warn("{} order '{}' has a fragment rate set at {}, but executed at {}.",
+                boost::lexical_cast<std::string>(aOrder.side),
+                aOrder.getIdentity(),
+                aOrder.fragmentsRate,
+                aOrder.executionRate);
+    }
+
     // In case of a market order, the "trade" response returns the fills (without any time attached)
     // and "transactTime". I suspect all fills are considered to have taken places at transaction time.
     // For other orders (limit), the times will be accumulated from the fills as they arrive on the websocket

@@ -1,6 +1,9 @@
 #pragma once
 
 
+#include "EventLoop.h"
+
+#include <tradebot/Order.h>
 #include <tradebot/Trader.h>
 
 
@@ -12,7 +15,10 @@ struct ProductionBot
 {
     int run();
 
+    void onAggregateTrade(Json aMessage);
+
     tradebot::Trader trader;
+    EventLoop mainLoop;
 };
 
 

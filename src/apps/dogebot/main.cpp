@@ -1,4 +1,5 @@
 #include "NaiveBot.h"
+#include "ProductionBot.h"
 
 #include <binance/Api.h>
 
@@ -88,6 +89,39 @@ int runNaiveBot(int argc, char * argv[], const std::string & aSecretsFile)
 }
 
 
+int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
+{
+    if (argc != 6)
+    {
+        std::cerr << "Usage: " << argv[0] << " secretsfile productionbot base quote database-path\n";
+        return EXIT_FAILURE;
+    }
+
+    tradebot::Pair pair{argv[3], argv[4]};
+
+    const std::string databasePath{argv[5]};
+
+    spdlog::info("Starting {} to trade {}.",
+            argv[0],
+            pair.symbol());
+
+    trade::ProductionBot bot{
+        tradebot::Trader{
+            "productionbot",
+            pair,
+            tradebot::Database{databasePath},
+            tradebot::Exchange{
+                binance::Api{std::ifstream{aSecretsFile}, binance::Api::gTestNet},
+            },
+        }
+    };
+
+    bot.run();
+
+    return EXIT_SUCCESS;
+}
+
+
 int main(int argc, char * argv[])
 {
     // Hardcoded to testnet ATM
@@ -103,6 +137,10 @@ int main(int argc, char * argv[])
     if (argv[2] == std::string{"naivebot"} || argv[2] == std::string{"NaiveBot"})
     {
         return runNaiveBot(argc, argv, secretsfile);
+    }
+    else if (argv[2] == std::string{"productionbot"} || argv[2] == std::string{"productionbot"})
+    {
+        return runProductionBot(argc, argv, secretsfile);
     }
     else
     {
