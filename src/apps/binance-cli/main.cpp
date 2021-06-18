@@ -31,7 +31,7 @@ int main(int argc, char * argv[])
     if (argc < 3)
     {
         std::cerr << "Usage: " << argv[0] << " secretsfile action args... \n"
-            << "\taction might be: buy, sell, query-order, exchange-info\n"
+            << "\taction might be: buy, sell, query-order, exchange-info, account-info\n"
             ;
         return EXIT_FAILURE;
     }
@@ -123,6 +123,29 @@ int main(int argc, char * argv[])
         else
         {
             spdlog::critical("Could not query order.");
+            return EXIT_FAILURE;
+        }
+
+    }
+    else if (argv[2] == std::string{"account-info"})
+    {
+        if (argc != 3)
+        {
+            std::cerr << "Usage: " << argv[0] << " secretsfile account-info\n";
+            return EXIT_FAILURE;
+        }
+
+        tradebot::Exchange exchange{getExchange(secretsFile)};
+
+        binance::Response accountInformation =
+            exchange.restApi.getAccountInformation();
+        if (accountInformation.status == 200)
+        {
+            std::cout << accountInformation.json->dump(4) << '\n';
+        }
+        else
+        {
+            spdlog::critical("Could not get account information.");
             return EXIT_FAILURE;
         }
 
