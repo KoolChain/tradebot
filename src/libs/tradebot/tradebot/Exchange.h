@@ -18,6 +18,7 @@ enum class Execution
     Limit,
 };
 
+
 struct Exchange
 {
     /// \return "NOTEXISTING" if the exchange engine does not know the order, otherwise returns
@@ -80,8 +81,9 @@ struct Exchange
     Fulfillment accumulateTradesFor(const Order & aOrder, int aPageSize=1000);
 
     /// \brief Blocks while opening a websocket to get spot user data stream.
+    ///
     /// \return `true` if the websocket connected successfully, `false` otherwise.
-    bool openUserStream(StreamCallback aOnExecutionReport);
+    bool openUserStream(Stream::ReceiveCallback aOnMessage);
     void closeUserStream();
 
     binance::Api restApi;

@@ -8,6 +8,12 @@ namespace ad {
 namespace tradebot {
 
 
+//const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
+const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{1};
+// Good for testing
+//const std::chrono::milliseconds LISTEN_KEY_REFRESH_PERIOD{100};
+
+
 #define unhandledResponse(aResponse, aContext) \
 { \
     spdlog::critical("Unexpected response status {} on {}.", aResponse.status, aContext); \
@@ -412,9 +418,26 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
 }
 
 
-bool Exchange::openUserStream(StreamCallback aOnExecutionReport)
+bool Exchange::openUserStream(Stream::ReceiveCallback aOnMessage)
 {
-    spotUserStream.emplace(restApi, std::move(aOnExecutionReport));
+    WebsocketDestination userStreamDestination{
+        restApi.getEndpoints().websocketHost,
+        restApi.getEndpoints().websocketPort,
+        "/ws/" + restApi.createSpotListenKey().json->at("listenKey").get<std::string>()
+    };
+
+    spotUserStream.emplace(std::move(userStreamDestination),
+                           std::move(aOnMessage),
+                           std::make_unique<RefreshTimer>(
+                               // IMPORTANT: Will execute the HTTP PUT query on the timer io_context thread
+                               // So it introduces concurrent execution of http requests
+                               // (potentially complicating proper implementation of "quotas observation and waiting periods").
+                               // TODO potentially have it post the request to be executed on the main thread.
+                               std::bind(&binance::Api::pingSpotListenKey, restApi),
+                               LISTEN_KEY_REFRESH_PERIOD
+                           ));
+
+    // Block until the websocket either connects or fails to do so.
     std::unique_lock<std::mutex> lock{spotUserStream->mutex};
     spotUserStream->statusCondition.wait(lock,
                                          [&stream = *spotUserStream]()

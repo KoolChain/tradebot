@@ -174,6 +174,12 @@ inline void NaiveBot::onOrderTimer(const boost::system::error_code & aErrorCode)
 
 inline void NaiveBot::onReport(Json aExecutionReport)
 {
+    // Only interested in exection reports
+    if (aExecutionReport.at("e") != "executionReport")
+    {
+        return;
+    }
+
     if (aExecutionReport.at("c") == currentOrder->order.clientId())
     {
         if (aExecutionReport.at("X") == "PARTIALLY_FILLED")

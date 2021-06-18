@@ -19,8 +19,44 @@ namespace tradebot {
 class Exchange;
 
 
-using StreamCallback = std::function<void(Json)>;
+/// \brief Allows to run a user provided operation at regular interval.
+///
+/// Notably useful to PUT the listen key for Binance's User Data Stream.
+class RefreshTimer
+{
+public:
+    using MaintenanceOperation = std::function<void(void)>;
+    using Duration = std::chrono::milliseconds;
 
+    RefreshTimer(MaintenanceOperation aOperation, Duration aPeriod);
+    ~RefreshTimer();
+
+    void async_wait();
+
+private:
+    void onTimer(const boost::system::error_code & aErrorCode);
+
+private:
+    MaintenanceOperation operation;
+    Duration period;
+
+    bool intendedClose{false};
+    boost::asio::io_context ioContext;
+    boost::asio::steady_timer timer;
+    std::thread thread;
+};
+
+
+/// \brief Convenient way to give a websocket destination as a single parameter.
+struct WebsocketDestination
+{
+    std::string host;
+    std::string port;
+    std::string target;
+};
+
+
+/// \brief Abstraction over the notion of websocket stream as provided by Binance.
 class Stream
 {
 private:
@@ -34,8 +70,12 @@ private:
     };
 
 public:
+    using ReceiveCallback = std::function<void(Json)>;
+
     // Made public so std::optional::emplace can access it
-    Stream(binance::Api & aRestApi, StreamCallback aOnExecutionReport);
+    Stream(WebsocketDestination aDestination,
+           ReceiveCallback aOnMessage,
+           std::unique_ptr<RefreshTimer> aKeepAlive = nullptr);
     ~Stream();
 
 private:
@@ -44,22 +84,16 @@ private:
     Stream & operator = (const Stream &) = delete;
     Stream & operator = (Stream &&) = delete;
 
-    void onListenKeyTimer(const boost::system::error_code & aErrorCode);
-
     // Synchronization mechanism for status variable (allowing to wait for connection)
     std::mutex mutex;
     std::condition_variable statusCondition;
     Status status{Initialize};
 
-    // This class will compose Exchange, which is not movable nor copyable anyway
-    // so we refer back into the parent instance.
-    binance::Api & restApi;
-    std::string listenKey;
-    boost::asio::io_context listenKeyIoContext;
-    boost::asio::steady_timer keepListenKeyAlive;
-    std::thread listenKeyThread;
+    // An optional refresh timer, if periodic refresh is needed by the connected stream.
+    std::unique_ptr<RefreshTimer> keepAlive;
+
     net::WebSocket websocket;
-    std::atomic<bool> intendedClose{false}; // accessed from both timer and websocket threads
+    std::atomic<bool> intendedClose{false}; // accessed from both the thread destruction stream an the inner thread.
     std::thread websocketThread;
 };
 
