@@ -62,7 +62,7 @@ public:
     /// \brief Will place new market orders until it fulfills (by oposition to expiring).
     FulfilledOrder fillNewMarketOrder(Order & aOrder);
 
-    /// \brief High-level operation that create all orders on `aPair` that would be profitable
+    /// \brief High-level operation that create all orders that would be profitable
     /// at `aRate`, and fill them at market.
     ///
     /// Will make separate orders for each available fragment rate on a given side:
@@ -71,7 +71,7 @@ public:
     ///
     /// \return A pair containing the number of filled sell orders and buy orders.
     std::pair<std::size_t /*filled sell*/, std::size_t /*filled buy*/>
-    makeAndFillProfitableOrders(const Pair & aPair, Decimal aCurrentRate);
+    makeAndFillProfitableOrders(Decimal aCurrentRate);
 
     /// \brief To be called when an order did complete on the exchange, with its already accumulated
     /// fulfillment.

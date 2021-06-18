@@ -298,16 +298,16 @@ FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
 
 
 std::pair<std::size_t, std::size_t>
-Trader::makeAndFillProfitableOrders(const Pair & aPair, Decimal aCurrentRate)
+Trader::makeAndFillProfitableOrders(Decimal aCurrentRate)
 {
     auto makeAndFill = [&, this](Side aSide) -> std::size_t
     {
         std::size_t counter = 0;
-        for (const Decimal rate : database.getProfitableRates(aSide, aCurrentRate, aPair))
+        for (const Decimal rate : database.getProfitableRates(aSide, aCurrentRate, pair))
         {
             ++counter;
             fillExistingMarketOrder(
-                database.prepareOrder(name, aSide, rate, aPair, Order::FulfillResponse::SmallSpread));
+                database.prepareOrder(name, aSide, rate, pair, Order::FulfillResponse::SmallSpread));
         }
         return counter;
     };
@@ -320,7 +320,7 @@ Trader::makeAndFillProfitableOrders(const Pair & aPair, Decimal aCurrentRate)
     {
         spdlog::info("From rate {} on {}, filled {} sell market orders and {} buy market orders.",
                 aCurrentRate,
-                aPair.symbol(),
+                pair.symbol(),
                 sellCount,
                 buyCount);
     }
