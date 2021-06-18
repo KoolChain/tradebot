@@ -454,5 +454,34 @@ void Exchange::closeUserStream()
 }
 
 
+bool Exchange::openMarketStream(Stream::ReceiveCallback aOnMessage,
+                                const std::string & aStreamName)
+{
+    WebsocketDestination marketStreamDestination{
+        restApi.getEndpoints().websocketHost,
+        restApi.getEndpoints().websocketPort,
+        "/ws/" + aStreamName
+    };
+
+    marketStream.emplace(std::move(marketStreamDestination),
+                         std::move(aOnMessage));
+
+    // Block until the websocket either connects or fails to do so.
+    std::unique_lock<std::mutex> lock{marketStream->mutex};
+    marketStream->statusCondition.wait(lock,
+                                       [&stream = *marketStream]()
+                                       {
+                                           return stream.status != Stream::Initialize;
+                                       });
+    return marketStream->status == Stream::Connected;
+}
+
+
+void Exchange::closeMarketStream()
+{
+    marketStream.reset();
+}
+
+
 } // namespace tradebot
 } // namespace ad

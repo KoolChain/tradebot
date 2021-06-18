@@ -86,8 +86,15 @@ struct Exchange
     bool openUserStream(Stream::ReceiveCallback aOnMessage);
     void closeUserStream();
 
+    /// \brief Blocks while opening a websocket to get market stream.
+    ///
+    /// \return `true` if the websocket connected successfully, `false` otherwise.
+    bool openMarketStream(Stream::ReceiveCallback aOnMessage, const std::string & aStreamName);
+    void closeMarketStream();
+
     binance::Api restApi;
     std::optional<Stream> spotUserStream;
+    std::optional<Stream> marketStream;
 };
 
 
