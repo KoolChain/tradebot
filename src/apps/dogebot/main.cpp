@@ -66,7 +66,7 @@ int runNaiveBot(int argc, char * argv[], const std::string & aSecretsFile)
             pair,
             tradebot::Database{databasePath},
             tradebot::Exchange{
-                binance::Api{std::ifstream{aSecretsFile}, binance::Api::gTestNet},
+                binance::Api{std::ifstream{aSecretsFile}},
             },
         },
         OrderTracker{
@@ -111,7 +111,7 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
             pair,
             tradebot::Database{databasePath},
             tradebot::Exchange{
-                binance::Api{std::ifstream{aSecretsFile}, binance::Api::gTestNet},
+                binance::Api{std::ifstream{aSecretsFile}},
             },
         }
     };

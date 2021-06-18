@@ -22,7 +22,7 @@ SCENARIO("Placing orders", "[exchange]")
 
     GIVEN("An exchange instance.")
     {
-        auto binance = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto binance = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check
@@ -168,7 +168,7 @@ SCENARIO("Orders cancellation", "[exchange]")
 
     GIVEN("An exchange instance.")
     {
-        auto binance = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto binance = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check
@@ -316,7 +316,7 @@ SCENARIO("Listing trades.", "[exchange]")
 
     GIVEN("An exchange instance.")
     {
-        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check
@@ -388,7 +388,7 @@ SCENARIO("Listening to SPOT user data stream.")
 
     GIVEN("An exchange instance.")
     {
-        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check
@@ -489,7 +489,7 @@ SCENARIO("Retrying query order.", "[exchange]")
 
     GIVEN("An exchange instance.")
     {
-        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check

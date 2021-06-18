@@ -26,7 +26,7 @@ SCENARIO("Radical initialization clean-up", "[trader]")
             "tradertest",
             pair,
             Database{":memory:"},
-            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+            Exchange{binance::Api{secret::gTestnetCredentials}}
         };
 
         auto & db = trader.database;
@@ -78,7 +78,7 @@ SCENARIO("Orders completion.", "[trader]")
             "tradertest",
             pair,
             Database{":memory:"},
-            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+            Exchange{binance::Api{secret::gTestnetCredentials}}
         };
 
         auto & db = trader.database;
@@ -146,7 +146,7 @@ SCENARIO("Trader low-level functions.", "[trader]")
             "tradertest",
             pair,
             Database{":memory:"},
-            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+            Exchange{binance::Api{secret::gTestnetCredentials}}
         };
 
         auto & db = trader.database;
@@ -286,7 +286,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
             traderName,
             pair,
             Database{":memory:"},
-            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+            Exchange{binance::Api{secret::gTestnetCredentials}}
         };
 
         auto & db = trader.database;
@@ -521,7 +521,7 @@ SCENARIO("Fill profitable orders.", "[trader]")
             "tradertest",
             pair,
             Database{":memory:"},
-            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+            Exchange{binance::Api{secret::gTestnetCredentials}}
         };
 
         auto & db = trader.database;

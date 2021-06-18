@@ -160,20 +160,37 @@ namespace {
 } // anonymous namespace
 
 
-Api::Api(const Json & aSecrets, Endpoints aEndpoints) :
-        mEndpoints{std::move(aEndpoints)},
+Endpoints endpointsFromString(const std::string & aValue)
+{
+    if (aValue == "production")
+    {
+        return Api::gProduction;
+    }
+    else if (aValue == "test")
+    {
+        return Api::gTestNet;
+    }
+    else
+    {
+        spdlog::critical("Unhandled endpoint string '{}'.", aValue);
+        throw std::invalid_argument{"Invalid endpoint string."};
+    }
+}
+
+Api::Api(const Json & aSecrets) :
+        mEndpoints{endpointsFromString(aSecrets.at("server"))},
         mApiKey{aSecrets["apikey"]},
         mSecretKey{aSecrets["secretkey"]}
 {}
 
 
-Api::Api(std::istream & aSecrets, Endpoints aEndpoints) :
-        Api{[&aSecrets](){Json j; aSecrets>>j; return j;}(), std::move(aEndpoints)}
+Api::Api(std::istream & aSecrets) :
+        Api{[&aSecrets](){Json j; aSecrets>>j; return j;}()}
 {}
 
 
-Api::Api(std::istream && aSecrets, Endpoints aEndpoints) :
-        Api{aSecrets, std::move(aEndpoints)}
+Api::Api(std::istream && aSecrets) :
+        Api{aSecrets}
 {}
 
 

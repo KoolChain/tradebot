@@ -20,7 +20,7 @@ using namespace ad;
 tradebot::Exchange getExchange(const std::string & aSecretsFile)
 {
     return tradebot::Exchange{
-        binance::Api{std::ifstream{aSecretsFile}, binance::Api::gTestNet}
+        binance::Api{std::ifstream{aSecretsFile}}
     };
 }
 
