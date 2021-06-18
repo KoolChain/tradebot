@@ -1,12 +1,15 @@
 project(dogebot VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
+    EventLoop.h
     NaiveBot.h
     ProductionBot.h
 )
 
 set(${PROJECT_NAME}_SOURCES
     main.cpp
+
+    EventLoop.cpp
     ProductionBot.cpp
 )
 

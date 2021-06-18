@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "EventLoop.h"
+
 #include <tradebot/Fulfillment.h>
 #include <tradebot/Logging.h>
 #include <tradebot/Order.h>
@@ -9,8 +11,6 @@
 #include <trademath/FilterUtilities.h>
 
 #include <boost/asio/post.hpp>
-#include <boost/asio/deadline_timer.hpp>
-
 
 namespace ad {
 
@@ -28,8 +28,8 @@ struct NaiveBot
     tradebot::Trader trader;
     std::optional<OrderTracker> currentOrder;
     double percentage;
-    boost::asio::io_context mainLoop;
-    boost::asio::steady_timer orderTimer{mainLoop, gMaxFulfillPeriod};
+    EventLoop mainLoop;
+    boost::asio::steady_timer orderTimer{mainLoop.getContext(), gMaxFulfillPeriod};
 
     void onPartialFill(Json aReport);
 
@@ -38,8 +38,6 @@ struct NaiveBot
     void onReport(Json aExecutionReport);
 
     void onOrderTimer(const boost::system::error_code & aErrorCode);
-
-    void startEventLoop();
 
     void run();
 };
@@ -204,21 +202,6 @@ inline void NaiveBot::onReport(Json aExecutionReport)
 }
 
 
-inline void NaiveBot::startEventLoop()
-{
-    // io_context run returns as soon as there is no work left.
-    // create a timer never expiring, so it keeps on waiting for events to post work.
-    boost::asio::deadline_timer runForever{mainLoop, boost::posix_time::pos_infin};
-    runForever.async_wait([](const boost::system::error_code & aErrorCode)
-        {
-            spdlog::error("Interruption of run forever timer: {}.", aErrorCode.message());
-        }
-    );
-
-    mainLoop.run();
-}
-
-
 inline void NaiveBot::run()
 {
     // Initial cleanup
@@ -226,13 +209,14 @@ inline void NaiveBot::run()
 
     trader.exchange.openUserStream([this](Json aExecutionReport)
     {
-        boost::asio::post(mainLoop, std::bind(&NaiveBot::onReport, this, aExecutionReport));
+        boost::asio::post(mainLoop.getContext(),
+                          std::bind(&NaiveBot::onReport, this, aExecutionReport));
     });
     trader.fillNewMarketOrder(currentOrder->order);
 
     orderTimer.async_wait(std::bind(&NaiveBot::onOrderTimer, this, std::placeholders::_1));
 
-    startEventLoop();
+    mainLoop.run();
 }
 
 
