@@ -34,21 +34,17 @@ void configureLogging()
 }
 
 
-int main(int argc, char * argv[])
+int runNaiveBot(int argc, char * argv[], const std::string & aSecretsFile)
 {
-    // Hardcoded to testnet ATM
-    if (argc != 6)
+    if (argc != 7)
     {
-        std::cerr << "Usage: " << argv[0] << " secretsfile base quote amount percentage\n";
+        std::cerr << "Usage: " << argv[0] << " secretsfile naivebot base quote amount percentage\n";
         return EXIT_FAILURE;
     }
 
-    configureLogging();
-
-    std::string secretsfile{argv[1]};
-    tradebot::Pair pair{argv[2], argv[3]};
-    Decimal amount{argv[4]};
-    double percentage{std::stod(argv[5])};
+    tradebot::Pair pair{argv[3], argv[4]};
+    Decimal amount{argv[5]};
+    double percentage{std::stod(argv[6])};
 
     if (percentage < 0. || percentage > 1.)
     {
@@ -69,7 +65,7 @@ int main(int argc, char * argv[])
             pair,
             tradebot::Database{databasePath},
             tradebot::Exchange{
-                binance::Api{std::ifstream{secretsfile}, binance::Api::gTestNet},
+                binance::Api{std::ifstream{aSecretsFile}, binance::Api::gTestNet},
             },
         },
         OrderTracker{
@@ -89,4 +85,29 @@ int main(int argc, char * argv[])
     bot.run();
 
     return EXIT_SUCCESS;
+}
+
+
+int main(int argc, char * argv[])
+{
+    // Hardcoded to testnet ATM
+    if (argc < 3)
+    {
+        std::cerr << "Usage: " << argv[0] << " secretsfile botname [bot-args...]\n";
+        return EXIT_FAILURE;
+    }
+
+    configureLogging();
+    std::string secretsfile{argv[1]};
+
+    if (argv[2] == std::string{"naivebot"} || argv[2] == std::string{"NaiveBot"})
+    {
+        return runNaiveBot(argc, argv, secretsfile);
+    }
+    else
+    {
+        std::cerr << "Unknown botname '" << argv[2] << "'.\n";
+        std::cerr << "Usage: " << argv[0] << " secretsfile botname [bot-args...]\n";
+        return EXIT_FAILURE;
+    }
 }
