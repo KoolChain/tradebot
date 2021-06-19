@@ -11,6 +11,17 @@ namespace ad {
 namespace trade {
 
 
+struct IntervalTracker
+{
+    /// \return `true` if the latest price made the interval change.
+    bool update(Decimal aLatestPrice);
+
+    void reset();
+
+    trade::Ladder ladder;
+    trade::Ladder::const_reverse_iterator lowerBound{ladder.crend()};
+};
+
 struct ProductionBot
 {
     int run();
@@ -18,6 +29,7 @@ struct ProductionBot
     void onAggregateTrade(Json aMessage);
 
     tradebot::Trader trader;
+    IntervalTracker tracker;
     EventLoop mainLoop;
 };
 
