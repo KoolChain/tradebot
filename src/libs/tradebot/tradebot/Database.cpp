@@ -212,8 +212,8 @@ Decimal Database::sumAllFragments()
     std::unique_ptr<Decimal> result = mImpl->storage.sum(&Fragment::amount);
     if (!result)
     {
-        spdlog::critical("Cannot sum all fragments.");
-        throw std::logic_error("Unable to sum all fragments.");
+        // there are not fragments -> the sum is zero
+        return 0;
     }
     return fromFP(*result);
 }

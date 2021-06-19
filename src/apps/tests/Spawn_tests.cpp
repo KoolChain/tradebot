@@ -119,7 +119,7 @@ SCENARIO("Spawning from function, hardcoded 50K.", "[spawn]")
         REQUIRE(ladder.back() == Decimal{"0.9798"});
 
         Function initialDistribution{
-            [](Decimal aValue)
+            [](Decimal aValue) -> Decimal
             {
                 return Decimal("31465.715") * log(aValue);
             }
