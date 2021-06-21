@@ -7,6 +7,8 @@ namespace ad {
 namespace tradebot {
 
 namespace detail {
+
+
     void filterAmountTickSize(Order & aOrder, SymbolFilters aFilters)
     {
         Decimal remainder;
@@ -21,6 +23,25 @@ namespace detail {
                          remainder);
         }
     }
+
+
+    bool testAmountFilters(Order & aOrder, SymbolFilters aFilters)
+    {
+        if ((aOrder.amount * aOrder.fragmentsRate) < aFilters.minimumNotional)
+        {
+            spdlog::info("Order '{}' has notional amount of {}*{} = {} {}, whereas min notional is {}.",
+                         aOrder.getIdentity(),
+                         aOrder.amount,
+                         aOrder.fragmentsRate,
+                         aOrder.amount * aOrder.fragmentsRate,
+                         aOrder.quote,
+                         aFilters.minimumNotional);
+            return false;
+        }
+        return true;
+    }
+
+
 } // namespace detail
 
 
@@ -231,6 +252,10 @@ SymbolFilters Trader::queryFilters()
                 Decimal{filter["stepSize"].get<std::string>()},
             };
         }
+        else if (filter.at("filterType") == "MIN_NOTIONAL")
+        {
+            result.minimumNotional = Decimal{filter["minNotional"].get<std::string>()};
+        }
     }
     return result;
 }
@@ -354,8 +379,16 @@ Trader::makeAndFillProfitableOrders(Decimal aCurrentRate, SymbolFilters aFilters
             ++counter;
             Order order =
                 database.prepareOrder(name, aSide, rate, pair, Order::FulfillResponse::SmallSpread);
-            detail::filterAmountTickSize(order, aFilters);
-            fillExistingMarketOrder(order);
+            if (detail::testAmountFilters(order, aFilters))
+            {
+                detail::filterAmountTickSize(order, aFilters);
+                fillExistingMarketOrder(order);
+            }
+            else
+            {
+                spdlog::warn("Order '{}' will not be placed because it does not pass amount filters.",
+                             order.getIdentity());
+            }
         }
         return counter;
     };

@@ -661,6 +661,8 @@ SCENARIO("Symbol filters", "[trader]")
             CHECK(filters.amount.minimum == Decimal{"0.000001"});
             CHECK(filters.amount.maximum == Decimal{"900"});
             CHECK(filters.amount.tickSize == Decimal{"0.000001"});
+
+            CHECK(filters.minimumNotional == Decimal{"10"});
         }
     }
 }

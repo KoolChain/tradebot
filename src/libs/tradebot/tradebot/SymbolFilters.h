@@ -19,6 +19,8 @@ struct SymbolFilters
 
     ValueDomain price;
     ValueDomain amount;
+
+    Decimal minimumNotional;
 };
 
 
