@@ -126,6 +126,9 @@ Order & Exchange::placeOrder(Order & aOrder, Execution aExecution)
         case Execution::Limit:
             response = placeOrderImpl(to_limitOrder(aOrder), aOrder, restApi);
             break;
+        case Execution::LimitFok:
+            response = placeOrderImpl(to_limitFokOrder(aOrder), aOrder, restApi);
+            break;
     }
 
     if (response.status == 200)

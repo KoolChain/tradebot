@@ -118,6 +118,13 @@ inline binance::LimitOrder to_limitOrder(const Order & aOrder)
     };
 }
 
+inline binance::LimitOrder to_limitFokOrder(const Order & aOrder)
+{
+    binance::LimitOrder order = to_limitOrder(aOrder);
+    order.timeInForce = binance::TimeInForce::FOK;
+    return order;
+}
+
 
 /// \important Compares every data member except for the `id`!
 bool operator==(const Order & aLhs, const Order & aRhs);

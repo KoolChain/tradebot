@@ -16,6 +16,7 @@ enum class Execution
 {
     Market,
     Limit,
+    LimitFok,
 };
 
 
