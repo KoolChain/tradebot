@@ -4,7 +4,10 @@
 #include <binance/Api.h>
 
 #include <tradebot/Exchange.h>
+#include <tradebot/spawners/StableDownSpread.h>
 #include <tradebot/Trader.h>
+
+#include <trademath/Spreaders.h>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -91,19 +94,26 @@ int runNaiveBot(int argc, char * argv[], const std::string & aSecretsFile)
 
 int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
 {
-    if (argc != 6)
+    if (argc != 11)
     {
-        std::cerr << "Usage: " << argv[0] << " secretsfile productionbot base quote database-path\n";
+        std::cerr << "Usage: " << argv[0] << " secretsfile productionbot database-path base quote amount first-stop factor stop-count tickSize\n";
         return EXIT_FAILURE;
     }
 
-    tradebot::Pair pair{argv[3], argv[4]};
 
-    const std::string databasePath{argv[5]};
+    const std::string databasePath{argv[3]};
+    tradebot::Pair pair{argv[4], argv[5]};
+    Decimal amount{argv[6]};
+    Decimal firstStop{argv[7]};
+    Decimal factor{argv[8]};
+    int stopsCount = std::stoi(argv[9]);
+    Decimal tickSize{argv[10]};
 
     spdlog::info("Starting {} to trade {}.",
             argv[0],
             pair.symbol());
+
+    trade::Ladder ladder = trade::makeLadder(firstStop, factor, stopsCount, tickSize);
 
     trade::ProductionBot bot{
         tradebot::Trader{
@@ -113,7 +123,25 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
             tradebot::Exchange{
                 binance::Api{std::ifstream{aSecretsFile}},
             },
-        }
+            std::make_unique<tradebot::spawner::StableDownSpread<trade::ProportionSpreader>>(
+                trade::ProportionSpreader{
+                    ladder,
+                    std::vector<Decimal>{
+                        Decimal{"0.2"},
+                        Decimal{"0.2"},
+                        Decimal{"0.2"},
+                        Decimal{"0.2"},
+                        Decimal{"0.2"},
+                    },
+                },
+                Decimal{"0.1"},
+                Decimal{"0.25"},
+                Decimal{"0.2"}
+            ),
+        },
+        trade::IntervalTracker{
+            ladder
+        },
     };
 
     bot.run();
