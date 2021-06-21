@@ -11,6 +11,7 @@ set(${PROJECT_NAME}_HEADERS
     OrmDecimalAdaptor-impl.h
     Spawner.h
     Stream.h
+    SymbolFilters.h
     Trader.h
 
     spawners/Helpers.h

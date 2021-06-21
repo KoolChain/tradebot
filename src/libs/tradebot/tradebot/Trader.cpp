@@ -190,6 +190,33 @@ void Trader::spawnFragments(const FulfilledOrder & aOrder)
 }
 
 
+SymbolFilters Trader::queryFilters(const Pair & aPair)
+{
+    SymbolFilters result;
+    Json filtersArray = exchange.getExchangeInformation(aPair)["symbols"][0]["filters"];
+    for (const auto & filter : filtersArray)
+    {
+        if (filter.at("filterType") == "PRICE_FILTER")
+        {
+            result.price = SymbolFilters::ValueDomain{
+                Decimal{filter["minPrice"].get<std::string>()},
+                Decimal{filter["maxPrice"].get<std::string>()},
+                Decimal{filter["tickSize"].get<std::string>()},
+            };
+        }
+        else if (filter.at("filterType") == "LOT_SIZE")
+        {
+            result.amount = SymbolFilters::ValueDomain{
+                Decimal{filter["minQty"].get<std::string>()},
+                Decimal{filter["maxQty"].get<std::string>()},
+                Decimal{filter["stepSize"].get<std::string>()},
+            };
+        }
+    }
+    return result;
+}
+
+
 bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 {
     // Important: Everything happening on the database in this member function

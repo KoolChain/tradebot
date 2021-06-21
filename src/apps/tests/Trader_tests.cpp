@@ -587,3 +587,78 @@ SCENARIO("Fill profitable orders.", "[trader]")
         }
     }
 }
+
+
+SCENARIO("Symbol filters", "[trader]")
+{
+    GIVEN("A trader instance and a pair.")
+    {
+        const Pair pair{"BTC", "USDT"};
+
+        Trader trader{
+            "tradertest",
+            pair,
+            Database{":memory:"},
+            Exchange{binance::Api{secret::gTestnetCredentials}}
+        };
+
+        THEN("The filters for the pair can be retrieved.")
+        {
+            SymbolFilters filters = trader.queryFilters(pair);
+
+            // Expected filters at the time this test is implemented
+            //"filters": [
+            //    {
+            //        "filterType": "PRICE_FILTER",
+            //        "maxPrice": "1000000.00000000",
+            //        "minPrice": "0.01000000",
+            //        "tickSize": "0.01000000"
+            //    },
+            //    {
+            //        "avgPriceMins": 5,
+            //        "filterType": "PERCENT_PRICE",
+            //        "multiplierDown": "0.2",
+            //        "multiplierUp": "5"
+            //    },
+            //    {
+            //        "filterType": "LOT_SIZE",
+            //        "maxQty": "900.00000000",
+            //        "minQty": "0.00000100",
+            //        "stepSize": "0.00000100"
+            //    },
+            //    {
+            //        "applyToMarket": true,
+            //        "avgPriceMins": 5,
+            //        "filterType": "MIN_NOTIONAL",
+            //        "minNotional": "10.00000000"
+            //    },
+            //    {
+            //        "filterType": "ICEBERG_PARTS",
+            //        "limit": 10
+            //    },
+            //    {
+            //        "filterType": "MARKET_LOT_SIZE",
+            //        "maxQty": "100.00000000",
+            //        "minQty": "0.00000000",
+            //        "stepSize": "0.00000000"
+            //    },
+            //    {
+            //        "filterType": "MAX_NUM_ORDERS",
+            //        "maxNumOrders": 200
+            //    },
+            //    {
+            //        "filterType": "MAX_NUM_ALGO_ORDERS",
+            //        "maxNumAlgoOrders": 5
+            //    }
+            //]
+
+            CHECK(filters.price.minimum == Decimal{"0.01"});
+            CHECK(filters.price.maximum == Decimal{"1000000.00000000"});
+            CHECK(filters.price.tickSize == Decimal{"0.01"});
+
+            CHECK(filters.amount.minimum == Decimal{"0.000001"});
+            CHECK(filters.amount.maximum == Decimal{"900"});
+            CHECK(filters.amount.tickSize == Decimal{"0.000001"});
+        }
+    }
+}

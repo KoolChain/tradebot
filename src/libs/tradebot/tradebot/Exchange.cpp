@@ -69,6 +69,24 @@ Decimal Exchange::getCurrentAveragePrice(const Pair & aPair)
 }
 
 
+Json Exchange::getExchangeInformation(std::optional<Pair> aPair)
+{
+    binance::Response response = aPair ?
+        restApi.getExchangeInformation(aPair->symbol())
+        : restApi.getExchangeInformation();
+
+
+    if (response.status == 200)
+    {
+        return *response.json;
+    }
+    else
+    {
+        unhandledResponse(response, "exchange information");
+    }
+}
+
+
 template<class T_order>
 binance::Response placeOrderImpl(const T_order & aBinanceOrder, Order & aOrder, binance::Api & aRestApi)
 {

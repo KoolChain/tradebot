@@ -48,6 +48,8 @@ public:
     Response getSystemStatus();
 
     Response getExchangeInformation();
+    Response getExchangeInformation(const Symbol & aSymbol);
+
 
     Response getAllCoinsInformation();
 

@@ -206,6 +206,13 @@ Response Api::getExchangeInformation()
 }
 
 
+Response Api::getExchangeInformation(const Symbol & aSymbol)
+{
+    return makeRequest(Verb::GET, {"/api/v3/exchangeInfo"}, Security::None,
+                       cpr::Parameters{{"symbol", aSymbol}});
+}
+
+
 Response Api::getAllCoinsInformation()
 {
     return makeRequest(Verb::GET, {"/sapi/v1/capital/config/getall"}, Security::Signed);

@@ -4,6 +4,7 @@
 #include "Database.h"
 #include "Exchange.h"
 #include "Spawner.h"
+#include "SymbolFilters.h"
 
 namespace ad {
 namespace tradebot {
@@ -53,6 +54,8 @@ public:
     /// To follow this requirement, this member function will consolidate all the spawns from different
     /// fragments targeting the same rate into a single resulting Fragment stored in database.
     void spawnFragments(const FulfilledOrder & aOrder);
+
+    SymbolFilters queryFilters(const Pair & aPair);
 
     //
     // High-level API

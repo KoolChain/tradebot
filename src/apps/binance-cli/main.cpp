@@ -50,16 +50,7 @@ int main(int argc, char * argv[])
 
         tradebot::Exchange exchange{getExchange(secretsFile)};
 
-        binance::Response exchangeInfo = exchange.restApi.getExchangeInformation();
-        if (exchangeInfo.status == 200)
-        {
-            std::cout << exchangeInfo.json->dump(4) << '\n';
-        }
-        else
-        {
-            spdlog::critical("Could not retrieve exchange information.");
-            return EXIT_FAILURE;
-        }
+        std::cout << exchange.getExchangeInformation().dump(4) << '\n';
     }
     else if (argv[2] == std::string{"buy"}
              || argv[2] == std::string{"sell"})

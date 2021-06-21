@@ -31,6 +31,8 @@ struct Exchange
 
     Decimal getCurrentAveragePrice(const Pair & aPair);
 
+    Json getExchangeInformation(std::optional<Pair> aPair = {});
+
     Order & placeOrder(Order & aOrder, Execution aExecution);
 
     std::optional<FulfilledOrder> fillMarketOrder(Order & aOrder);
