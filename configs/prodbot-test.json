@@ -1,0 +1,12 @@
+{
+    "base": "BTC",
+    "quote": "USDT",
+    "amount": "0.7",
+
+    "ladder": {
+        "firstStop": "30000",
+        "factor": "1.002",
+        "stopCount": "200",
+        "tickSize": "0.01"
+    }
+}

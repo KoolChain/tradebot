@@ -96,26 +96,28 @@ int runNaiveBot(int argc, char * argv[], const std::string & aSecretsFile)
 
 int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
 {
-    if (argc != 11)
+    if (argc != 5)
     {
-        std::cerr << "Usage: " << argv[0] << " secretsfile productionbot database-path base quote amount first-stop factor stop-count tickSize\n";
+        std::cerr << "Usage: " << argv[0] << " secretsfile productionbot database-path config-path\n";
         return EXIT_FAILURE;
+
     }
 
-
     const std::string databasePath{argv[3]};
-    tradebot::Pair pair{argv[4], argv[5]};
-    Decimal amount{argv[6]};
-    Decimal firstStop{argv[7]};
-    Decimal factor{argv[8]};
-    int stopsCount = std::stoi(argv[9]);
-    Decimal tickSize{argv[10]};
+
+    Json config = Json::parse(std::ifstream{argv[4]});
+    tradebot::Pair pair{config.at("base"), config.at("quote")};
+    //Decimal amount{config.at("amount")};
+    Decimal firstStop{config.at("ladder").at("firstStop").get<std::string>()};
+    Decimal factor{config.at("ladder").at("factor").get<std::string>()};
+    int stopCount = std::stoi(config.at("ladder").at("stopCount").get<std::string>());
+    Decimal tickSize{config.at("ladder").at("tickSize").get<std::string>()};
 
     spdlog::info("Starting {} to trade {}.",
             argv[0],
             pair.symbol());
 
-    trade::Ladder ladder = trade::makeLadder(firstStop, factor, stopsCount, tickSize);
+    trade::Ladder ladder = trade::makeLadder(firstStop, factor, stopCount, tickSize);
 
     trade::ProductionBot bot{
         tradebot::Trader{
