@@ -124,7 +124,8 @@ template <class T_amount, class T_ladderIt, class T_function>
 SpawnResult<T_amount>
 spawnIntegration(const T_amount aAmount,
                  T_ladderIt aStopBegin, const T_ladderIt aStopEnd,
-                 T_function aFunction)
+                 T_function aFunction,
+                 Decimal aTickSize = Decimal{0})
 {
     if (std::distance(aStopBegin, aStopEnd) < 1)
     {
@@ -138,6 +139,10 @@ spawnIntegration(const T_amount aAmount,
         ++aStopBegin, ++nextStop)
     {
         Decimal amount = (Decimal)aAmount * abs(aFunction.integrate(*aStopBegin, *nextStop));
+        if (aTickSize != 0) // we would expect compilers to optimize that away on default value
+        {
+            amount = applyTickSize(amount, aTickSize);
+        }
         accumulation += amount;
         result.emplace_back(*nextStop, T_amount{amount});
     }
@@ -153,13 +158,18 @@ template <class T_amount, class T_ladderIt, class T_proportionsIt>
 SpawnResult<T_amount>
 spawnProportions(const T_amount aAmount,
                  T_ladderIt aStopBegin, const T_ladderIt aStopEnd,
-                 T_proportionsIt aProportionsBegin, const T_proportionsIt aProportionsEnd)
+                 T_proportionsIt aProportionsBegin, const T_proportionsIt aProportionsEnd,
+                 Decimal aTickSize = Decimal{0})
 {
     std::vector<Spawn> result;
     Decimal accumulation{0};
     while(aStopBegin != aStopEnd && aProportionsBegin != aProportionsEnd)
     {
         Decimal amount = (Decimal)aAmount * (*aProportionsBegin);
+        if (aTickSize != 0) // we would expect compilers to optimize that away on default value
+        {
+            amount = applyTickSize(amount, aTickSize);
+        }
         accumulation += amount;
         result.emplace_back(*aStopBegin, T_amount{amount});
         ++aStopBegin;

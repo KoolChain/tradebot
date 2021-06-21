@@ -127,27 +127,29 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
             tradebot::Exchange{
                 binance::Api{std::ifstream{aSecretsFile}},
             },
-            std::make_unique<tradebot::spawner::StableDownSpread<trade::ProportionSpreader>>(
-                trade::ProportionSpreader{
-                    ladder,
-                    std::vector<Decimal>{
-                        Decimal{"0.2"},
-                        Decimal{"0.2"},
-                        Decimal{"0.2"},
-                        Decimal{"0.2"},
-                        Decimal{"0.2"},
-                    },
-                },
-                Decimal{"0.1"},
-                Decimal{"0.25"},
-                Decimal{"0.2"}
-            ),
         },
         trade::IntervalTracker{
             ladder
         },
     };
 
+    bot.trader.spawner =
+        std::make_unique<tradebot::spawner::StableDownSpread<trade::ProportionSpreader>>(
+            trade::ProportionSpreader{
+                ladder,
+                std::vector<Decimal>{
+                    Decimal{"0.2"},
+                    Decimal{"0.2"},
+                    Decimal{"0.2"},
+                    Decimal{"0.2"},
+                    Decimal{"0.2"},
+                },
+                bot.trader.queryFilters().amount.tickSize,
+            },
+            Decimal{"0.1"},
+            Decimal{"0.25"},
+            Decimal{"0.2"}
+        );
     bot.run();
 
     return EXIT_SUCCESS;

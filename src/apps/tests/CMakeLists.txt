@@ -21,6 +21,7 @@ set(${PROJECT_NAME}_SOURCES
     Exchange_tests.cpp
     Order_tests.cpp
     Spawn_tests.cpp
+    Spreaders_tests.cpp
     StableDownSpread_tests.cpp
     Sqliteorm_tests.cpp
     Trader_tests.cpp
