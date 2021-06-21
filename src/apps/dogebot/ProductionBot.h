@@ -6,6 +6,8 @@
 #include <tradebot/Order.h>
 #include <tradebot/Trader.h>
 
+#include <trademath/Interval.h>
+
 
 namespace ad {
 namespace trade {
@@ -14,7 +16,7 @@ namespace trade {
 struct IntervalTracker
 {
     /// \return `true` if the latest price made the interval change.
-    bool update(Decimal aLatestPrice);
+    std::optional<Interval> update(Decimal aLatestPrice);
 
     void reset();
 

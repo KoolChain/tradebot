@@ -142,9 +142,13 @@ Order & Exchange::placeOrder(Order & aOrder, Execution aExecution)
 }
 
 
-std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
+template <class T_order>
+std::optional<FulfilledOrder> fillOrderImpl(const T_order & aBinanceOrder,
+                                            Order & aOrder,
+                                            binance::Api & aRestApi,
+                                            const std::string & aOrderType)
 {
-    binance::Response response = placeOrderImpl(to_marketOrder(aOrder), aOrder, restApi);
+    binance::Response response = placeOrderImpl(aBinanceOrder, aOrder, aRestApi);
     if (response.status == 200)
     {
         const Json & json = *response.json;
@@ -164,7 +168,8 @@ std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
         }
         else if (json["status"] == "EXPIRED")
         {
-            spdlog::warn("Market order '{}' for {} {} at {} {} is expired.",
+            spdlog::warn("{} order '{}' for {} {} at {} {} is expired.",
+                         aOrderType,
                          aOrder.getIdentity(),
                          aOrder.amount,
                          aOrder.base,
@@ -175,16 +180,29 @@ std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
         }
         else
         {
-            spdlog::critical("Unhandled status '{}' when placing market order '{}'.",
+            spdlog::critical("Unhandled status '{}' when placing {} order '{}'.",
                              json["status"],
+                             aOrderType,
                              aOrder.getIdentity());
-            throw std::logic_error{"Unhandled market order status in response."};
+            throw std::logic_error{"Unhandled order status in response."};
         }
     }
     else
     {
-        unhandledResponse(response, "fill market order");
+        unhandledResponse(response, aOrderType + " order");
     }
+}
+
+
+std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
+{
+    return fillOrderImpl(to_marketOrder(aOrder), aOrder, restApi, "market");
+}
+
+
+std::optional<FulfilledOrder> Exchange::fillLimitFokOrder(Order & aOrder)
+{
+    return fillOrderImpl(to_limitFokOrder(aOrder), aOrder, restApi, "limit fok");
 }
 
 

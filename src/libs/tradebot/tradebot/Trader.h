@@ -6,6 +6,9 @@
 #include "Spawner.h"
 #include "SymbolFilters.h"
 
+#include <trademath/Interval.h>
+
+
 namespace ad {
 namespace tradebot {
 
@@ -19,6 +22,7 @@ private:
     {
         return fillExistingMarketOrder(aOrder);
     }
+    FulfilledOrder fillExistingLimitFokOrder(Order & aOrder);
 
 public: // should be private, but requires testing
     bool completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder);
@@ -67,15 +71,15 @@ public:
     FulfilledOrder fillNewMarketOrder(Order & aOrder);
 
     /// \brief High-level operation that create all orders that would be profitable
-    /// at `aRate`, and fill them at market.
+    /// at rates in `aInterval`, and fill them as limit Fill Or Kill.
     ///
     /// Will make separate orders for each available fragment rate on a given side:
-    /// * one sell order per sell fragment rate below the current rate.
-    /// * one buy order per buy fragment rate above the current rate.
+    /// * one sell order per sell fragment rate below the interval lower bound.
+    /// * one buy order per buy fragment rate above the interval higher bound.
     ///
     /// \return A pair containing the number of filled sell orders and buy orders.
     std::pair<std::size_t /*filled sell*/, std::size_t /*filled buy*/>
-    makeAndFillProfitableOrders(Decimal aCurrentRate, SymbolFilters aFilters);
+    makeAndFillProfitableOrders(Interval aInterval, SymbolFilters aFilters);
 
     /// \brief To be called when an order did complete on the exchange, with its already accumulated
     /// fulfillment.

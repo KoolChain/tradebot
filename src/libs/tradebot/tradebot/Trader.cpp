@@ -357,7 +357,6 @@ FulfilledOrder Trader::fillExistingMarketOrder(Order & aOrder)
 
     completeFulfilledOrder(*fulfilled);
     return *fulfilled;
-
 }
 
 
@@ -368,21 +367,34 @@ FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
 }
 
 
-std::pair<std::size_t, std::size_t>
-Trader::makeAndFillProfitableOrders(Decimal aCurrentRate, SymbolFilters aFilters)
+FulfilledOrder Trader::fillExistingLimitFokOrder(Order & aOrder)
 {
-    auto makeAndFill = [&, this](Side aSide) -> std::size_t
+    database.update(aOrder.setStatus(Order::Status::Sending));
+
+    std::optional<FulfilledOrder> fulfilled;
+    while(!(fulfilled = exchange.fillLimitFokOrder(aOrder)).has_value())
+    {}
+
+    completeFulfilledOrder(*fulfilled);
+    return *fulfilled;
+}
+
+
+std::pair<std::size_t, std::size_t>
+Trader::makeAndFillProfitableOrders(Interval aRateInterval, SymbolFilters aFilters)
+{
+    auto makeAndFill = [this, aFilters](Side aSide, Decimal aRate) -> std::size_t
     {
         std::size_t counter = 0;
-        for (const Decimal rate : database.getProfitableRates(aSide, aCurrentRate, pair))
+        for (const Decimal rate : database.getProfitableRates(aSide, aRate, pair))
         {
-            ++counter;
             Order order =
                 database.prepareOrder(name, aSide, rate, pair, Order::FulfillResponse::SmallSpread);
             if (detail::testAmountFilters(order, aFilters))
             {
                 detail::filterAmountTickSize(order, aFilters);
-                fillExistingMarketOrder(order);
+                fillExistingLimitFokOrder(order);
+                ++counter;
             }
             else
             {
@@ -393,18 +405,16 @@ Trader::makeAndFillProfitableOrders(Decimal aCurrentRate, SymbolFilters aFilters
         return counter;
     };
 
-    auto sellCount = makeAndFill(Side::Sell);
-    auto buyCount  = makeAndFill(Side::Buy);
+    auto sellCount = makeAndFill(Side::Sell, aRateInterval.front);
+    auto buyCount  = makeAndFill(Side::Buy, aRateInterval.back);
 
     // Only log if there were matching orders to fill.
-    if (sellCount + buyCount)
-    {
-        spdlog::info("From rate {} on {}, filled {} sell market orders and {} buy market orders.",
-                aCurrentRate,
-                pair.symbol(),
-                sellCount,
-                buyCount);
-    }
+    spdlog::info("From rate interval [{}, {}] on {}, filled {} sell market orders and {} buy market orders.",
+            aRateInterval.front,
+            aRateInterval.back,
+            pair.symbol(),
+            sellCount,
+            buyCount);
 
     return {sellCount, buyCount};
 }

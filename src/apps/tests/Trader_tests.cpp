@@ -551,7 +551,7 @@ SCENARIO("Fill profitable orders.", "[trader]")
             THEN("They can be filled at once as profitable orders.")
             {
                 auto [sellCount, buyCount] =
-                    trader.makeAndFillProfitableOrders(averagePrice, symbolFilters);
+                    trader.makeAndFillProfitableOrders({averagePrice, averagePrice}, symbolFilters);
 
                 REQUIRE(sellCount == 2);
                 REQUIRE(buyCount == 0);
@@ -578,7 +578,7 @@ SCENARIO("Fill profitable orders.", "[trader]")
             THEN("They can be filled at once as profitable orders.")
             {
                 auto [sellCount, buyCount] =
-                    trader.makeAndFillProfitableOrders(averagePrice, symbolFilters);
+                    trader.makeAndFillProfitableOrders({averagePrice, averagePrice}, symbolFilters);
 
                 REQUIRE(sellCount == 0);
                 REQUIRE(buyCount == 3);

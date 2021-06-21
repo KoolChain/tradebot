@@ -14,7 +14,7 @@ namespace ad {
 namespace trade {
 
 
-bool IntervalTracker::update(Decimal aLatestPrice)
+std::optional<Interval> IntervalTracker::update(Decimal aLatestPrice)
 {
     trade::Ladder::const_reverse_iterator newLowerBound =
         std::find_if(ladder.crbegin(), ladder.crend(), [&, this](auto stop)
@@ -39,7 +39,15 @@ bool IntervalTracker::update(Decimal aLatestPrice)
         }
     }
 
-    return newLowerBound != std::exchange(lowerBound, newLowerBound);
+    if (newLowerBound != std::exchange(lowerBound, newLowerBound))
+    {
+        return Interval{lowerBound == ladder.crend() ?   *lowerBound-1 : *lowerBound,
+                        lowerBound == ladder.crbegin() ?   *lowerBound : *(lowerBound-1)};
+    }
+    else
+    {
+        return {};
+    }
 }
 
 
@@ -53,13 +61,15 @@ void ProductionBot::onAggregateTrade(Json aMessage)
 {
     Decimal latestPrice{aMessage.at("p").get<std::string>()};
 
-    if (tracker.update(latestPrice))
+    if (auto optionalInterval = tracker.update(latestPrice))
     {
         spdlog::info("Latest price {} changed the current ladder interval.",
                 latestPrice);
-        boost::asio::post(mainLoop.getContext(), [this, latestPrice]()
+        boost::asio::post(mainLoop.getContext(), [this, latestPrice, interval=*optionalInterval]()
                 {
-                    trader.makeAndFillProfitableOrders(latestPrice, symbolFilters);
+                    spdlog::info("Start handling new interval [{}, {}].",
+                                 interval.front, interval.back);
+                    trader.makeAndFillProfitableOrders(interval, symbolFilters);
                 });
     }
 }
