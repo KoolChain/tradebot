@@ -151,7 +151,7 @@ std::vector<Decimal> Database::getSellRatesBelow(Decimal aRateLimit, const Pair 
 {
     using namespace sqlite_orm;
     return mImpl->storage.select(&Fragment::targetRate,
-            where(   (c(&Fragment::targetRate) < aRateLimit)
+            where(   (c(&Fragment::targetRate) <= aRateLimit)
                   && (c(&Fragment::side) = static_cast<int>(Side::Sell))
                   && (c(&Fragment::base) = aPair.base)
                   && (c(&Fragment::quote) = aPair.quote)
@@ -165,7 +165,7 @@ std::vector<Decimal> Database::getBuyRatesAbove(Decimal aRateLimit, const Pair &
 {
     using namespace sqlite_orm;
     return mImpl->storage.select(&Fragment::targetRate,
-            where(   (c(&Fragment::targetRate) > aRateLimit)
+            where(   (c(&Fragment::targetRate) >= aRateLimit)
                   && (c(&Fragment::side) = static_cast<int>(Side::Buy))
                   && (c(&Fragment::base) = aPair.base)
                   && (c(&Fragment::quote) = aPair.quote)
