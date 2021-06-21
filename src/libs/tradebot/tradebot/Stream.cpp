@@ -110,6 +110,7 @@ void onStreamReceive(const std::string & aMessage, Stream::ReceiveCallback aOnMe
 
 Stream::Stream(WebsocketDestination aDestination,
                ReceiveCallback aOnMessage,
+               UnintendedCloseCallback aOnUnintededClose,
                std::unique_ptr<RefreshTimer> aKeepAlive) :
     keepAlive{std::move(aKeepAlive)},
     websocket{
@@ -130,7 +131,9 @@ Stream::Stream(WebsocketDestination aDestination,
         }
     },
     websocketThread{
-        [this, destination = std::move(aDestination)]()
+        [this,
+         destination = std::move(aDestination),
+         onUnintededClose = std::move(aOnUnintededClose)]()
         {
             try
             {
@@ -165,6 +168,7 @@ Stream::Stream(WebsocketDestination aDestination,
                 {
                     spdlog::warn("User data stream websocket could not connect.");
                 }
+                onUnintededClose();
             }
         }
     }

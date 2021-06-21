@@ -418,7 +418,8 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
 }
 
 
-bool Exchange::openUserStream(Stream::ReceiveCallback aOnMessage)
+bool Exchange::openUserStream(Stream::ReceiveCallback aOnMessage,
+                              Stream::UnintendedCloseCallback aOnUnintededClose)
 {
     WebsocketDestination userStreamDestination{
         restApi.getEndpoints().websocketHost,
@@ -428,6 +429,7 @@ bool Exchange::openUserStream(Stream::ReceiveCallback aOnMessage)
 
     spotUserStream.emplace(std::move(userStreamDestination),
                            std::move(aOnMessage),
+                           std::move(aOnUnintededClose),
                            std::make_unique<RefreshTimer>(
                                // IMPORTANT: Will execute the HTTP PUT query on the timer io_context thread
                                // So it introduces concurrent execution of http requests
@@ -454,8 +456,9 @@ void Exchange::closeUserStream()
 }
 
 
-bool Exchange::openMarketStream(Stream::ReceiveCallback aOnMessage,
-                                const std::string & aStreamName)
+bool Exchange::openMarketStream(const std::string & aStreamName,
+                                Stream::ReceiveCallback aOnMessage,
+                                Stream::UnintendedCloseCallback aOnUnintededClose)
 {
     WebsocketDestination marketStreamDestination{
         restApi.getEndpoints().websocketHost,
@@ -464,7 +467,8 @@ bool Exchange::openMarketStream(Stream::ReceiveCallback aOnMessage,
     };
 
     marketStream.emplace(std::move(marketStreamDestination),
-                         std::move(aOnMessage));
+                         std::move(aOnMessage),
+                         std::move(aOnUnintededClose));
 
     // Block until the websocket either connects or fails to do so.
     std::unique_lock<std::mutex> lock{marketStream->mutex};

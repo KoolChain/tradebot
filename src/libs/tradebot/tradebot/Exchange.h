@@ -83,13 +83,16 @@ struct Exchange
     /// \brief Blocks while opening a websocket to get spot user data stream.
     ///
     /// \return `true` if the websocket connected successfully, `false` otherwise.
-    bool openUserStream(Stream::ReceiveCallback aOnMessage);
+    bool openUserStream(Stream::ReceiveCallback aOnMessage,
+                        Stream::UnintendedCloseCallback aOnUnintededClose = [](){});
     void closeUserStream();
 
     /// \brief Blocks while opening a websocket to get market stream.
     ///
     /// \return `true` if the websocket connected successfully, `false` otherwise.
-    bool openMarketStream(Stream::ReceiveCallback aOnMessage, const std::string & aStreamName);
+    bool openMarketStream(const std::string & aStreamName,
+                          Stream::ReceiveCallback aOnMessage,
+                          Stream::UnintendedCloseCallback aOnUnintededClose = [](){});
     void closeMarketStream();
 
     binance::Api restApi;

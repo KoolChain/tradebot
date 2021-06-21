@@ -64,14 +64,27 @@ void ProductionBot::onAggregateTrade(Json aMessage)
     }
 }
 
+void ProductionBot::connectMarketStream()
+{
+    trader.exchange.openMarketStream(boost::to_lower_copy(trader.pair.symbol()) + "@aggTrade",
+                                     std::bind(&ProductionBot::onAggregateTrade,
+                                               this,
+                                               std::placeholders::_1),
+                                     [this]()
+                                     {
+                                        boost::asio::post(mainLoop.getContext(),
+                                                          std::bind(&ProductionBot::connectMarketStream,
+                                                                    this));
+                                     });
+}
+
 
 int ProductionBot::run()
 {
     trader.cleanup();
 
     tracker.reset();
-    trader.exchange.openMarketStream(std::bind(&ProductionBot::onAggregateTrade, this, std::placeholders::_1),
-                                     boost::to_lower_copy(trader.pair.symbol()) + "@aggTrade");
+    connectMarketStream();
 
     mainLoop.run();
 

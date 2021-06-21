@@ -71,10 +71,12 @@ private:
 
 public:
     using ReceiveCallback = std::function<void(Json)>;
+    using UnintendedCloseCallback = std::function<void(void)>;
 
     // Made public so std::optional::emplace can access it
     Stream(WebsocketDestination aDestination,
            ReceiveCallback aOnMessage,
+           UnintendedCloseCallback aOnUnintededClose,
            std::unique_ptr<RefreshTimer> aKeepAlive = nullptr);
     ~Stream();
 

@@ -24,6 +24,8 @@ struct IntervalTracker
 
 struct ProductionBot
 {
+    void connectMarketStream();
+
     int run();
 
     void onAggregateTrade(Json aMessage);
