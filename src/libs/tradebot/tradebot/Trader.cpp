@@ -6,6 +6,23 @@
 namespace ad {
 namespace tradebot {
 
+namespace detail {
+    void filterAmountTickSize(Order & aOrder, SymbolFilters aFilters)
+    {
+        Decimal remainder;
+        Decimal tickSize = aFilters.amount.tickSize;
+        std::tie(aOrder.amount, remainder) = trade::computeTickFilter(aOrder.amount, tickSize);
+        if (! isEqual(remainder, Decimal{0}))
+        {
+            spdlog::warn("Prepared order '{}' had to be filtered to respect tick size {}."
+                         " Remainder is {}.",
+                         aOrder.getIdentity(),
+                         tickSize,
+                         remainder);
+        }
+    }
+} // namespace detail
+
 
 void Trader::sendExistingOrder(Execution aExecution, Order & aOrder)
 {
@@ -28,10 +45,12 @@ void Trader::placeNewOrder(Execution aExecution, Order & aOrder)
 Order Trader::placeOrderForMatchingFragments(Execution aExecution,
                                              Side aSide,
                                              Decimal aFragmentsRate,
-                                             Order::FulfillResponse aFulfillResponse)
+                                             Order::FulfillResponse aFulfillResponse,
+                                             SymbolFilters aFilters)
 {
     // Create the Inactive order in DB, assigning all matching fragments
     Order order = database.prepareOrder(name, aSide, aFragmentsRate, pair, aFulfillResponse);
+    detail::filterAmountTickSize(order, aFilters);
     sendExistingOrder(aExecution, order);
     return order;
 }
@@ -190,10 +209,10 @@ void Trader::spawnFragments(const FulfilledOrder & aOrder)
 }
 
 
-SymbolFilters Trader::queryFilters(const Pair & aPair)
+SymbolFilters Trader::queryFilters()
 {
     SymbolFilters result;
-    Json filtersArray = exchange.getExchangeInformation(aPair)["symbols"][0]["filters"];
+    Json filtersArray = exchange.getExchangeInformation(pair)["symbols"][0]["filters"];
     for (const auto & filter : filtersArray)
     {
         if (filter.at("filterType") == "PRICE_FILTER")
@@ -325,7 +344,7 @@ FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
 
 
 std::pair<std::size_t, std::size_t>
-Trader::makeAndFillProfitableOrders(Decimal aCurrentRate)
+Trader::makeAndFillProfitableOrders(Decimal aCurrentRate, SymbolFilters aFilters)
 {
     auto makeAndFill = [&, this](Side aSide) -> std::size_t
     {
@@ -333,8 +352,10 @@ Trader::makeAndFillProfitableOrders(Decimal aCurrentRate)
         for (const Decimal rate : database.getProfitableRates(aSide, aCurrentRate, pair))
         {
             ++counter;
-            fillExistingMarketOrder(
-                database.prepareOrder(name, aSide, rate, pair, Order::FulfillResponse::SmallSpread));
+            Order order =
+                database.prepareOrder(name, aSide, rate, pair, Order::FulfillResponse::SmallSpread);
+            detail::filterAmountTickSize(order, aFilters);
+            fillExistingMarketOrder(order);
         }
         return counter;
     };

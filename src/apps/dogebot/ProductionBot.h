@@ -32,6 +32,9 @@ struct ProductionBot
 
     tradebot::Trader trader;
     IntervalTracker tracker;
+
+    // Automatically initialized
+    tradebot::SymbolFilters symbolFilters{trader.queryFilters()};
     EventLoop mainLoop;
 };
 

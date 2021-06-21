@@ -59,7 +59,7 @@ void ProductionBot::onAggregateTrade(Json aMessage)
                 latestPrice);
         boost::asio::post(mainLoop.getContext(), [this, latestPrice]()
                 {
-                    trader.makeAndFillProfitableOrders(latestPrice);
+                    trader.makeAndFillProfitableOrders(latestPrice, symbolFilters);
                 });
     }
 }

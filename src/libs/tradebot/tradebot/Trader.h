@@ -29,7 +29,8 @@ public:
     Order placeOrderForMatchingFragments(Execution aExecution,
                                          Side aSide,
                                          Decimal aFragmentsRate,
-                                         Order::FulfillResponse aFulfillResponse);
+                                         Order::FulfillResponse aFulfillResponse,
+                                         SymbolFilters aFilters = SymbolFilters{});
 
     /// \brief Attempt to cancel the order on the exchange,
     /// and always discard the order from the database.
@@ -55,7 +56,7 @@ public:
     /// fragments targeting the same rate into a single resulting Fragment stored in database.
     void spawnFragments(const FulfilledOrder & aOrder);
 
-    SymbolFilters queryFilters(const Pair & aPair);
+    SymbolFilters queryFilters();
 
     //
     // High-level API
@@ -74,7 +75,7 @@ public:
     ///
     /// \return A pair containing the number of filled sell orders and buy orders.
     std::pair<std::size_t /*filled sell*/, std::size_t /*filled buy*/>
-    makeAndFillProfitableOrders(Decimal aCurrentRate);
+    makeAndFillProfitableOrders(Decimal aCurrentRate, SymbolFilters aFilters);
 
     /// \brief To be called when an order did complete on the exchange, with its already accumulated
     /// fulfillment.

@@ -527,6 +527,8 @@ SCENARIO("Fill profitable orders.", "[trader]")
         auto & db = trader.database;
         auto & binance = trader.exchange;
 
+        SymbolFilters symbolFilters = trader.queryFilters();
+
         // Sanity check
         binance.cancelAllOpenOrders(pair);
         REQUIRE(binance.listOpenOrders(pair).empty());
@@ -549,7 +551,7 @@ SCENARIO("Fill profitable orders.", "[trader]")
             THEN("They can be filled at once as profitable orders.")
             {
                 auto [sellCount, buyCount] =
-                    trader.makeAndFillProfitableOrders(averagePrice);
+                    trader.makeAndFillProfitableOrders(averagePrice, symbolFilters);
 
                 REQUIRE(sellCount == 2);
                 REQUIRE(buyCount == 0);
@@ -576,7 +578,7 @@ SCENARIO("Fill profitable orders.", "[trader]")
             THEN("They can be filled at once as profitable orders.")
             {
                 auto [sellCount, buyCount] =
-                    trader.makeAndFillProfitableOrders(averagePrice);
+                    trader.makeAndFillProfitableOrders(averagePrice, symbolFilters);
 
                 REQUIRE(sellCount == 0);
                 REQUIRE(buyCount == 3);
@@ -604,7 +606,7 @@ SCENARIO("Symbol filters", "[trader]")
 
         THEN("The filters for the pair can be retrieved.")
         {
-            SymbolFilters filters = trader.queryFilters(pair);
+            SymbolFilters filters = trader.queryFilters();
 
             // Expected filters at the time this test is implemented
             //"filters": [
