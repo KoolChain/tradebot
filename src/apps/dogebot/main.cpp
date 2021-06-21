@@ -22,12 +22,14 @@
 using namespace ad;
 
 
-void configureLogging()
+void configureLogging(const std::string aBotname, const std::string aLogPathPrefix = "./")
 {
     auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     consoleSink->set_level(spdlog::level::trace);
 
-    auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("/tmp/naivebot.log", true);
+    std::ostringstream logpath;
+    logpath << aLogPathPrefix << aBotname << "-" << getTimestamp() << ".log";
+    auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logpath.str(), true);
     fileSink->set_level(spdlog::level::trace);
 
     auto logger = std::make_shared<spdlog::logger>(spdlog::logger{"multi_sink", {consoleSink, fileSink}});
@@ -159,20 +161,21 @@ int main(int argc, char * argv[])
         return EXIT_FAILURE;
     }
 
-    configureLogging();
+    const std::string botname{argv[2]};
+    configureLogging(botname);
     std::string secretsfile{argv[1]};
 
-    if (argv[2] == std::string{"naivebot"} || argv[2] == std::string{"NaiveBot"})
+    if (botname == std::string{"naivebot"} || botname == std::string{"NaiveBot"})
     {
         return runNaiveBot(argc, argv, secretsfile);
     }
-    else if (argv[2] == std::string{"productionbot"} || argv[2] == std::string{"productionbot"})
+    else if (botname == std::string{"productionbot"} || botname == std::string{"productionbot"})
     {
         return runProductionBot(argc, argv, secretsfile);
     }
     else
     {
-        std::cerr << "Unknown botname '" << argv[2] << "'.\n";
+        std::cerr << "Unknown botname '" << botname << "'.\n";
         std::cerr << "Usage: " << argv[0] << " secretsfile botname [bot-args...]\n";
         return EXIT_FAILURE;
     }
