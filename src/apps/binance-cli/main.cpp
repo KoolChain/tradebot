@@ -24,15 +24,21 @@ tradebot::Exchange getExchange(const std::string & aSecretsFile)
     };
 }
 
+
+void printUsage(const std::string aCommand)
+{
+    std::cerr << "Usage: " << aCommand << " secretsfile action args... \n"
+        << "\taction might be: buy, sell, query-order, exchange-info, account-info\n"
+        ;
+}
+
 int main(int argc, char * argv[])
 {
     spdlog::set_level(spdlog::level::trace);
 
     if (argc < 3)
     {
-        std::cerr << "Usage: " << argv[0] << " secretsfile action args... \n"
-            << "\taction might be: buy, sell, query-order, exchange-info, account-info\n"
-            ;
+        printUsage(argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -139,7 +145,12 @@ int main(int argc, char * argv[])
             spdlog::critical("Could not get account information.");
             return EXIT_FAILURE;
         }
-
+    }
+    else
+    {
+        std::cerr << "Unknown commande '" << argv[2] << "'.\n";
+        printUsage(argv[0]);
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
