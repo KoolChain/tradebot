@@ -166,16 +166,19 @@ FulfilledOrder fulfill(Order & aOrder,
         if (globalPrice > 0.
             && (! isEqual(aOrder.executionRate, globalPrice)))
         {
+            Decimal difference = aOrder.executionRate - jstod(aQueryStatus["price"]);
             // Just warning, and use the fulfillment averaged price.
-            spdlog::warn("Order '{}' global price {} is different from the fulfillment price {}, averaged from {} trade(s)."
-                         " Use fulfillment price, difference is {}.",
-                         aOrder.getIdentity(),
-                         globalPrice,
-                         aOrder.executionRate,
-                         aFulfillment.tradeCount,
-                         aOrder.executionRate - jstod(aQueryStatus["price"])
-            );
-
+            spdlog::log(   (aOrder.side == Side::Sell && difference > 0)
+                        || (aOrder.side == Side::Buy  && difference < 0) ? spdlog::level::info
+                                                                         : spdlog::level::warn,
+                        "{} order '{}' global price {} is different from the fulfillment price {}, averaged from {} trade(s)."
+                        " Use fulfillment price, difference is {}.",
+                        boost::lexical_cast<std::string>(aOrder.side),
+                        aOrder.getIdentity(),
+                        globalPrice,
+                        aOrder.executionRate,
+                        aFulfillment.tradeCount,
+                        difference);
         }
     }
     else
