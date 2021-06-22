@@ -1,7 +1,7 @@
 {
     "base": "BTC",
     "quote": "USDT",
-    "amount": "0.8",
+    "amount": "1.0",
 
     "bot": {
         "name": "smallspread_test"
@@ -13,9 +13,9 @@
     },
 
     "ladder": {
-        "firstStop": "30000",
+        "firstStop": "26000",
         "factor": "1.002",
-        "stopCount": "200",
+        "stopCount": "250",
         "tickSize": "0.01"
     },
 

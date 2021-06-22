@@ -21,7 +21,7 @@ struct OrderTracker
 };
 
 
-static std::chrono::minutes gMaxFulfillPeriod{3};
+static std::chrono::minutes gMaxFulfillPeriod{20};
 
 struct NaiveBot
 {
