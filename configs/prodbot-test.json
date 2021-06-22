@@ -7,6 +7,11 @@
         "name": "smallspread_test"
     },
 
+    "initial": {
+        "spawnBeginOffset": 5,
+        "spawnEndOffset": 0
+    },
+
     "ladder": {
         "firstStop": "30000",
         "factor": "1.002",

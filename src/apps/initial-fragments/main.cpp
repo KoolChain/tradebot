@@ -34,6 +34,8 @@ int main(int argc, char * argv[])
     Decimal factor{config.at("ladder").at("factor").get<std::string>()};
     int stopCount = std::stoi(config.at("ladder").at("stopCount").get<std::string>());
     Decimal tickSize{config.at("ladder").at("tickSize").get<std::string>()};
+    std::size_t spawnBeginOffset{config.at("initial").at("spawnBeginOffset")};
+    std::size_t spawnEndOffset{config.at("initial").at("spawnEndOffset")};
 
     tradebot::Exchange exchange{binance::Api{std::ifstream{secretsfile}}};
     tradebot::SymbolFilters filters = exchange.queryFilters(pair);
@@ -73,7 +75,10 @@ int main(int argc, char * argv[])
         }
     };
 
-    Decimal integral = initialDistribution.integrate(ladder.front(), ladder.back());
+    auto spawnBegin = ladder.begin() + spawnBeginOffset;
+    auto spawnEnd = ladder.end() - spawnEndOffset;
+
+    Decimal integral = initialDistribution.integrate(*spawnBegin, *(spawnEnd-1));
     Decimal ratio = fromFP(amount/integral); // lets round it
     spdlog::debug("Integration produces {}, target is {}, so the factor is {}.",
                  integral,
@@ -81,7 +86,7 @@ int main(int argc, char * argv[])
                  ratio);
 
     auto [spawns, spawnedAmount] =
-        trade::spawnIntegration(trade::Base{ratio}, ladder.begin(), ladder.end(), initialDistribution);
+        trade::spawnIntegration(trade::Base{ratio}, spawnBegin, spawnEnd, initialDistribution);
 
     if (! isEqual(spawnedAmount, amount))
     {
