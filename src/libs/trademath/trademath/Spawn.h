@@ -54,14 +54,26 @@ struct Spawn
         base{static_cast<Decimal>(aAmount) / rate}
     {}
 
-    Decimal targetQuote() const
-    {
-        return base * rate;
-    }
+    template <class T_amount>
+    Decimal getAmount();
 
     Decimal rate;
     Decimal base;
 };
+
+
+template <>
+inline Decimal Spawn::getAmount<Base>()
+{
+    return base;
+}
+
+
+template <>
+inline Decimal Spawn::getAmount<Quote>()
+{
+    return base * rate;
+}
 
 
 inline bool operator==(const Spawn aLhs, const Spawn aRhs)
@@ -113,6 +125,7 @@ template <class T_amount>
 using SpawnResult = std::pair<std::vector<Spawn>, T_amount/*accumulation*/>;
 
 /// \brief Compute a vector of `Spawn` and the corresponding accumulated base amount from a proportion function.
+/// Can apply a tick size, filtering in `Base` values.
 ///
 /// It integrates the proportion function `aFunction` over the ladder intervals,
 /// and apply the proportion to `aAmount` at each interval, assigning the resulting amount to the
@@ -139,18 +152,22 @@ spawnIntegration(const T_amount aAmount,
         ++aStopBegin, ++nextStop)
     {
         Decimal amount = (Decimal)aAmount * abs(aFunction.integrate(*aStopBegin, *nextStop));
+        Spawn spawn{*nextStop, T_amount{amount}};
         if (aTickSize != 0) // we would expect compilers to optimize that away on default value
         {
-            amount = applyTickSize(amount, aTickSize);
+            // Always apply the tick size to base value.
+            // (For the moment the libraries only allow placing order by giving the base value).
+            spawn.base = applyTickSize(spawn.base, aTickSize);
         }
-        accumulation += amount;
-        result.emplace_back(*nextStop, T_amount{amount});
+        accumulation += spawn.getAmount<T_amount>();
+        result.push_back(std::move(spawn));
     }
     return {result, T_amount{accumulation}};
 }
 
 
 /// \brief Compute a vector of `Spawn` and the corresponding accumulated base amount from a proportions' range.
+/// Can apply a tick size, filtering in `Base` values.
 ///
 /// Applies the proportions in the proportions' range to `aAmount`,
 /// assigning the results to the stops in the ladder range.
@@ -166,12 +183,15 @@ spawnProportions(const T_amount aAmount,
     while(aStopBegin != aStopEnd && aProportionsBegin != aProportionsEnd)
     {
         Decimal amount = (Decimal)aAmount * (*aProportionsBegin);
+        Spawn spawn{*aStopBegin, T_amount{amount}};
         if (aTickSize != 0) // we would expect compilers to optimize that away on default value
         {
-            amount = applyTickSize(amount, aTickSize);
+            // Always apply the tick size to base value
+            // (For the moment the libraries only allow placing order by giving the base value).
+            spawn.base = applyTickSize(spawn.base, aTickSize);
         }
-        accumulation += amount;
-        result.emplace_back(*aStopBegin, T_amount{amount});
+        accumulation += spawn.getAmount<T_amount>();
+        result.push_back(std::move(spawn));
         ++aStopBegin;
         ++aProportionsBegin;
     }

@@ -41,6 +41,8 @@ public:
                      Decimal aTakeHomeFactorSubsequentSell,
                      Decimal aTakeHomeFactorSubsequentBuy);
 
+    Decimal tickSize() const;
+
     Result
     computeResultingFragments(const Fragment & aFilledFragment,
                               const FulfilledOrder & aOrder,
@@ -77,6 +79,13 @@ StableDownSpread<TMP_ARGS>::StableDownSpread(
     takeHomeFactorSubsequentSell{aTakeHomeFactorSubsequentSell},
     takeHomeFactorSubsequentBuy{aTakeHomeFactorSubsequentBuy}
 {}
+
+
+template <TMP_PARAM_LIST>
+Decimal StableDownSpread<TMP_ARGS>::tickSize() const
+{
+    return downSpreader.tickSize;
+}
 
 
 template <TMP_PARAM_LIST>
@@ -131,15 +140,6 @@ StableDownSpread<TMP_ARGS>::onFirstSell(const Fragment & aFilledFragment,
 
 
 template <TMP_PARAM_LIST>
-void StableDownSpread<TMP_ARGS>::filterSpawnedAmount(Decimal & aSpawned, Decimal & aTakenHome)
-{
-    Decimal remainder;
-    std::tie(aSpawned, remainder) = trade::computeTickFilter(aSpawned, downSpreader.tickSize);
-    aTakenHome += remainder;
-}
-
-
-template <TMP_PARAM_LIST>
 SpawnerBase::Result
 StableDownSpread<TMP_ARGS>::onSubsequentBuy(const Fragment & aFilledFragment,
                                             const FulfilledOrder & aOrder,
@@ -174,10 +174,17 @@ StableDownSpread<TMP_ARGS>::onSubsequentBuy(const Fragment & aFilledFragment,
     Decimal excessBase = actualBaseAmount - breakEvenBase;
     Decimal takenHomeBase = excessBase * takeHomeFactorSubsequentBuy;
 
-    Decimal spawned = actualBaseAmount - takenHomeBase;
-    filterSpawnedAmount(spawned, takenHomeBase);
+    //
+    // Tick size filtering
+    //
 
-    trade::Spawn singleSpawn{parentSellRate, trade::Base{spawned}};
+    // estimate of spawned, before filtering
+    trade::Spawn singleSpawn{parentSellRate, trade::Base{actualBaseAmount - takenHomeBase}};
+    // filter to find the exact amount that will be spawned
+    singleSpawn.base = trade::applyTickSize(singleSpawn.base, tickSize());
+    // compute the exact taken home, from exact spawned
+    takenHomeBase = actualBaseAmount - singleSpawn.base;
+
     return {{singleSpawn}, takenHomeBase};
 }
 
@@ -216,10 +223,17 @@ StableDownSpread<TMP_ARGS>::onSubsequentSell(const Fragment & aFilledFragment,
     Decimal excessQuote = actualQuoteAmount - breakEvenQuote;
     Decimal takenHomeQuote = excessQuote * takeHomeFactorSubsequentSell;
 
-    Decimal spawned = actualQuoteAmount - takenHomeQuote;
-    filterSpawnedAmount(spawned, takenHomeQuote);
+    //
+    // Tick size filtering
+    //
 
-    trade::Spawn singleSpawn{parentBuyRate, trade::Quote{spawned}};
+    // The computation occured in quote, but the order will be placed in base
+    // so the tick filter has to be applied to the base amount.
+    // (Then, the filtered base amount is converted back to quote, to find the exact taken home)
+    trade::Spawn singleSpawn{parentBuyRate, trade::Quote{actualQuoteAmount - takenHomeQuote}};
+    singleSpawn.base = trade::applyTickSize(singleSpawn.base, tickSize());
+    takenHomeQuote = actualQuoteAmount - singleSpawn.getAmount<trade::Quote>();
+
     return {{singleSpawn}, takenHomeQuote};
 }
 
