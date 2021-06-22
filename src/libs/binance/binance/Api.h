@@ -41,13 +41,15 @@ public:
     /// \note The body content is currently sent as request parameters
     struct NoBody{};
 
-    Api(const Json & aSecrets, Endpoints aEndpoints);
-    Api(std::istream & aSecrets, Endpoints aEndpoints);
-    Api(std::istream && aSecrets, Endpoints aEndpoints);
+    Api(const Json & aSecrets);
+    Api(std::istream & aSecrets);
+    Api(std::istream && aSecrets);
 
     Response getSystemStatus();
 
     Response getExchangeInformation();
+    Response getExchangeInformation(const Symbol & aSymbol);
+
 
     Response getAllCoinsInformation();
 

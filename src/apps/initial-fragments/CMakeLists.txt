@@ -1,16 +1,10 @@
-project(dogebot VERSION "${CMAKE_PROJECT_VERSION}")
+project(intial-fragments VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
-    EventLoop.h
-    NaiveBot.h
-    ProductionBot.h
 )
 
 set(${PROJECT_NAME}_SOURCES
     main.cpp
-
-    EventLoop.cpp
-    ProductionBot.cpp
 )
 
 add_executable(${PROJECT_NAME}
@@ -22,7 +16,6 @@ find_package(spdlog REQUIRED COMPONENTS libspdlog)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        ad::binance
         ad::tradebot
 
         spdlog::libspdlog

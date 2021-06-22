@@ -26,7 +26,7 @@ SCENARIO("Radical initialization clean-up", "[trader]")
             "tradertest",
             pair,
             Database{":memory:"},
-            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+            Exchange{binance::Api{secret::gTestnetCredentials}}
         };
 
         auto & db = trader.database;
@@ -78,7 +78,7 @@ SCENARIO("Orders completion.", "[trader]")
             "tradertest",
             pair,
             Database{":memory:"},
-            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+            Exchange{binance::Api{secret::gTestnetCredentials}}
         };
 
         auto & db = trader.database;
@@ -146,7 +146,7 @@ SCENARIO("Trader low-level functions.", "[trader]")
             "tradertest",
             pair,
             Database{":memory:"},
-            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+            Exchange{binance::Api{secret::gTestnetCredentials}}
         };
 
         auto & db = trader.database;
@@ -193,7 +193,7 @@ SCENARIO("Trader low-level functions.", "[trader]")
 
                 THEN("This order can be queried in the exchange")
                 {
-                    Json orderJson = exchange.queryOrder(impossible);
+                    Json orderJson = *exchange.tryQueryOrder(impossible);
 
                     REQUIRE(orderJson["status"] == "NEW");
                     REQUIRE(orderJson["symbol"] == impossible.symbol());
@@ -276,7 +276,9 @@ SCENARIO("Trader low-level functions.", "[trader]")
 SCENARIO("Controlled initialization clean-up", "[trader]")
 {
     const Pair pair{"BTC", "USDT"};
-    const std::string traderName = "tradertest";
+    // Make the name a bit more unique, I suspect some collisions when querying order
+    // on the rest API and the exchange is not yet up to date.
+    const std::string traderName = "tradertest_controlledinit";
 
     GIVEN("A trader instance.")
     {
@@ -284,7 +286,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
             traderName,
             pair,
             Database{":memory:"},
-            Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+            Exchange{binance::Api{secret::gTestnetCredentials}}
         };
 
         auto & db = trader.database;
@@ -504,6 +506,170 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                     exchange.placeOrder(limitFulfilled, Execution::Market);
                 }
             }
+        }
+    }
+}
+
+
+Decimal filterPrice(Decimal aPrice)
+{
+    return trade::applyTickSize(aPrice, Decimal{"0.01"});
+}
+
+
+SCENARIO("Fill profitable orders.", "[trader]")
+{
+    const Pair pair{"BTC", "USDT"};
+
+    GIVEN("A trader instance.")
+    {
+        Trader trader{
+            "tradertest",
+            pair,
+            Database{":memory:"},
+            Exchange{binance::Api{secret::gTestnetCredentials}}
+        };
+
+        auto & db = trader.database;
+        auto & binance = trader.exchange;
+
+        SymbolFilters symbolFilters = trader.queryFilters();
+
+        // Sanity check
+        binance.cancelAllOpenOrders(pair);
+        REQUIRE(binance.listOpenOrders(pair).empty());
+
+        Decimal averagePrice = binance.getCurrentAveragePrice(pair);
+        INFO("The average price is " << averagePrice);
+
+        WHEN("3 sell fragments at 2 different rates below average are written to DB.")
+        {
+            Decimal amount{"0.001"};
+            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice/1.2), Side::Sell};
+            db.insert(f);
+            db.insert(f);
+            f.targetRate = filterPrice(averagePrice/1.3);
+            db.insert(f);
+
+            // Sanity check
+            REQUIRE(db.getUnassociatedFragments(Side::Sell, pair).size() == 3);
+            REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 0);
+
+            THEN("They can be filled at once as profitable orders.")
+            {
+                auto [sellCount, buyCount] =
+                    trader.makeAndFillProfitableOrders({averagePrice, averagePrice}, symbolFilters);
+
+                REQUIRE(sellCount == 2);
+                REQUIRE(buyCount == 0);
+
+                REQUIRE(db.getUnassociatedFragments(Side::Sell, pair).size() == 0);
+                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 2);
+            }
+        }
+
+        WHEN("3 buy fragments at 3 different rates above average are written to DB.")
+        {
+            Decimal amount{"0.001"};
+            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice*1.2), Side::Buy};
+            db.insert(f);
+            f.targetRate = filterPrice(averagePrice*1.3);
+            db.insert(f);
+            f.targetRate = filterPrice(averagePrice*1.4);
+            db.insert(f);
+
+            // Sanity check
+            REQUIRE(db.getUnassociatedFragments(Side::Buy, pair).size() == 3);
+            REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 0);
+
+            THEN("They can be filled at once as profitable orders.")
+            {
+                auto [sellCount, buyCount] =
+                    trader.makeAndFillProfitableOrders({averagePrice, averagePrice}, symbolFilters);
+
+                REQUIRE(sellCount == 0);
+                REQUIRE(buyCount == 3);
+
+                REQUIRE(db.getUnassociatedFragments(Side::Buy, pair).size() == 0);
+                REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 3);
+            }
+        }
+    }
+}
+
+
+SCENARIO("Symbol filters", "[trader]")
+{
+    GIVEN("A trader instance and a pair.")
+    {
+        const Pair pair{"BTC", "USDT"};
+
+        Trader trader{
+            "tradertest",
+            pair,
+            Database{":memory:"},
+            Exchange{binance::Api{secret::gTestnetCredentials}}
+        };
+
+        THEN("The filters for the pair can be retrieved.")
+        {
+            SymbolFilters filters = trader.queryFilters();
+
+            // Expected filters at the time this test is implemented
+            //"filters": [
+            //    {
+            //        "filterType": "PRICE_FILTER",
+            //        "maxPrice": "1000000.00000000",
+            //        "minPrice": "0.01000000",
+            //        "tickSize": "0.01000000"
+            //    },
+            //    {
+            //        "avgPriceMins": 5,
+            //        "filterType": "PERCENT_PRICE",
+            //        "multiplierDown": "0.2",
+            //        "multiplierUp": "5"
+            //    },
+            //    {
+            //        "filterType": "LOT_SIZE",
+            //        "maxQty": "900.00000000",
+            //        "minQty": "0.00000100",
+            //        "stepSize": "0.00000100"
+            //    },
+            //    {
+            //        "applyToMarket": true,
+            //        "avgPriceMins": 5,
+            //        "filterType": "MIN_NOTIONAL",
+            //        "minNotional": "10.00000000"
+            //    },
+            //    {
+            //        "filterType": "ICEBERG_PARTS",
+            //        "limit": 10
+            //    },
+            //    {
+            //        "filterType": "MARKET_LOT_SIZE",
+            //        "maxQty": "100.00000000",
+            //        "minQty": "0.00000000",
+            //        "stepSize": "0.00000000"
+            //    },
+            //    {
+            //        "filterType": "MAX_NUM_ORDERS",
+            //        "maxNumOrders": 200
+            //    },
+            //    {
+            //        "filterType": "MAX_NUM_ALGO_ORDERS",
+            //        "maxNumAlgoOrders": 5
+            //    }
+            //]
+
+            CHECK(filters.price.minimum == Decimal{"0.01"});
+            CHECK(filters.price.maximum == Decimal{"1000000.00000000"});
+            CHECK(filters.price.tickSize == Decimal{"0.01"});
+
+            CHECK(filters.amount.minimum == Decimal{"0.000001"});
+            CHECK(filters.amount.maximum == Decimal{"900"});
+            CHECK(filters.amount.tickSize == Decimal{"0.000001"});
+
+            CHECK(filters.minimumNotional == Decimal{"10"});
         }
     }
 }

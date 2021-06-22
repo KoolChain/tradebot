@@ -4,6 +4,10 @@
 #include "Database.h"
 #include "Exchange.h"
 #include "Spawner.h"
+#include "SymbolFilters.h"
+
+#include <trademath/Interval.h>
+
 
 namespace ad {
 namespace tradebot {
@@ -11,8 +15,16 @@ namespace tradebot {
 
 struct Trader
 {
+    using Predicate = std::function<bool(void)>;
+
 private:
     void sendExistingOrder(Execution aExecution, Order & aOrder);
+    FulfilledOrder fillExistingMarketOrder(Order & aOrder);
+    FulfilledOrder fillExistingMarketOrder(Order && aOrder)
+    {
+        return fillExistingMarketOrder(aOrder);
+    }
+    std::optional<FulfilledOrder> fillExistingLimitFokOrder(Order & aOrder, Predicate & aPredicate);
 
 public: // should be private, but requires testing
     bool completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder);
@@ -23,7 +35,8 @@ public:
     Order placeOrderForMatchingFragments(Execution aExecution,
                                          Side aSide,
                                          Decimal aFragmentsRate,
-                                         Order::FulfillResponse aFulfillResponse);
+                                         Order::FulfillResponse aFulfillResponse,
+                                         SymbolFilters aFilters = SymbolFilters{});
 
     /// \brief Attempt to cancel the order on the exchange,
     /// and always discard the order from the database.
@@ -49,6 +62,8 @@ public:
     /// fragments targeting the same rate into a single resulting Fragment stored in database.
     void spawnFragments(const FulfilledOrder & aOrder);
 
+    SymbolFilters queryFilters();
+
     //
     // High-level API
     //
@@ -56,6 +71,22 @@ public:
 
     /// \brief Will place new market orders until it fulfills (by oposition to expiring).
     FulfilledOrder fillNewMarketOrder(Order & aOrder);
+
+    /// \brief High-level operation that create all orders that would be profitable
+    /// at rates in `aInterval`, and fill them as limit Fill Or Kill.
+    ///
+    /// Will make separate orders for each available fragment rate on a given side:
+    /// * one sell order per sell fragment rate below the interval lower bound.
+    /// * one buy order per buy fragment rate above the interval higher bound.
+    ///
+    /// \param aPredicate A function called before each attempt to place an order, that will
+    /// interrupt the procedure if it returns false.
+    ///
+    /// \return A pair containing the number of filled sell orders and buy orders.
+    std::pair<std::size_t /*filled sell*/, std::size_t /*filled buy*/>
+    makeAndFillProfitableOrders(Interval aInterval,
+                                SymbolFilters aFilters,
+                                Predicate aPredicate = [](){return true;});
 
     /// \brief To be called when an order did complete on the exchange, with its already accumulated
     /// fulfillment.

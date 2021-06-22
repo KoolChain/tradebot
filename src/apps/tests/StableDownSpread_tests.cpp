@@ -80,7 +80,7 @@ SCENARIO("StableDownSpread from fixed proportions.", "[sdspread]")
                     {
                         INFO("Spawn index is " << id);
                         REQUIRE(buySpawns.at(id).rate == (4 - id));
-                        REQUIRE(isEqual(buySpawns.at(id).targetQuote(),
+                        REQUIRE(isEqual(buySpawns.at(id).getAmount<trade::Quote>(),
                                         reinvestedQuote * proportions.at(id)));
                     }
                 }
@@ -105,7 +105,7 @@ SCENARIO("StableDownSpread from fixed proportions.", "[sdspread]")
                     {
                         INFO("Spawn index is " << id);
                         REQUIRE(buySpawns.at(id).rate == (4 - id));
-                        REQUIRE(isEqual(buySpawns.at(id).targetQuote(),
+                        REQUIRE(isEqual(buySpawns.at(id).getAmount<trade::Quote>(),
                                         reinvestedQuote * proportions.at(id)));
                     }
                 }
@@ -210,7 +210,7 @@ SCENARIO("StableDownSpread from fixed proportions.", "[sdspread]")
 
                             trade::Spawn spawn = buySpawns.at(0);
                             REQUIRE(spawn.rate == orderBuy_1.fragmentsRate);
-                            REQUIRE(isEqual(spawn.targetQuote(), reinvestedQuote));
+                            REQUIRE(isEqual(spawn.getAmount<trade::Quote>(), reinvestedQuote));
                         }
 
                     }
@@ -233,7 +233,7 @@ SCENARIO("StableDownSpread from fixed proportions.", "[sdspread]")
 
                             trade::Spawn spawn = buySpawns.at(0);
                             REQUIRE(spawn.rate == orderBuy_1.fragmentsRate);
-                            REQUIRE(isEqual(spawn.targetQuote(), reinvestedQuote));
+                            REQUIRE(isEqual(spawn.getAmount<trade::Quote>(), reinvestedQuote));
                         }
 
                     }

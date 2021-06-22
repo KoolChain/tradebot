@@ -18,7 +18,7 @@ SCENARIO("Binance REST API", "[binance][net][live]")
 {
     GIVEN("A Binance interface connected to the testnet")
     {
-        binance::Api binance{secret::gTestnetCredentials, binance::Api::gTestNet};
+        binance::Api binance{secret::gTestnetCredentials};
 
         THEN("It is possible to retrieve the account informations")
         {
@@ -69,7 +69,7 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
     {
         static const std::string symbol = "BTCUSDT";
         static const binance::ClientId clientId{"BinanceTest01"};
-        binance::Api binance{secret::gTestnetCredentials, binance::Api::gTestNet};
+        binance::Api binance{secret::gTestnetCredentials};
 
         std::vector<std::string> received;
         net::WebSocket stream{

@@ -46,7 +46,7 @@ inline tradebot::Trader makeTrader(const std::string & aTraderName,
         aTraderName,
         aPair,
         tradebot::Database{":memory:"},
-        tradebot::Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}}
+        tradebot::Exchange{binance::Api{secret::gTestnetCredentials}}
     };
 }
 

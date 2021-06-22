@@ -16,7 +16,7 @@ using Ladder = std::vector<Decimal>;
 Ladder makeLadder(Decimal aFirstRate,
                   Decimal aFactor,
                   std::size_t aStopCount,
-                  Decimal aTickSize = gDefaultTicksize);
+                  Decimal aTickSize = gDefaultTickSize);
 
 
 // Only exist so getStopFor can log without exposing the spdlog header here.

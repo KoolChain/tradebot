@@ -3,14 +3,10 @@
 
 #include "Fulfillment.h"
 #include "Order.h"
+#include "Stream.h"
+#include "SymbolFilters.h"
 
 #include <binance/Api.h>
-#include <websocket/WebSocket.h>
-
-#include <boost/asio/steady_timer.hpp>
-
-#include <condition_variable>
-#include <thread>
 
 
 namespace ad {
@@ -21,53 +17,12 @@ enum class Execution
 {
     Market,
     Limit,
+    LimitFok,
 };
+
 
 struct Exchange
 {
-    using UserStreamCallback = std::function<void(Json)>;
-
-    class Stream
-    {
-    private:
-        friend class Exchange;
-
-        enum Status
-        {
-            Initialize,
-            Connected,
-            Done,
-        };
-
-    public:
-        // Made public so std::optional::emplace can access it
-        Stream(binance::Api & aRestApi, Exchange::UserStreamCallback aOnExecutionReport);
-        ~Stream();
-
-    private:
-        Stream(const Stream &) = delete;
-        Stream(Stream &&) = delete;
-        Stream & operator = (const Stream &) = delete;
-        Stream & operator = (Stream &&) = delete;
-
-
-        void onListenKeyTimer(const boost::system::error_code & aErrorCode);
-
-        // Synchronization mechanism for status variable (allowing to wait for connection)
-        std::mutex mutex;
-        std::condition_variable statusCondition;
-        Status status{Initialize};
-
-        // This class will compose Exchange, which is not movable nor copyable anyway
-        // so we refer back into the parent instance.
-        binance::Api & restApi;
-        std::string listenKey;
-        net::WebSocket websocket;
-        boost::asio::steady_timer keepListenKeyAlive;
-        bool intendedClose{false};
-        std::thread thread;
-    };
-
     /// \return "NOTEXISTING" if the exchange engine does not know the order, otherwise returns
     ///         the value from the exchange:
     ///         * NEW (Active order)
@@ -78,9 +33,15 @@ struct Exchange
 
     Decimal getCurrentAveragePrice(const Pair & aPair);
 
+    Json getExchangeInformation(std::optional<Pair> aPair = {});
+
+    SymbolFilters queryFilters(const Pair & aPair);
+
     Order & placeOrder(Order & aOrder, Execution aExecution);
 
     std::optional<FulfilledOrder> fillMarketOrder(Order & aOrder);
+
+    std::optional<FulfilledOrder> fillLimitFokOrder(Order & aOrder);
 
     /// \return true if the order was cancelled, false otherwise
     ///         (because it was not present, already cancelled, etc.).
@@ -128,12 +89,23 @@ struct Exchange
     Fulfillment accumulateTradesFor(const Order & aOrder, int aPageSize=1000);
 
     /// \brief Blocks while opening a websocket to get spot user data stream.
+    ///
     /// \return `true` if the websocket connected successfully, `false` otherwise.
-    bool openUserStream(UserStreamCallback aOnExecutionReport);
+    bool openUserStream(Stream::ReceiveCallback aOnMessage,
+                        Stream::UnintendedCloseCallback aOnUnintededClose = [](){});
     void closeUserStream();
+
+    /// \brief Blocks while opening a websocket to get market stream.
+    ///
+    /// \return `true` if the websocket connected successfully, `false` otherwise.
+    bool openMarketStream(const std::string & aStreamName,
+                          Stream::ReceiveCallback aOnMessage,
+                          Stream::UnintendedCloseCallback aOnUnintededClose = [](){});
+    void closeMarketStream();
 
     binance::Api restApi;
     std::optional<Stream> spotUserStream;
+    std::optional<Stream> marketStream;
 };
 
 

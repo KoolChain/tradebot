@@ -5,6 +5,7 @@ set(${PROJECT_NAME}_HEADERS
     DecimalLog.h
     FilterUtilities.h
     Function.h
+    Interval.h
     Ladder.h
     Spawn.h
     Spreaders.h

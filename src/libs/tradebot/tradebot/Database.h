@@ -50,9 +50,13 @@ public:
 
     std::vector<Fragment> getFragmentsComposing(const Order & aOrder);
     std::vector<Fragment> getUnassociatedFragments(Side aSide, Decimal aRate, const Pair & aPair);
+    std::vector<Fragment> getUnassociatedFragments(Side aSide, const Pair & aPair);
 
-    std::vector<Decimal> getSellRatesAbove(Decimal aRateLimit, const Pair & aPair);
-    std::vector<Decimal> getBuyRatesBelow(Decimal aRateLimit, const Pair & aPair);
+    std::vector<Decimal> getSellRatesBelow(Decimal aRateLimit, const Pair & aPair);
+    std::vector<Decimal> getBuyRatesAbove(Decimal aRateLimit, const Pair & aPair);
+
+    /// \brief Will call either `getSellRatesBelow()` or `getBuyRatesAbove()` depending on `aSide`.
+    std::vector<Decimal> getProfitableRates(Side aSide, Decimal aRateLimit, const Pair & aPair);
 
     void assignAvailableFragments(const Order & aOrder);
 

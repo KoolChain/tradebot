@@ -10,6 +10,8 @@ set(${PROJECT_NAME}_HEADERS
     OrmAdaptors-impl.h
     OrmDecimalAdaptor-impl.h
     Spawner.h
+    Stream.h
+    SymbolFilters.h
     Trader.h
 
     spawners/Helpers.h
@@ -23,6 +25,7 @@ set(${PROJECT_NAME}_SOURCES
     Order.cpp
     Fragment.cpp
     Fulfillment.cpp
+    Stream.cpp
     Trader.cpp
 
     spawners/NaiveDownSpread.cpp

@@ -22,7 +22,7 @@ SCENARIO("Placing orders", "[exchange]")
 
     GIVEN("An exchange instance.")
     {
-        auto binance = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto binance = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check
@@ -93,11 +93,10 @@ SCENARIO("Placing orders", "[exchange]")
             REQUIRE(immediateOrder.status == Order::Status::Active);
             REQUIRE(immediateOrder.exchangeId != -1);
 
-            while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
-            {
-                binance.placeOrder(immediateOrder, Execution::Limit);
-            }
-            while(binance.getOrderStatus(immediateOrder) == "PARTIALLY_FILLED")
+
+            auto waitStates = {"NEW", "PARTIALLY_FILLED"};
+            while(std::find(waitStates.begin(), waitStates.end(),
+                            binance.getOrderStatus(immediateOrder)) != waitStates.end())
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds{50});
             }
@@ -117,6 +116,7 @@ SCENARIO("Placing orders", "[exchange]")
                     REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.amount);
                     REQUIRE(orderJson["type"] == "LIMIT");
                     REQUIRE(orderJson["side"] == "SELL");
+                    REQUIRE(orderJson["timeInForce"] == "GTC");
                 }
             }
 
@@ -128,6 +128,84 @@ SCENARIO("Placing orders", "[exchange]")
                 while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
                 {
                     binance.placeOrder(immediateOrder, Execution::Market);
+                }
+            }
+        }
+
+        WHEN("A buy limit FOK order is placed.")
+        {
+            // we want the buy to be instant, so we discount the average price
+            Decimal price = floor(1.2*averagePrice);
+            Order immediateOrder = makeOrder(traderName, pair, Side::Buy, price);
+            db.insert(immediateOrder);
+            binance.placeOrder(immediateOrder, Execution::LimitFok);
+
+            REQUIRE(immediateOrder.status == Order::Status::Active);
+            REQUIRE(immediateOrder.exchangeId != -1);
+
+            while(binance.getOrderStatus(immediateOrder) == "EXPIRED")
+            {
+                binance.placeOrder(immediateOrder, Execution::LimitFok);
+            }
+
+            WHEN("The order had to complete, it could not paritally fill.")
+            {
+                THEN("The complete order information can be retrieved from the exchange.")
+                {
+                    Json orderJson = binance.queryOrder(immediateOrder);
+
+                    REQUIRE(orderJson["status"] == "FILLED");
+                    REQUIRE(orderJson["symbol"] == pair.symbol());
+                    REQUIRE(orderJson["orderId"] == immediateOrder.exchangeId);
+                    REQUIRE(orderJson["clientOrderId"] == immediateOrder.clientId());
+                    REQUIRE(jstod(orderJson["price"]) == immediateOrder.fragmentsRate);
+                    REQUIRE(jstod(orderJson["origQty"]) == immediateOrder.amount);
+                    REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.amount);
+                    REQUIRE(orderJson["type"] == "LIMIT");
+                    REQUIRE(orderJson["side"] == "BUY");
+                    REQUIRE(orderJson["timeInForce"] == "FOK");
+                }
+            }
+
+            // Let's "revert" the order the best we can (to conserve balance)
+            {
+                revertOrder(binance, db, immediateOrder);
+            }
+        }
+
+        WHEN("A buy limit FOK order is placed, with an impossible price.")
+        {
+            // we want the buy to be instant, so we discount the average price
+            Decimal price = floor(0.5*averagePrice);
+            Order impossibleOrder = makeOrder(traderName, pair, Side::Buy, price);
+            db.insert(impossibleOrder);
+
+            // A few attempts to have more chances it is not a "sporadic" expiration.
+            for (int attempt = 0; attempt != 3; ++attempt)
+            {
+                binance.placeOrder(impossibleOrder, Execution::LimitFok);
+                REQUIRE(impossibleOrder.status == Order::Status::Active);
+                REQUIRE(impossibleOrder.exchangeId != -1);
+
+                REQUIRE(binance.getOrderStatus(impossibleOrder) == "EXPIRED");
+            }
+
+            WHEN("The order is expired.")
+            {
+                THEN("The complete order information can be retrieved from the exchange.")
+                {
+                    Json orderJson = binance.queryOrder(impossibleOrder);
+
+                    REQUIRE(orderJson["status"] == "EXPIRED");
+                    REQUIRE(orderJson["symbol"] == pair.symbol());
+                    REQUIRE(orderJson["orderId"] == impossibleOrder.exchangeId);
+                    REQUIRE(orderJson["clientOrderId"] == impossibleOrder.clientId());
+                    REQUIRE(jstod(orderJson["price"]) == impossibleOrder.fragmentsRate);
+                    REQUIRE(jstod(orderJson["origQty"]) == impossibleOrder.amount);
+                    REQUIRE(jstod(orderJson["executedQty"]) == Decimal{0});
+                    REQUIRE(orderJson["type"] == "LIMIT");
+                    REQUIRE(orderJson["side"] == "BUY");
+                    REQUIRE(orderJson["timeInForce"] == "FOK");
                 }
             }
         }
@@ -168,7 +246,7 @@ SCENARIO("Orders cancellation", "[exchange]")
 
     GIVEN("An exchange instance.")
     {
-        auto binance = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto binance = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check
@@ -316,7 +394,7 @@ SCENARIO("Listing trades.", "[exchange]")
 
     GIVEN("An exchange instance.")
     {
-        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check
@@ -388,7 +466,7 @@ SCENARIO("Listening to SPOT user data stream.")
 
     GIVEN("An exchange instance.")
     {
-        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check
@@ -489,7 +567,7 @@ SCENARIO("Retrying query order.", "[exchange]")
 
     GIVEN("An exchange instance.")
     {
-        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials, binance::Api::gTestNet}};
+        auto exchange = Exchange{binance::Api{secret::gTestnetCredentials}};
         auto db = Database{":memory:"};
 
         // Sanity check

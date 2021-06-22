@@ -22,7 +22,7 @@ int main(int argc, char * argv[])
     spdlog::set_level(spdlog::level::trace);
 
     tradebot::Exchange exchange{
-        binance::Api{std::ifstream{argv[1]}, binance::Api::gTestNet}
+        binance::Api{std::ifstream{argv[1]}}
     };
 
     tradebot::Pair pair{argv[3], argv[4]};

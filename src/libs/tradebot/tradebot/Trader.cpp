@@ -6,6 +6,47 @@
 namespace ad {
 namespace tradebot {
 
+namespace detail {
+
+
+    void filterAmountTickSize(Order & aOrder, SymbolFilters aFilters)
+    {
+        Decimal remainder;
+        Decimal tickSize = aFilters.amount.tickSize;
+        std::tie(aOrder.amount, remainder) = trade::computeTickFilter(aOrder.amount, tickSize);
+        if (! isEqual(remainder, Decimal{0}))
+        {
+            spdlog::warn("Prepared order '{}' had to be filtered to respect tick size {}."
+                         " Remainder is {}.",
+                         aOrder.getIdentity(),
+                         tickSize,
+                         remainder);
+        }
+    }
+
+
+    bool testAmountFilters(Order & aOrder, SymbolFilters aFilters)
+    {
+        if (! testAmount(aFilters, aOrder.amount, aOrder.fragmentsRate))
+        {
+            spdlog::info("Order '{}' (amount: {}, rate: {}, notional: {} {}) does not pass "
+                         "amount filters (min: {}, max: {}, min notional: {}).",
+                         aOrder.getIdentity(),
+                         aOrder.amount,
+                         aOrder.fragmentsRate,
+                         aOrder.amount * aOrder.fragmentsRate,
+                         aOrder.quote,
+                         aFilters.amount.minimum,
+                         aFilters.amount.maximum,
+                         aFilters.minimumNotional);
+            return false;
+        }
+        return true;
+    }
+
+
+} // namespace detail
+
 
 void Trader::sendExistingOrder(Execution aExecution, Order & aOrder)
 {
@@ -28,10 +69,12 @@ void Trader::placeNewOrder(Execution aExecution, Order & aOrder)
 Order Trader::placeOrderForMatchingFragments(Execution aExecution,
                                              Side aSide,
                                              Decimal aFragmentsRate,
-                                             Order::FulfillResponse aFulfillResponse)
+                                             Order::FulfillResponse aFulfillResponse,
+                                             SymbolFilters aFilters)
 {
     // Create the Inactive order in DB, assigning all matching fragments
     Order order = database.prepareOrder(name, aSide, aFragmentsRate, pair, aFulfillResponse);
+    detail::filterAmountTickSize(order, aFilters);
     sendExistingOrder(aExecution, order);
     return order;
 }
@@ -190,6 +233,12 @@ void Trader::spawnFragments(const FulfilledOrder & aOrder)
 }
 
 
+SymbolFilters Trader::queryFilters()
+{
+   return exchange.queryFilters(pair);
+}
+
+
 bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 {
     // Important: Everything happening on the database in this member function
@@ -276,10 +325,9 @@ void Trader::cleanup()
 }
 
 
-FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
+FulfilledOrder Trader::fillExistingMarketOrder(Order & aOrder)
 {
-    // No need to go through the Inactive state
-    database.insert(aOrder.resetAsInactive().setStatus(Order::Status::Sending));
+    database.update(aOrder.setStatus(Order::Status::Sending));
 
     std::optional<FulfilledOrder> fulfilled;
     while(!(fulfilled = exchange.fillMarketOrder(aOrder)).has_value())
@@ -287,6 +335,83 @@ FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
 
     completeFulfilledOrder(*fulfilled);
     return *fulfilled;
+}
+
+
+FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
+{
+    database.insert(aOrder.resetAsInactive());
+    return fillExistingMarketOrder(aOrder);
+}
+
+
+std::optional<FulfilledOrder> Trader::fillExistingLimitFokOrder(Order & aOrder,
+                                                                Predicate & aPredicate)
+{
+    database.update(aOrder.setStatus(Order::Status::Sending));
+
+    std::optional<FulfilledOrder> fulfilled;
+    while(aPredicate() && !(fulfilled = exchange.fillLimitFokOrder(aOrder)).has_value())
+    {}
+
+    if (fulfilled)
+    {
+        completeFulfilledOrder(*fulfilled);
+    }
+    else
+    {
+        spdlog::debug("Predicate interrupted limit FOK filling loop.");
+        database.update(aOrder.setStatus(Order::Status::Inactive));
+    }
+    return fulfilled;
+}
+
+
+std::pair<std::size_t, std::size_t>
+Trader::makeAndFillProfitableOrders(Interval aRateInterval,
+                                    SymbolFilters aFilters,
+                                    Predicate aPredicate)
+{
+    auto makeAndFill = [this, aFilters, &predicate = aPredicate]
+                       (Side aSide, Decimal aRate) -> std::size_t
+    {
+        std::size_t counter = 0;
+        for (const Decimal rate : database.getProfitableRates(aSide, aRate, pair))
+        {
+            Order order =
+                database.prepareOrder(name, aSide, rate, pair, Order::FulfillResponse::SmallSpread);
+            if (detail::testAmountFilters(order, aFilters))
+            {
+                detail::filterAmountTickSize(order, aFilters);
+                if(! fillExistingLimitFokOrder(order, predicate))
+                {
+                    database.discardOrder(order);
+                    break;
+                }
+                ++counter;
+            }
+            else
+            {
+                spdlog::warn("Order '{}' will not be placed because it does not pass amount filters.",
+                             order.getIdentity());
+                database.discardOrder(order);
+            }
+        }
+        return counter;
+    };
+
+    auto sellCount = makeAndFill(Side::Sell, aRateInterval.front);
+    auto buyCount  = makeAndFill(Side::Buy, aRateInterval.back);
+
+    // Only log if there were matching orders to fill.
+    spdlog::info("From rate interval [{}, {}] on {}, filled {} sell market orders and {} buy market orders.",
+            aRateInterval.front,
+            aRateInterval.back,
+            pair.symbol(),
+            sellCount,
+            buyCount);
+
+    return {sellCount, buyCount};
 }
 
 

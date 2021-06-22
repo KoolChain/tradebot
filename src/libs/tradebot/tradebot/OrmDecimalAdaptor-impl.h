@@ -11,7 +11,10 @@ namespace sqlite_orm
     {
         int bind(sqlite3_stmt *stmt, int index, const ad::Decimal & value)
         {
-            return sqlite3_bind_double(stmt, index++, static_cast<double>(value));
+            // The Decimal is rounded to the correct precision before being bound (DB input operations).
+            // This way only the correct number of decimal digits is written/compared
+            // (even if `value` was carrying more).
+            return sqlite3_bind_double(stmt, index++, static_cast<double>(ad::fromFP(value)));
         }
     };
 

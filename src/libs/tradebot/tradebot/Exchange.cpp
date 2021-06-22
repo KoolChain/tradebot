@@ -3,18 +3,12 @@
 
 #include <trademath/DecimalLog.h>
 
-#include <boost/asio/post.hpp>
-
-#include <functional>
-
 
 namespace ad {
 namespace tradebot {
 
 
 const std::chrono::minutes LISTEN_KEY_REFRESH_PERIOD{30};
-// Good for testing
-//const std::chrono::milliseconds LISTEN_KEY_REFRESH_PERIOD{100};
 
 
 #define unhandledResponse(aResponse, aContext) \
@@ -72,6 +66,55 @@ Decimal Exchange::getCurrentAveragePrice(const Pair & aPair)
 }
 
 
+Json Exchange::getExchangeInformation(std::optional<Pair> aPair)
+{
+    binance::Response response = aPair ?
+        restApi.getExchangeInformation(aPair->symbol())
+        : restApi.getExchangeInformation();
+
+
+    if (response.status == 200)
+    {
+        return *response.json;
+    }
+    else
+    {
+        unhandledResponse(response, "exchange information");
+    }
+}
+
+
+SymbolFilters Exchange::queryFilters(const Pair & aPair)
+{
+    SymbolFilters result;
+    Json filtersArray = getExchangeInformation(aPair)["symbols"][0]["filters"];
+    for (const auto & filter : filtersArray)
+    {
+        if (filter.at("filterType") == "PRICE_FILTER")
+        {
+            result.price = SymbolFilters::ValueDomain{
+                Decimal{filter["minPrice"].get<std::string>()},
+                Decimal{filter["maxPrice"].get<std::string>()},
+                Decimal{filter["tickSize"].get<std::string>()},
+            };
+        }
+        else if (filter.at("filterType") == "LOT_SIZE")
+        {
+            result.amount = SymbolFilters::ValueDomain{
+                Decimal{filter["minQty"].get<std::string>()},
+                Decimal{filter["maxQty"].get<std::string>()},
+                Decimal{filter["stepSize"].get<std::string>()},
+            };
+        }
+        else if (filter.at("filterType") == "MIN_NOTIONAL")
+        {
+            result.minimumNotional = Decimal{filter["minNotional"].get<std::string>()};
+        }
+    }
+    return result;
+}
+
+
 template<class T_order>
 binance::Response placeOrderImpl(const T_order & aBinanceOrder, Order & aOrder, binance::Api & aRestApi)
 {
@@ -111,6 +154,9 @@ Order & Exchange::placeOrder(Order & aOrder, Execution aExecution)
         case Execution::Limit:
             response = placeOrderImpl(to_limitOrder(aOrder), aOrder, restApi);
             break;
+        case Execution::LimitFok:
+            response = placeOrderImpl(to_limitFokOrder(aOrder), aOrder, restApi);
+            break;
     }
 
     if (response.status == 200)
@@ -124,9 +170,13 @@ Order & Exchange::placeOrder(Order & aOrder, Execution aExecution)
 }
 
 
-std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
+template <class T_order>
+std::optional<FulfilledOrder> fillOrderImpl(const T_order & aBinanceOrder,
+                                            Order & aOrder,
+                                            binance::Api & aRestApi,
+                                            const std::string & aOrderType)
 {
-    binance::Response response = placeOrderImpl(to_marketOrder(aOrder), aOrder, restApi);
+    binance::Response response = placeOrderImpl(aBinanceOrder, aOrder, aRestApi);
     if (response.status == 200)
     {
         const Json & json = *response.json;
@@ -146,7 +196,8 @@ std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
         }
         else if (json["status"] == "EXPIRED")
         {
-            spdlog::warn("Market order '{}' for {} {} at {} {} is expired.",
+            spdlog::warn("{} order '{}' for {} {} at {} {} is expired.",
+                         aOrderType,
                          aOrder.getIdentity(),
                          aOrder.amount,
                          aOrder.base,
@@ -157,16 +208,29 @@ std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
         }
         else
         {
-            spdlog::critical("Unhandled status '{}' when placing market order '{}'.",
+            spdlog::critical("Unhandled status '{}' when placing {} order '{}'.",
                              json["status"],
+                             aOrderType,
                              aOrder.getIdentity());
-            throw std::logic_error{"Unhandled market order status in response."};
+            throw std::logic_error{"Unhandled order status in response."};
         }
     }
     else
     {
-        unhandledResponse(response, "fill market order");
+        unhandledResponse(response, aOrderType + " order");
     }
+}
+
+
+std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
+{
+    return fillOrderImpl(to_marketOrder(aOrder), aOrder, restApi, "market");
+}
+
+
+std::optional<FulfilledOrder> Exchange::fillLimitFokOrder(Order & aOrder)
+{
+    return fillOrderImpl(to_limitFokOrder(aOrder), aOrder, restApi, "limit fok");
 }
 
 
@@ -421,143 +485,28 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
 }
 
 
-void onStreamReceive(const std::string & aMessage, Exchange::UserStreamCallback aOnExecutionReport)
+bool Exchange::openUserStream(Stream::ReceiveCallback aOnMessage,
+                              Stream::UnintendedCloseCallback aOnUnintededClose)
 {
-    Json json = Json::parse(aMessage);
-    if (json.at("e") == "executionReport")
-    {
-        aOnExecutionReport(std::move(json));
-    }
-}
+    WebsocketDestination userStreamDestination{
+        restApi.getEndpoints().websocketHost,
+        restApi.getEndpoints().websocketPort,
+        "/ws/" + restApi.createSpotListenKey().json->at("listenKey").get<std::string>()
+    };
 
+    spotUserStream.emplace(std::move(userStreamDestination),
+                           std::move(aOnMessage),
+                           std::move(aOnUnintededClose),
+                           std::make_unique<RefreshTimer>(
+                               // IMPORTANT: Will execute the HTTP PUT query on the timer io_context thread
+                               // So it introduces concurrent execution of http requests
+                               // (potentially complicating proper implementation of "quotas observation and waiting periods").
+                               // TODO potentially have it post the request to be executed on the main thread.
+                               std::bind(&binance::Api::pingSpotListenKey, restApi),
+                               LISTEN_KEY_REFRESH_PERIOD
+                           ));
 
-// IMPORTANT: Will execute the HTTP PUT query on the websocket io_context thread
-// So it introduces concurrent execution of http requests
-// (potentially complicating proper implementation of "quotas observation and waiting periods").
-// TODO potentially have it post the request to be executed on the main thread.
-void Exchange::Stream::onListenKeyTimer(const boost::system::error_code & aErrorCode)
-{
-    if (aErrorCode == boost::asio::error::operation_aborted)
-    {
-        spdlog::debug("Listen key refresh timer aborted.");
-        return;
-    }
-    else if (aErrorCode)
-    {
-        spdlog::error("Error on listen key refresh timer: {}. Will try to go on.", aErrorCode.message());
-    }
-
-    // timer closed value is changed in the same thread running io_context
-    // so it cannot race,
-    // and as importantly it cannot change value "in the middle" of the if body.
-    if (! intendedClose)
-    {
-        restApi.pingSpotListenKey();
-        keepListenKeyAlive.expires_after(LISTEN_KEY_REFRESH_PERIOD);
-        keepListenKeyAlive.async_wait(std::bind(&Exchange::Stream::onListenKeyTimer,
-                                                this,
-                                                std::placeholders::_1));
-    }
-    else
-    {
-        spdlog::debug("Timer was closed while the handler was already queued. Not restarting it.");
-    }
-}
-
-
-Exchange::Stream::Stream(binance::Api & aRestApi,
-                         Exchange::UserStreamCallback aOnExecutionReport) :
-    restApi{aRestApi},
-    listenKey{restApi.createSpotListenKey().json->at("listenKey")},
-    websocket{
-        // On connect
-        [this]()
-        {
-            {
-                std::scoped_lock<std::mutex> lock{mutex};
-                status = Connected;
-            }
-            statusCondition.notify_one();
-
-            // Cannot be done at the start of the thread directly
-            // because it would still block the run when the websocket cannot connect
-            keepListenKeyAlive.async_wait(std::bind(&Exchange::Stream::onListenKeyTimer,
-                                                    this,
-                                                    std::placeholders::_1));
-
-        },
-        // On Message
-        [onReport = std::move(aOnExecutionReport)](const std::string & aMessage)
-        {
-            onStreamReceive(aMessage, onReport);
-        }
-    },
-    keepListenKeyAlive{
-        websocket.exposeContextDetail(),
-        LISTEN_KEY_REFRESH_PERIOD},
-    thread{
-        [this]()
-        {
-            websocket.run(restApi.getEndpoints().websocketHost,
-                          restApi.getEndpoints().websocketPort,
-                          "/ws/" + listenKey);
-
-            if (! intendedClose)
-            {
-                spdlog::warn("User data stream websocket closed without application consent.");
-            }
-
-            {
-                std::scoped_lock<std::mutex> lock{mutex};
-                status = Done;
-            }
-            statusCondition.notify_one();
-        }
-    }
-{}
-
-
-Exchange::Stream::~Stream()
-{
-    // This object cannot be destroyed until the io_context is done running
-    // so it is safe to capture it in a lambda executed on the io_context thread.
-    boost::asio::post(
-        keepListenKeyAlive.get_executor(),
-        [this]
-        {
-            // Cancel any pending wait on the timer
-            // (otherwise the io_context::run() would still block on already waiting handlers)
-            keepListenKeyAlive.cancel();
-            // There are conditions where the timer handler might not be waiting anymore
-            // even though the cancellation in happening in the same thread as the completion handler
-            // (notably, completion handler already pending in the io_context queue, just after this lambda)
-            // So it would not be cancelled by the call to cancel().
-            // see: https://stackoverflow.com/a/43169596/1027706
-            intendedClose = true;
-        });
-
-    // IMPORTANT: It is likely better to **never** close a listen key.
-    // The listen key seems to be account-wide, being only one installed at any given time.
-    // So, one application closing the listen key would close it for any other application also using it.
-    //if (restApi.closeSpotListenKey(listenKey).status != 200)
-    //{
-    //    spdlog::critical("Cannot close the current spot listen key, cannot throw in a destructor.");
-    //    // See note below.
-    //    //websocket.async_close();
-    //}
-    // The close above should result in the websocket closing, so the thread terminating.
-    // NOTE: I expected that closing the listen key would have the server close the websocket.
-    //       Apparently this is not the case, so close it manually anyway.
-    websocket.async_close();
-    thread.join();
-    spdlog::debug("User stream closed successfully.");
-}
-
-
-
-bool Exchange::openUserStream(UserStreamCallback aOnExecutionReport)
-{
-    spotUserStream.emplace(restApi, std::move(aOnExecutionReport));
+    // Block until the websocket either connects or fails to do so.
     std::unique_lock<std::mutex> lock{spotUserStream->mutex};
     spotUserStream->statusCondition.wait(lock,
                                          [&stream = *spotUserStream]()
@@ -571,6 +520,37 @@ bool Exchange::openUserStream(UserStreamCallback aOnExecutionReport)
 void Exchange::closeUserStream()
 {
     spotUserStream.reset();
+}
+
+
+bool Exchange::openMarketStream(const std::string & aStreamName,
+                                Stream::ReceiveCallback aOnMessage,
+                                Stream::UnintendedCloseCallback aOnUnintededClose)
+{
+    WebsocketDestination marketStreamDestination{
+        restApi.getEndpoints().websocketHost,
+        restApi.getEndpoints().websocketPort,
+        "/ws/" + aStreamName
+    };
+
+    marketStream.emplace(std::move(marketStreamDestination),
+                         std::move(aOnMessage),
+                         std::move(aOnUnintededClose));
+
+    // Block until the websocket either connects or fails to do so.
+    std::unique_lock<std::mutex> lock{marketStream->mutex};
+    marketStream->statusCondition.wait(lock,
+                                       [&stream = *marketStream]()
+                                       {
+                                           return stream.status != Stream::Initialize;
+                                       });
+    return marketStream->status == Stream::Connected;
+}
+
+
+void Exchange::closeMarketStream()
+{
+    marketStream.reset();
 }
 
 

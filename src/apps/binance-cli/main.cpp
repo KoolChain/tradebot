@@ -20,8 +20,16 @@ using namespace ad;
 tradebot::Exchange getExchange(const std::string & aSecretsFile)
 {
     return tradebot::Exchange{
-        binance::Api{std::ifstream{aSecretsFile}, binance::Api::gTestNet}
+        binance::Api{std::ifstream{aSecretsFile}}
     };
+}
+
+
+void printUsage(const std::string aCommand)
+{
+    std::cerr << "Usage: " << aCommand << " secretsfile action args... \n"
+        << "\taction might be: buy, sell, query-order, exchange-info, account-info\n"
+        ;
 }
 
 int main(int argc, char * argv[])
@@ -30,9 +38,7 @@ int main(int argc, char * argv[])
 
     if (argc < 3)
     {
-        std::cerr << "Usage: " << argv[0] << " secretsfile action args... \n"
-            << "\taction might be: buy, sell, query-order, exchange-info\n"
-            ;
+        printUsage(argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -50,16 +56,7 @@ int main(int argc, char * argv[])
 
         tradebot::Exchange exchange{getExchange(secretsFile)};
 
-        binance::Response exchangeInfo = exchange.restApi.getExchangeInformation();
-        if (exchangeInfo.status == 200)
-        {
-            std::cout << exchangeInfo.json->dump(4) << '\n';
-        }
-        else
-        {
-            spdlog::critical("Could not retrieve exchange information.");
-            return EXIT_FAILURE;
-        }
+        std::cout << exchange.getExchangeInformation().dump(4) << '\n';
     }
     else if (argv[2] == std::string{"buy"}
              || argv[2] == std::string{"sell"})
@@ -126,6 +123,34 @@ int main(int argc, char * argv[])
             return EXIT_FAILURE;
         }
 
+    }
+    else if (argv[2] == std::string{"account-info"})
+    {
+        if (argc != 3)
+        {
+            std::cerr << "Usage: " << argv[0] << " secretsfile account-info\n";
+            return EXIT_FAILURE;
+        }
+
+        tradebot::Exchange exchange{getExchange(secretsFile)};
+
+        binance::Response accountInformation =
+            exchange.restApi.getAccountInformation();
+        if (accountInformation.status == 200)
+        {
+            std::cout << accountInformation.json->dump(4) << '\n';
+        }
+        else
+        {
+            spdlog::critical("Could not get account information.");
+            return EXIT_FAILURE;
+        }
+    }
+    else
+    {
+        std::cerr << "Unknown commande '" << argv[2] << "'.\n";
+        printUsage(argv[0]);
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

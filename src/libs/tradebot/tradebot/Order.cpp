@@ -166,16 +166,19 @@ FulfilledOrder fulfill(Order & aOrder,
         if (globalPrice > 0.
             && (! isEqual(aOrder.executionRate, globalPrice)))
         {
+            Decimal difference = aOrder.executionRate - jstod(aQueryStatus["price"]);
             // Just warning, and use the fulfillment averaged price.
-            spdlog::warn("Order '{}' global price {} is different from the fulfillment price {}, averaged from {} trade(s)."
-                         " Use fulfillment price, difference is {}.",
-                         aOrder.getIdentity(),
-                         globalPrice,
-                         aOrder.executionRate,
-                         aFulfillment.tradeCount,
-                         aOrder.executionRate - jstod(aQueryStatus["price"])
-            );
-
+            spdlog::log(   (aOrder.side == Side::Sell && difference > 0)
+                        || (aOrder.side == Side::Buy  && difference < 0) ? spdlog::level::info
+                                                                         : spdlog::level::warn,
+                        "{} order '{}' global price {} is different from the fulfillment price {}, averaged from {} trade(s)."
+                        " Use fulfillment price, difference is {}.",
+                        boost::lexical_cast<std::string>(aOrder.side),
+                        aOrder.getIdentity(),
+                        globalPrice,
+                        aOrder.executionRate,
+                        aFulfillment.tradeCount,
+                        difference);
         }
     }
     else
@@ -183,6 +186,18 @@ FulfilledOrder fulfill(Order & aOrder,
         spdlog::critical("Cannot get the fulfillment price for order '{}'.",
                          aOrder.getIdentity());
         throw std::logic_error{"Cannot get its price while fulfilling an order."};
+    }
+
+    // Warn if the order executed at a "loss" compared to a set fragments rate
+    if ( aOrder.fragmentsRate // only check if a fragments rate was explicitly set
+         && (   (aOrder.side == Side::Sell && aOrder.executionRate < aOrder.fragmentsRate)
+             || (aOrder.side == Side::Buy && aOrder.executionRate > aOrder.fragmentsRate)))
+    {
+        spdlog::error("{} order '{}' fragment rate is set at {}, but it executed at {}.",
+                boost::lexical_cast<std::string>(aOrder.side),
+                aOrder.getIdentity(),
+                aOrder.fragmentsRate,
+                aOrder.executionRate);
     }
 
     // In case of a market order, the "trade" response returns the fills (without any time attached)

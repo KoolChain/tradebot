@@ -1,0 +1,36 @@
+{
+    "base": "BTC",
+    "quote": "USDT",
+    "amount": "1.0",
+
+    "bot": {
+        "name": "smallspread_test"
+    },
+
+    "initial": {
+        "spawnBeginOffset": 5,
+        "spawnEndOffset": 0
+    },
+
+    "ladder": {
+        "firstStop": "26000",
+        "factor": "1.002",
+        "stopCount": "250",
+        "tickSize": "0.01"
+    },
+
+    "spawner": {
+        "spreader": {
+            "proportions": [
+                "0.2",
+                "0.2",
+                "0.2",
+                "0.2",
+                "0.2"
+            ]
+        },
+        "takeHomeFactorInitialSell": "0.1",
+        "takeHomeFactorSubsequentSell": "0.25",
+        "takeHomeFactorSubsequentBuy": "0.2"
+    }
+}
