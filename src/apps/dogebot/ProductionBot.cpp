@@ -65,11 +65,26 @@ void ProductionBot::onAggregateTrade(Json aMessage)
     {
         spdlog::info("Latest price {} changed the current ladder interval.",
                 latestPrice);
+        // This executes on the stream thread, increment each time an interval change is detected
+        ++intervalChangeSemaphore;
+
         boost::asio::post(mainLoop.getContext(), [this, latestPrice, interval=*optionalInterval]()
                 {
                     spdlog::info("Start handling new interval [{}, {}].",
                                  interval.front, interval.back);
-                    trader.makeAndFillProfitableOrders(interval, symbolFilters);
+                    // Matches the increment, with a decrement occuring in the main thread
+                    // where all the order filling takes place.
+                    // Combined with the predicate below, it allows to stop trying to fill
+                    // in case a new interval change is detected before some orders have completed.
+                    --intervalChangeSemaphore;
+
+                    trader.makeAndFillProfitableOrders(
+                            interval,
+                            symbolFilters,
+                            [this]
+                            {
+                                return intervalChangeSemaphore == 0;
+                            });
                 });
     }
 }

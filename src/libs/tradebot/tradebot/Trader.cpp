@@ -367,23 +367,35 @@ FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
 }
 
 
-FulfilledOrder Trader::fillExistingLimitFokOrder(Order & aOrder)
+std::optional<FulfilledOrder> Trader::fillExistingLimitFokOrder(Order & aOrder,
+                                                                Predicate & aPredicate)
 {
     database.update(aOrder.setStatus(Order::Status::Sending));
 
     std::optional<FulfilledOrder> fulfilled;
-    while(!(fulfilled = exchange.fillLimitFokOrder(aOrder)).has_value())
+    while(aPredicate() && !(fulfilled = exchange.fillLimitFokOrder(aOrder)).has_value())
     {}
 
-    completeFulfilledOrder(*fulfilled);
-    return *fulfilled;
+    if (fulfilled)
+    {
+        completeFulfilledOrder(*fulfilled);
+    }
+    else
+    {
+        spdlog::debug("Predicate interrupted limit FOK filling loop.");
+        database.update(aOrder.setStatus(Order::Status::Inactive));
+    }
+    return fulfilled;
 }
 
 
 std::pair<std::size_t, std::size_t>
-Trader::makeAndFillProfitableOrders(Interval aRateInterval, SymbolFilters aFilters)
+Trader::makeAndFillProfitableOrders(Interval aRateInterval,
+                                    SymbolFilters aFilters,
+                                    Predicate aPredicate)
 {
-    auto makeAndFill = [this, aFilters](Side aSide, Decimal aRate) -> std::size_t
+    auto makeAndFill = [this, aFilters, &predicate = aPredicate]
+                       (Side aSide, Decimal aRate) -> std::size_t
     {
         std::size_t counter = 0;
         for (const Decimal rate : database.getProfitableRates(aSide, aRate, pair))
@@ -393,7 +405,11 @@ Trader::makeAndFillProfitableOrders(Interval aRateInterval, SymbolFilters aFilte
             if (detail::testAmountFilters(order, aFilters))
             {
                 detail::filterAmountTickSize(order, aFilters);
-                fillExistingLimitFokOrder(order);
+                if(! fillExistingLimitFokOrder(order, predicate))
+                {
+                    database.discardOrder(order);
+                    break;
+                }
                 ++counter;
             }
             else

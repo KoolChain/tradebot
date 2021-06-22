@@ -36,6 +36,7 @@ struct ProductionBot
     IntervalTracker tracker;
 
     // Automatically initialized
+    std::atomic<int> intervalChangeSemaphore{0};
     tradebot::SymbolFilters symbolFilters{trader.queryFilters()};
     EventLoop mainLoop;
 };

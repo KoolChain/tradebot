@@ -15,6 +15,8 @@ namespace tradebot {
 
 struct Trader
 {
+    using Predicate = std::function<bool(void)>;
+
 private:
     void sendExistingOrder(Execution aExecution, Order & aOrder);
     FulfilledOrder fillExistingMarketOrder(Order & aOrder);
@@ -22,7 +24,7 @@ private:
     {
         return fillExistingMarketOrder(aOrder);
     }
-    FulfilledOrder fillExistingLimitFokOrder(Order & aOrder);
+    std::optional<FulfilledOrder> fillExistingLimitFokOrder(Order & aOrder, Predicate & aPredicate);
 
 public: // should be private, but requires testing
     bool completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder);
@@ -77,9 +79,14 @@ public:
     /// * one sell order per sell fragment rate below the interval lower bound.
     /// * one buy order per buy fragment rate above the interval higher bound.
     ///
+    /// \param aPredicate A function called before each attempt to place an order, that will
+    /// interrupt the procedure if it returns false.
+    ///
     /// \return A pair containing the number of filled sell orders and buy orders.
     std::pair<std::size_t /*filled sell*/, std::size_t /*filled buy*/>
-    makeAndFillProfitableOrders(Interval aInterval, SymbolFilters aFilters);
+    makeAndFillProfitableOrders(Interval aInterval,
+                                SymbolFilters aFilters,
+                                Predicate aPredicate = [](){return true;});
 
     /// \brief To be called when an order did complete on the exchange, with its already accumulated
     /// fulfillment.
