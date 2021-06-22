@@ -23,7 +23,7 @@ struct ProportionSpreader
 
     Ladder ladder;
     std::vector<Decimal> proportions;
-    Decimal tickSize;
+    Decimal tickSize{trade::gDefaultTickSize};
 };
 
 

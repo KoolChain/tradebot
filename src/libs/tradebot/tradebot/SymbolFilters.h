@@ -2,6 +2,7 @@
 
 
 #include <trademath/Decimal.h>
+#include <trademath/FilterUtilities.h>
 
 
 namespace ad {
@@ -14,13 +15,13 @@ struct SymbolFilters
     {
         Decimal minimum{0};
         Decimal maximum{std::numeric_limits<Decimal>::max()};
-        Decimal tickSize{Decimal{1} / pow(10, EXCHANGE_DECIMALS)};
+        Decimal tickSize{trade::gDefaultTickSize};
     };
 
     ValueDomain price;
     ValueDomain amount;
 
-    Decimal minimumNotional;
+    Decimal minimumNotional{0};
 };
 
 
