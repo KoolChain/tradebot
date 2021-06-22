@@ -184,7 +184,7 @@ int main(int argc, char * argv[])
 
     const std::string botname{argv[2]};
     configureLogging(botname);
-    std::string secretsfile{argv[1]};
+    const std::string secretsfile{argv[1]};
 
     if (botname == std::string{"naivebot"} || botname == std::string{"NaiveBot"})
     {

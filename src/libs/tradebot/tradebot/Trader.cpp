@@ -27,14 +27,17 @@ namespace detail {
 
     bool testAmountFilters(Order & aOrder, SymbolFilters aFilters)
     {
-        if ((aOrder.amount * aOrder.fragmentsRate) < aFilters.minimumNotional)
+        if (! testAmount(aFilters, aOrder.amount, aOrder.fragmentsRate))
         {
-            spdlog::info("Order '{}' has notional amount of {}*{} = {} {}, whereas min notional is {}.",
+            spdlog::info("Order '{}' (amount: {}, rate: {}, notional: {} {}) does not pass "
+                         "amount filters (min: {}, max: {}, min notional: {}).",
                          aOrder.getIdentity(),
                          aOrder.amount,
                          aOrder.fragmentsRate,
                          aOrder.amount * aOrder.fragmentsRate,
                          aOrder.quote,
+                         aFilters.amount.minimum,
+                         aFilters.amount.maximum,
                          aFilters.minimumNotional);
             return false;
         }
