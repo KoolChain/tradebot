@@ -112,16 +112,26 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
     Decimal factor{config.at("ladder").at("factor").get<std::string>()};
     int stopCount = std::stoi(config.at("ladder").at("stopCount").get<std::string>());
     Decimal tickSize{config.at("ladder").at("tickSize").get<std::string>()};
+    const std::string botName =
+        config.at("bot").value("name", "productionbot") + '_' + std::to_string(getTimestamp());
 
-    spdlog::info("Starting {} to trade {}.",
-            argv[0],
-            pair.symbol());
+    Json spawnerConfig = config.at("spawner");
 
+    spdlog::info("Starting bot '{}' to trade {}.",
+                 botName,
+                 pair.symbol());
+
+    //
+    // Ladder
+    //
     trade::Ladder ladder = trade::makeLadder(firstStop, factor, stopCount, tickSize);
 
+    //
+    // Production Bot
+    //
     trade::ProductionBot bot{
         tradebot::Trader{
-            "productionbot",
+            botName,
             pair,
             tradebot::Database{databasePath},
             tradebot::Exchange{
@@ -133,23 +143,30 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
         },
     };
 
+    //
+    // spawner::StableDownSpread
+    //
+    std::vector<Decimal> proportions;
+    std::transform(spawnerConfig.at("spreader").at("proportions").begin(),
+                   spawnerConfig.at("spreader").at("proportions").end(),
+                   std::back_inserter(proportions),
+                   [](const std::string & aValue){ return Decimal{aValue}; });
+
     bot.trader.spawner =
         std::make_unique<tradebot::spawner::StableDownSpread<trade::ProportionSpreader>>(
             trade::ProportionSpreader{
                 ladder,
-                std::vector<Decimal>{
-                    Decimal{"0.2"},
-                    Decimal{"0.2"},
-                    Decimal{"0.2"},
-                    Decimal{"0.2"},
-                    Decimal{"0.2"},
-                },
+                proportions,
                 bot.trader.queryFilters().amount.tickSize,
             },
-            Decimal{"0.1"},
-            Decimal{"0.25"},
-            Decimal{"0.2"}
+            Decimal{spawnerConfig.at("takeHomeFactorInitialSell").get<std::string>()},
+            Decimal{spawnerConfig.at("takeHomeFactorSubsequentSell").get<std::string>()},
+            Decimal{spawnerConfig.at("takeHomeFactorSubsequentBuy").get<std::string>()}
         );
+
+    //
+    // Run
+    //
     bot.run();
 
     return EXIT_SUCCESS;
