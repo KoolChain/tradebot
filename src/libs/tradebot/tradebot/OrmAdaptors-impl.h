@@ -37,7 +37,6 @@
 namespace sqlite_orm
 {
     BOILERENUM(ad::tradebot::Order::Status)
-    BOILERENUM(ad::tradebot::Order::FulfillResponse)
     BOILERENUM(ad::tradebot::Side)
 }
 

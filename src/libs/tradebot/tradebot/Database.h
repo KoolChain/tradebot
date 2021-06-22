@@ -93,8 +93,7 @@ public:
     Order prepareOrder(const std::string & aTraderName,
                        Side aSide,
                        Decimal aFragmentsRate,
-                       const Pair & aPair,
-                       Order::FulfillResponse aFulfillResponse);
+                       const Pair & aPair);
 
     void discardOrder(Order & aOrder);
 

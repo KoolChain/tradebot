@@ -416,8 +416,7 @@ SCENARIO("Not spawning counter-fragments with default NullSpawner.", "[spawn]")
                     trader.name,
                     Side::Sell,
                     rate,
-                    pair,
-                    Order::FulfillResponse::SmallSpread);
+                    pair);
             db.reload(fragment_1);
             db.reload(fragment_2);
 
@@ -530,8 +529,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                     trader.name,
                     Side::Sell,
                     rate,
-                    pair,
-                    Order::FulfillResponse::SmallSpread);
+                    pair);
             db.reload(fragment);
 
             // Sanity check
@@ -722,8 +720,7 @@ SCENARIO("Consolidation of counter-fragments.", "[spawn]")
                     trader.name,
                     Side::Sell,
                     rate,
-                    pair,
-                    Order::FulfillResponse::SmallSpread);
+                    pair);
             db.reload(fragment_1);
             db.reload(fragment_2);
 

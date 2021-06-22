@@ -24,7 +24,6 @@ inline tradebot::Order makeOrder(const std::string & aTraderName,
         aAmount,
         aPrice,
         aSide,
-        tradebot::Order::FulfillResponse::SmallSpread,
     };
 }
 
@@ -92,8 +91,7 @@ makeOrderWithFragments(
             aTraderName,
             aSide,
             aRate,
-            aPair,
-            tradebot::Order::FulfillResponse::SmallSpread);
+            aPair);
 
     for (auto & fragment : fragments)
     {

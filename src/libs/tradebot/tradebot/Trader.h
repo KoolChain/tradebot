@@ -35,7 +35,6 @@ public:
     Order placeOrderForMatchingFragments(Execution aExecution,
                                          Side aSide,
                                          Decimal aFragmentsRate,
-                                         Order::FulfillResponse aFulfillResponse,
                                          SymbolFilters aFilters = SymbolFilters{});
 
     /// \brief Attempt to cancel the order on the exchange,

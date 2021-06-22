@@ -69,11 +69,10 @@ void Trader::placeNewOrder(Execution aExecution, Order & aOrder)
 Order Trader::placeOrderForMatchingFragments(Execution aExecution,
                                              Side aSide,
                                              Decimal aFragmentsRate,
-                                             Order::FulfillResponse aFulfillResponse,
                                              SymbolFilters aFilters)
 {
     // Create the Inactive order in DB, assigning all matching fragments
-    Order order = database.prepareOrder(name, aSide, aFragmentsRate, pair, aFulfillResponse);
+    Order order = database.prepareOrder(name, aSide, aFragmentsRate, pair);
     detail::filterAmountTickSize(order, aFilters);
     sendExistingOrder(aExecution, order);
     return order;
@@ -378,8 +377,7 @@ Trader::makeAndFillProfitableOrders(Interval aRateInterval,
         std::size_t counter = 0;
         for (const Decimal rate : database.getProfitableRates(aSide, aRate, pair))
         {
-            Order order =
-                database.prepareOrder(name, aSide, rate, pair, Order::FulfillResponse::SmallSpread);
+            Order order = database.prepareOrder(name, aSide, rate, pair);
             if (detail::testAmountFilters(order, aFilters))
             {
                 detail::filterAmountTickSize(order, aFilters);

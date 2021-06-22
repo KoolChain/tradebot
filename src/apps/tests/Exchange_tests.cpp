@@ -266,7 +266,6 @@ SCENARIO("Orders cancellation", "[exchange]")
                 10.,
                 1.,
                 Side::Sell,
-                Order::FulfillResponse::SmallSpread,
                 0,
                 Order::Status::Sending
             };
@@ -297,7 +296,6 @@ SCENARIO("Orders cancellation", "[exchange]")
                 0.01,
                 floor(averagePrice*4),
                 Side::Sell,
-                Order::FulfillResponse::SmallSpread,
             };
             db.insert(impossibleOrder);
             binance.placeOrder(impossibleOrder, Execution::Limit);
@@ -343,7 +341,6 @@ SCENARIO("Orders cancellation", "[exchange]")
                 0.001,
                 floor(averagePrice),
                 Side::Sell,
-                Order::FulfillResponse::SmallSpread,
             };
             db.insert(immediateOrder);
             binance.placeOrder(immediateOrder, Execution::Market);

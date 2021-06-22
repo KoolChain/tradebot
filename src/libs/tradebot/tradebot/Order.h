@@ -41,19 +41,12 @@ struct Order
         Fulfilled,
     };
 
-    enum class FulfillResponse
-    {
-        SmallSpread,
-    };
-
     std::string traderName;
     Coin base;
     Coin quote;
     Decimal amount; // Quantity of base to exchange
     Decimal fragmentsRate;
     Side side;
-
-    FulfillResponse fulfillResponse;
 
     MillisecondsSinceEpoch activationTime{0};
     Status status{Status::Inactive};

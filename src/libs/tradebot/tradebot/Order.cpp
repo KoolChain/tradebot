@@ -61,7 +61,6 @@ bool operator==(const Order & aLhs, const Order & aRhs)
         && isEqual(aLhs.amount, aRhs.amount)
         && isEqual(aLhs.fragmentsRate, aRhs.fragmentsRate)
         && aLhs.side == aRhs.side
-        && aLhs.fulfillResponse == aRhs.fulfillResponse
         && aLhs.activationTime == aRhs.activationTime
         && aLhs.status == aRhs.status
         && aLhs.fulfillTime == aRhs.fulfillTime

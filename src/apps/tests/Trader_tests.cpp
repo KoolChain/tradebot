@@ -169,8 +169,7 @@ SCENARIO("Trader low-level functions.", "[trader]")
                 Order impossible =
                     trader.placeOrderForMatchingFragments(Execution::Limit,
                                                           Side::Sell,
-                                                          impossiblePrice,
-                                                          Order::FulfillResponse::SmallSpread);
+                                                          impossiblePrice);
 
                 // The order is recorded in database
                 REQUIRE(db.getOrder(impossible.id) == impossible);
@@ -185,7 +184,6 @@ SCENARIO("Trader low-level functions.", "[trader]")
                 REQUIRE(impossible.amount == Decimal{"0.001"} + Decimal{"0.002"});
                 REQUIRE(impossible.fragmentsRate == impossiblePrice);
                 REQUIRE(impossible.side     == Side::Sell);
-                REQUIRE(impossible.fulfillResponse == Order::FulfillResponse::SmallSpread);
                 REQUIRE(impossible.exchangeId != -1);
 
                 // The fragments are associated
@@ -244,7 +242,6 @@ SCENARIO("Trader low-level functions.", "[trader]")
                 0.01,
                 averagePrice,
                 tradebot::Side::Sell,
-                tradebot::Order::FulfillResponse::SmallSpread,
                 getTimestamp(),
                 tradebot::Order::Status::Sending,
             };
@@ -317,15 +314,13 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                 0.01,
                 averagePrice,
                 tradebot::Side::Sell,
-                tradebot::Order::FulfillResponse::SmallSpread,
             };
             db.insert(inactive);
 
             // Sending never received
             db.insert(Fragment{pair.base, pair.quote, 0.001, impossiblePrice, Side::Sell});
             Order sendingNeverReceived =
-                db.prepareOrder(traderName, Side::Sell, impossiblePrice, pair,
-                                Order::FulfillResponse::SmallSpread);
+                db.prepareOrder(traderName, Side::Sell, impossiblePrice, pair);
             db.update(sendingNeverReceived.setStatus(Order::Status::Sending));
 
             // Sending and received
@@ -333,8 +328,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
             Order sendingAndReceived =
                 trader.placeOrderForMatchingFragments(Execution::Limit,
                                                       Side::Sell,
-                                                      impossiblePrice,
-                                                      Order::FulfillResponse::SmallSpread);
+                                                      impossiblePrice);
             db.update(sendingAndReceived.setStatus(Order::Status::Sending));
 
             // Active not fulfilled
@@ -343,8 +337,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                 Order activeNotFulfilled =
                     trader.placeOrderForMatchingFragments(Execution::Limit,
                                                           Side::Sell,
-                                                          impossiblePrice,
-                                                          Order::FulfillResponse::SmallSpread);
+                                                          impossiblePrice);
             }
 
             // Active fulfilled market order
@@ -358,8 +351,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
             Order marketFulfilled =
                 trader.placeOrderForMatchingFragments(Execution::Market,
                                                       Side::Sell,
-                                                      averagePrice,
-                                                      Order::FulfillResponse::SmallSpread);
+                                                      averagePrice);
             while(exchange.getOrderStatus(marketFulfilled) == "EXPIRED")
             {
                 exchange.placeOrder(marketFulfilled, Execution::Market);
@@ -376,8 +368,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
             Order limitFulfilled =
                 trader.placeOrderForMatchingFragments(Execution::Limit,
                                                       Side::Buy,
-                                                      limitGenerous,
-                                                      Order::FulfillResponse::SmallSpread);
+                                                      limitGenerous);
             while(exchange.getOrderStatus(limitFulfilled) == "EXPIRED")
             {
                 exchange.placeOrder(limitFulfilled, Execution::Limit);
@@ -393,8 +384,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                 Order cancelling =
                     trader.placeOrderForMatchingFragments(Execution::Limit,
                                                           Side::Sell,
-                                                          impossiblePrice,
-                                                          Order::FulfillResponse::SmallSpread);
+                                                          impossiblePrice);
                 db.update(cancelling.setStatus(Order::Status::Cancelling));
             }
 
@@ -404,8 +394,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
                 Order cancelling =
                     trader.placeOrderForMatchingFragments(Execution::Limit,
                                                           Side::Sell,
-                                                          impossiblePrice,
-                                                          Order::FulfillResponse::SmallSpread);
+                                                          impossiblePrice);
                 REQUIRE(exchange.cancelOrder(cancelling));
                 db.update(cancelling.setStatus(Order::Status::Cancelling));
             }

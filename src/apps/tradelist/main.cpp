@@ -43,7 +43,6 @@ int main(int argc, char * argv[])
         jstod(orderJson.at("origQty")),
         0.,
         orderJson.at("side") == tradebot::Side::Sell ? tradebot::Side::Sell : tradebot::Side::Buy,
-        tradebot::Order::FulfillResponse::SmallSpread,
     };
 
     spdlog::info("Reconstructed order for {} {} at {} {}. Client order id: '{}', exchange status: {}, executed quantity: {}",

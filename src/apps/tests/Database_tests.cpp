@@ -26,7 +26,6 @@ SCENARIO("Order and fragment records.", "[db]")
                 10.,
                 1.4,
                 tradebot::Side::Sell,
-                tradebot::Order::FulfillResponse::SmallSpread,
                 getTimestamp(),
                 tradebot::Order::Status::Cancelling,
             };
@@ -104,7 +103,6 @@ SCENARIO("Orders selection", "[db]")
                     10.,
                     1.,
                     tradebot::Side::Sell,
-                    tradebot::Order::FulfillResponse::SmallSpread,
                 }
             };
 
@@ -245,7 +243,7 @@ SCENARIO("Order high-level creation.", "[db]")
         THEN("Matching SELL fragments can be assigned to a new SELL order")
         {
             Order order =
-                db.prepareOrder("dbtest", Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
+                db.prepareOrder("dbtest", Side::Sell, 2., {"DOGE", "BUSD"});
 
             REQUIRE(order.amount == 2*baseFragment.amount);
             REQUIRE(order.status == Order::Status::Inactive);
@@ -253,7 +251,7 @@ SCENARIO("Order high-level creation.", "[db]")
             THEN("There are no more fragments at the same rate.")
             {
                 REQUIRE_THROWS(
-                    db.prepareOrder("dbtest", Side::Sell, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
+                    db.prepareOrder("dbtest", Side::Sell, 2., {"DOGE", "BUSD"}));
 
                 auto sellRates = db.getSellRatesBelow(4., {"DOGE", "BUSD"});
                 REQUIRE(std::find(sellRates.begin(), sellRates.end(), 2.) == sellRates.end());
@@ -302,7 +300,7 @@ SCENARIO("Order high-level creation.", "[db]")
         THEN("Matching BUY fragments can be assigned to a new BUY order")
         {
             Order order =
-                db.prepareOrder("dbtest", Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread);
+                db.prepareOrder("dbtest", Side::Buy, 2., {"DOGE", "BUSD"});
 
             REQUIRE(order.amount == 100.);
             REQUIRE(order.status == Order::Status::Inactive);
@@ -310,7 +308,7 @@ SCENARIO("Order high-level creation.", "[db]")
             THEN("There are no more fragments at the same rate.")
             {
                 REQUIRE_THROWS(
-                    db.prepareOrder("dbtest", Side::Buy, 2., {"DOGE", "BUSD"}, Order::FulfillResponse::SmallSpread));
+                    db.prepareOrder("dbtest", Side::Buy, 2., {"DOGE", "BUSD"}));
 
                 auto buyRates = db.getBuyRatesAbove(0., {"DOGE", "BUSD"});
                 REQUIRE(std::find(buyRates.begin(), buyRates.end(), 2.) == buyRates.end());

@@ -27,7 +27,6 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("amount", &Order::amount),
                        make_column("fragments_rate", &Order::fragmentsRate),
                        make_column("side", &Order::side),
-                       make_column("fulfill_response", &Order::fulfillResponse),
                        make_column("activation_time", &Order::activationTime),
                        make_column("status", &Order::status),
                        make_column("fulfill_time", &Order::fulfillTime),
@@ -326,8 +325,7 @@ void Database::commit(TransactionGuard && aGuard)
 Order Database::prepareOrder(const std::string & aTraderName,
                              Side aSide,
                              Decimal aFragmentsRate,
-                             const Pair & aPair,
-                             Order::FulfillResponse aFulfillResponse)
+                             const Pair & aPair)
 {
     Order order{
         aTraderName,
@@ -336,7 +334,6 @@ Order Database::prepareOrder(const std::string & aTraderName,
         Decimal{"0"}, // amount
         aFragmentsRate,
         aSide,
-        aFulfillResponse
     };
 
     auto transaction = mImpl->storage.transaction_guard();
