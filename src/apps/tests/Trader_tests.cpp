@@ -511,6 +511,12 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 }
 
 
+Decimal filterPrice(Decimal aPrice)
+{
+    return trade::applyTickSize(aPrice, Decimal{"0.01"});
+}
+
+
 SCENARIO("Fill profitable orders.", "[trader]")
 {
     const Pair pair{"BTC", "USDT"};
@@ -534,14 +540,15 @@ SCENARIO("Fill profitable orders.", "[trader]")
         REQUIRE(binance.listOpenOrders(pair).empty());
 
         Decimal averagePrice = binance.getCurrentAveragePrice(pair);
+        INFO("The average price is " << averagePrice);
 
         WHEN("3 sell fragments at 2 different rates below average are written to DB.")
         {
             Decimal amount{"0.001"};
-            Fragment f{pair.base, pair.quote, amount, averagePrice/2, Side::Sell};
+            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice/1.2), Side::Sell};
             db.insert(f);
             db.insert(f);
-            f.targetRate = averagePrice/3;
+            f.targetRate = filterPrice(averagePrice/1.3);
             db.insert(f);
 
             // Sanity check
@@ -564,11 +571,11 @@ SCENARIO("Fill profitable orders.", "[trader]")
         WHEN("3 buy fragments at 3 different rates above average are written to DB.")
         {
             Decimal amount{"0.001"};
-            Fragment f{pair.base, pair.quote, amount, averagePrice*2, Side::Buy};
+            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice*1.2), Side::Buy};
             db.insert(f);
-            f.targetRate = averagePrice*3;
+            f.targetRate = filterPrice(averagePrice*1.3);
             db.insert(f);
-            f.targetRate = averagePrice*4;
+            f.targetRate = filterPrice(averagePrice*1.4);
             db.insert(f);
 
             // Sanity check
