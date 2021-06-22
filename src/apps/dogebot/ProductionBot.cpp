@@ -41,8 +41,8 @@ std::optional<Interval> IntervalTracker::update(Decimal aLatestPrice)
 
     if (newLowerBound != std::exchange(lowerBound, newLowerBound))
     {
-        return Interval{lowerBound == ladder.crend() ?   *lowerBound-1 : *lowerBound,
-                        lowerBound == ladder.crbegin() ?   *lowerBound : *(lowerBound-1)};
+        return Interval{lowerBound == ladder.crend()   ? *(lowerBound-1) : *lowerBound,
+                        lowerBound == ladder.crbegin() ?     *lowerBound : *(lowerBound-1)};
     }
     else
     {
