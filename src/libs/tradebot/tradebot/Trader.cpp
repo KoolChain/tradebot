@@ -400,6 +400,7 @@ Trader::makeAndFillProfitableOrders(Interval aRateInterval, SymbolFilters aFilte
             {
                 spdlog::warn("Order '{}' will not be placed because it does not pass amount filters.",
                              order.getIdentity());
+                database.discardOrder(order);
             }
         }
         return counter;
