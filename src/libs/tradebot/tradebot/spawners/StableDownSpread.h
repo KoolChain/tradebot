@@ -32,6 +32,9 @@ namespace spawner {
 template <TMP_PARAM_LIST>
 class StableDownSpread : public SpawnerBase
 {
+private:
+    void filterSpawnedAmount(Decimal & aSpawned, Decimal & aTakenHome);
+
 public:
     StableDownSpread(T_spreader aSpreader,
                      Decimal aTakeHomeFactorInitialSell,
@@ -116,12 +119,23 @@ StableDownSpread<TMP_ARGS>::onFirstSell(const Fragment & aFilledFragment,
 {
     Decimal actualQuoteAmount{aFilledFragment.amount * aOrder.executionRate};
 
+    // The spreader takes care of applying tick size filter itself, as long as it was
+    // constructed with one.
     auto [spawns, totalSpawnedQuote] =
         downSpreader.spreadDown(trade::Quote{actualQuoteAmount * (1-takeHomeFactorInitialSell)},
                                 aFilledFragment.targetRate);
 
     Decimal takenHome = actualQuoteAmount - static_cast<Decimal>(totalSpawnedQuote);
     return {spawns, takenHome};
+}
+
+
+template <TMP_PARAM_LIST>
+void StableDownSpread<TMP_ARGS>::filterSpawnedAmount(Decimal & aSpawned, Decimal & aTakenHome)
+{
+    Decimal remainder;
+    std::tie(aSpawned, remainder) = trade::computeTickFilter(aSpawned, downSpreader.tickSize);
+    aTakenHome += remainder;
 }
 
 
@@ -160,7 +174,10 @@ StableDownSpread<TMP_ARGS>::onSubsequentBuy(const Fragment & aFilledFragment,
     Decimal excessBase = actualBaseAmount - breakEvenBase;
     Decimal takenHomeBase = excessBase * takeHomeFactorSubsequentBuy;
 
-    trade::Spawn singleSpawn{parentSellRate, trade::Base{actualBaseAmount - takenHomeBase}};
+    Decimal spawned = actualBaseAmount - takenHomeBase;
+    filterSpawnedAmount(spawned, takenHomeBase);
+
+    trade::Spawn singleSpawn{parentSellRate, trade::Base{spawned}};
     return {{singleSpawn}, takenHomeBase};
 }
 
@@ -199,7 +216,10 @@ StableDownSpread<TMP_ARGS>::onSubsequentSell(const Fragment & aFilledFragment,
     Decimal excessQuote = actualQuoteAmount - breakEvenQuote;
     Decimal takenHomeQuote = excessQuote * takeHomeFactorSubsequentSell;
 
-    trade::Spawn singleSpawn{parentBuyRate, trade::Quote{actualQuoteAmount - takenHomeQuote}};
+    Decimal spawned = actualQuoteAmount - takenHomeQuote;
+    filterSpawnedAmount(spawned, takenHomeQuote);
+
+    trade::Spawn singleSpawn{parentBuyRate, trade::Quote{spawned}};
     return {{singleSpawn}, takenHomeQuote};
 }
 
