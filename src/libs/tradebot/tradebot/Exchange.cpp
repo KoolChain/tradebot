@@ -87,6 +87,37 @@ Json Exchange::getExchangeInformation(std::optional<Pair> aPair)
 }
 
 
+SymbolFilters Exchange::queryFilters(const Pair & aPair)
+{
+    SymbolFilters result;
+    Json filtersArray = getExchangeInformation(aPair)["symbols"][0]["filters"];
+    for (const auto & filter : filtersArray)
+    {
+        if (filter.at("filterType") == "PRICE_FILTER")
+        {
+            result.price = SymbolFilters::ValueDomain{
+                Decimal{filter["minPrice"].get<std::string>()},
+                Decimal{filter["maxPrice"].get<std::string>()},
+                Decimal{filter["tickSize"].get<std::string>()},
+            };
+        }
+        else if (filter.at("filterType") == "LOT_SIZE")
+        {
+            result.amount = SymbolFilters::ValueDomain{
+                Decimal{filter["minQty"].get<std::string>()},
+                Decimal{filter["maxQty"].get<std::string>()},
+                Decimal{filter["stepSize"].get<std::string>()},
+            };
+        }
+        else if (filter.at("filterType") == "MIN_NOTIONAL")
+        {
+            result.minimumNotional = Decimal{filter["minNotional"].get<std::string>()};
+        }
+    }
+    return result;
+}
+
+
 template<class T_order>
 binance::Response placeOrderImpl(const T_order & aBinanceOrder, Order & aOrder, binance::Api & aRestApi)
 {

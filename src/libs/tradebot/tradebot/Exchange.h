@@ -4,6 +4,7 @@
 #include "Fulfillment.h"
 #include "Order.h"
 #include "Stream.h"
+#include "SymbolFilters.h"
 
 #include <binance/Api.h>
 
@@ -33,6 +34,8 @@ struct Exchange
     Decimal getCurrentAveragePrice(const Pair & aPair);
 
     Json getExchangeInformation(std::optional<Pair> aPair = {});
+
+    SymbolFilters queryFilters(const Pair & aPair);
 
     Order & placeOrder(Order & aOrder, Execution aExecution);
 
