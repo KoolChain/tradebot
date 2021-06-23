@@ -587,6 +587,77 @@ SCENARIO("Fill profitable orders.", "[trader]")
 }
 
 
+SCENARIO("Fill profitable orders limit bug.", "[trader][bug]")
+{
+    // The bug: Trader::makeAndFillProfitableOrders is sending limit fok orders at the fragments
+    // rate, instead of one of the edge rate of the provided interval.
+    GIVEN("A trader instance.")
+    {
+        const Pair pair{"BTC", "USDT"};
+        Trader trader{
+            "tradertest",
+            pair,
+            Database{":memory:"},
+            Exchange{binance::Api{secret::gTestnetCredentials}}
+        };
+
+        auto & db = trader.database;
+        auto & exchange = trader.exchange;
+        SymbolFilters symbolFilters = trader.queryFilters();
+
+        // Sanity check
+        exchange.cancelAllOpenOrders(pair);
+        REQUIRE(exchange.listOpenOrders(pair).empty());
+
+        Decimal averagePrice = exchange.getCurrentAveragePrice(pair);
+        INFO("The average price is " << averagePrice);
+
+        WHEN("A sell fragments at rates much below is written to DB (it would trigger price filter).")
+        {
+            Decimal amount{"0.01"};
+            Decimal offendingLowPrice = filterPrice(averagePrice/10);
+            Fragment f{pair.base, pair.quote, amount, offendingLowPrice, Side::Sell};
+            db.insert(f);
+
+            // Sanity check
+            REQUIRE(db.getUnassociatedFragments(Side::Sell, pair).size() == 1);
+            REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 0);
+
+            GIVEN("A price interval satisfying the price filters.")
+            {
+                Interval acceptableRange{
+                    trade::applyTickSize(averagePrice/1.5, symbolFilters.price.tickSize),
+                    trade::applyTickSize(averagePrice*1.5, symbolFilters.price.tickSize)
+                };
+
+                THEN("A profitable order can be filled within this valid range, despite the invalid low fragment price.")
+                {
+                    // If the operation place the order at fragments rate, it will throw when placing
+                    // the order because the fragment rate will not be accepted by price filters.
+                    auto [sells, buys] =
+                        trader.makeAndFillProfitableOrders(acceptableRange, symbolFilters);
+                    REQUIRE(sells == 1);
+                    REQUIRE(buys == 0);
+
+                    REQUIRE(db.getUnassociatedFragments(Side::Sell, pair).size() == 0);
+                    REQUIRE(db.selectOrders(pair, Order::Status::Fulfilled).size() == 1);
+
+                    Order filledOrder = db.selectOrders(pair, Order::Status::Fulfilled).at(0);
+
+                    CHECK(filledOrder.amount == amount);
+                    CHECK(filledOrder.fragmentsRate == offendingLowPrice);
+                    // Ideally, we would like to check the actual limit price sent to the exchange.
+                    // Yet this is difficult without a mocked up exchange.
+                    CHECK(filledOrder.executionRate >= acceptableRange.front);
+
+                    revertOrder(exchange, db, makeOrder(trader.name, pair, f.side, Decimal{0}, f.amount));
+                }
+            }
+        }
+    }
+}
+
+
 SCENARIO("Symbol filters", "[trader]")
 {
     GIVEN("A trader instance and a pair.")

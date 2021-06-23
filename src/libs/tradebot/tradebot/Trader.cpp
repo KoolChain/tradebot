@@ -345,12 +345,14 @@ FulfilledOrder Trader::fillNewMarketOrder(Order & aOrder)
 
 
 std::optional<FulfilledOrder> Trader::fillExistingLimitFokOrder(Order & aOrder,
+                                                                Decimal aLimitRate,
                                                                 Predicate & aPredicate)
 {
     database.update(aOrder.setStatus(Order::Status::Sending));
 
     std::optional<FulfilledOrder> fulfilled;
-    while(aPredicate() && !(fulfilled = exchange.fillLimitFokOrder(aOrder)).has_value())
+    while(   aPredicate()
+          && ! (fulfilled = exchange.fillLimitFokOrder(aOrder, aLimitRate)).has_value())
     {}
 
     if (fulfilled)
@@ -381,7 +383,7 @@ Trader::makeAndFillProfitableOrders(Interval aRateInterval,
             if (detail::testAmountFilters(order, aFilters))
             {
                 detail::filterAmountTickSize(order, aFilters);
-                if(! fillExistingLimitFokOrder(order, predicate))
+                if(! fillExistingLimitFokOrder(order, aRate, predicate))
                 {
                     database.discardOrder(order);
                     break;

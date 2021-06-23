@@ -24,7 +24,9 @@ private:
     {
         return fillExistingMarketOrder(aOrder);
     }
-    std::optional<FulfilledOrder> fillExistingLimitFokOrder(Order & aOrder, Predicate & aPredicate);
+    std::optional<FulfilledOrder> fillExistingLimitFokOrder(Order & aOrder,
+                                                            Decimal aLimitRate,
+                                                            Predicate & aPredicate);
 
 public: // should be private, but requires testing
     bool completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder);

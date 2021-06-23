@@ -228,9 +228,15 @@ std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
 }
 
 
-std::optional<FulfilledOrder> Exchange::fillLimitFokOrder(Order & aOrder)
+std::optional<FulfilledOrder> Exchange::fillLimitFokOrder(Order & aOrder,
+                                                          std::optional<Decimal> aExplicitLimitRate)
 {
-    return fillOrderImpl(to_limitFokOrder(aOrder), aOrder, restApi, "limit fok");
+    binance::LimitOrder limitOrder = to_limitFokOrder(aOrder);
+    if (aExplicitLimitRate)
+    {
+        limitOrder.price = *aExplicitLimitRate;
+    }
+    return fillOrderImpl(limitOrder, aOrder, restApi, "limit fok");
 }
 
 
