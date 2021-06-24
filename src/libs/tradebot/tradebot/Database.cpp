@@ -66,6 +66,12 @@ struct Database::Impl
 Database::Impl::Impl(const std::string & aFilename) :
     storage{detail::initializeStorage(aFilename)}
 {
+    // Does not seem to add a timeout
+    //storage.busy_timeout(50000);
+
+    // Allows to have reader without locking the one writer
+    // see: https://www.sqlite.org/wal.html
+    storage.pragma.journal_mode(sqlite_orm::journal_mode::WAL);
     storage.sync_schema();
 }
 
