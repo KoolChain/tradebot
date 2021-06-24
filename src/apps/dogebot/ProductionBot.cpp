@@ -14,6 +14,14 @@ namespace ad {
 namespace trade {
 
 
+// The bot is not doing anything time sensitive, since all orders are
+// placed as Limit FOK.
+// As there were several API errors on test net:
+// "Client error -1021: Timestamp for this request is outside of the recvWindow."
+// So this timer has been made larger.
+static const std::chrono::milliseconds gProdbotReceiveWindow{15000};
+
+
 std::optional<Interval> IntervalTracker::update(Decimal aLatestPrice)
 {
     trade::Ladder::const_reverse_iterator newLowerBound =
@@ -107,6 +115,7 @@ void ProductionBot::connectMarketStream()
 int ProductionBot::run()
 {
     trader.cleanup();
+    trader.exchange.restApi.setReceiveWindow(gProdbotReceiveWindow);
 
     tracker.reset();
     connectMarketStream();

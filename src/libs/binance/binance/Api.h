@@ -87,6 +87,8 @@ public:
 
     Response getCompletedWidthdrawHistory();
 
+    Api & setReceiveWindow(std::chrono::milliseconds aReceiveWindow);
+
     const Endpoints & getEndpoints();
 
     static const Endpoints gProduction;

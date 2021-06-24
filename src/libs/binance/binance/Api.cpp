@@ -351,6 +351,13 @@ Response Api::getCompletedWidthdrawHistory()
 }
 
 
+Api & Api::setReceiveWindow(std::chrono::milliseconds aReceiveWindow)
+{
+    mReceiveWindow = aReceiveWindow;
+    return *this;
+}
+
+
 const Endpoints & Api::getEndpoints()
 {
     return mEndpoints;
