@@ -1,4 +1,4 @@
-project(intial-fragments VERSION "${CMAKE_PROJECT_VERSION}")
+project(initial-fragments VERSION "${CMAKE_PROJECT_VERSION}")
 
 set(${PROJECT_NAME}_HEADERS
 )
