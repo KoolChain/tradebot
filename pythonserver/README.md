@@ -29,13 +29,15 @@ https://developers.google.com/sheets/api/quickstart/python
 This repository can build a docker image that will use `updatesheet.py`
 to export the content of the database every hour.
 
-### Building image
+### Cron based
+
+#### Building image
 
 From this folder run:
 
-    docker build -t adnn/tradebot-export .
+    docker build -t adnn/tradebot-cronexport .
 
-### Running the container
+#### Running the container
 
 `--init` argument should be provided so the container can be stopped properly.
 
@@ -49,14 +51,31 @@ The pointed files must be accessible in the running container, usually via mount
 
 e.g. command:
 
-    docker run --init --rm --name cron \
+    docker run --init --rm --name tradebot-export \
         -e SPREADSHEET_ID=${some_spreadsheet_id} \
         -e GOOGLE_TOKEN_FILE=/token.json \
         -e SQLITE_FILE=/db.sqlite \
         -v $(pwd)/token.json:/token.json \
         -v $(pwd)/dogebot.sqlite:/db.sqlite \
-        cron_export
+        adnn/tradebot-cronexport
 
+### Jobber based
+
+At the moment, there is a problem with capturing `stderr`:
+https://github.com/dshearer/jobber/issues/331#issue-929952548
+
+There is nonetheless a "test" image to build, with a test script `jobberprinter.py`
+which outputs to both `stdout` and `stderr`.
+
+#### Building image
+
+From this folder run:
+
+    docker build -t adnn/tradebot-jobberexport -f DockerfileJobber .
+
+#### Running the container
+
+    docker run --rm --name tradebot-export adnn/tradebot-jobberexport
 
 ## Development
 

@@ -1,0 +1,16 @@
+version: 1.4
+
+resultSinks:
+  - &stdoutSink
+    type: stdout
+    data:
+     - stdout
+     - stderr
+
+jobs:
+  UpdateSheet:
+    cmd: /jobbercommand.sh
+    time: '*/5 * * * * *'
+    notifyOnSuccess: [*stdoutSink]
+    notifyOnError: [*stdoutSink]
+

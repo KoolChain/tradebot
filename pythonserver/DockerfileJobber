@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+
+FROM jobber:1.4-alpine3.11
+
+## Install python3
+USER root
+RUN apk add --no-cache python3
+USER jobberuser
+
+## Deploy python app
+#COPY requirements.txt ./
+#RUN pip3 install -r requirements.txt
+#COPY --chown=jobberuser:jobberuser dbaccess.py gsheet.py updatesheet.py docker/command.sh ./
+
+## The test output python script
+COPY --chown=jobberuser:jobberuser jobberprinter.py docker/jobbercommand.sh ./
+
+## The jobber script
+COPY --chown=jobberuser:jobberuser docker/jobfile /home/jobberuser/.jobber
+RUN chmod 0600 /home/jobberuser/.jobber
