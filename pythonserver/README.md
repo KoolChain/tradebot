@@ -31,6 +31,8 @@ to export the content of the database every hour.
 
 ### Cron based
 
+Following: https://devopsheaven.com/cron/docker/alpine/linux/2017/10/30/run-cron-docker-alpine.html
+
 #### Building image
 
 From this folder run:
@@ -60,6 +62,8 @@ e.g. command:
         adnn/tradebot-cronexport
 
 ### Jobber based
+
+Using: https://hub.docker.com/_/jobber
 
 At the moment, there is a problem with capturing `stderr`:
 https://github.com/dshearer/jobber/issues/331#issue-929952548

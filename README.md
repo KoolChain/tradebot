@@ -49,3 +49,41 @@ From `build/` folder
 ```
 src/apps/tests/tests
 ```
+
+## Docker
+
+There is a docker application (multi-container docker compose).
+It starts both:
+
+* Tradebot
+* A recurrent `updatesheet.py` container
+
+### Build
+
+**Note**: Separately building the images is not required, as docker compose will take care of it.
+
+However, the command to build tradebot would be.
+
+    docker build -t adnn/tradebot .
+
+### Run
+
+The one command to build containers and run the application:
+
+    docker-compose up --build
+
+By default, the application expects the following files to exist from the host working directory:
+
+* `./secrets/binance.json`: The credentials to access Binance API
+* `./configs/dogebot.json`: The tradebot configuration
+
+It mounts the corresponding folders at the root of the container.
+
+
+#### Customization points
+
+The expected path to the files above can be changed via environment variables that must be
+set in the shell executing `docker-compose up`:
+
+* BINANCE_SECRETS_FILE (default: `/secrets/binance.json`)
+* DOGEBOT_CONFIG (default: `/configs/dogebot.json`)
