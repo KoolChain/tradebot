@@ -34,11 +34,6 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("commissionAsset", &Order::commissionAsset),
                        make_column("exchange_id", &Order::exchangeId)
             ),
-            make_table("Launches",
-                       make_column("id", &stats::Launch::id, primary_key(), autoincrement()),
-
-                       make_column("time", &stats::Launch::time)
-            ),
             make_table("Fragments",
                        make_column("id", &Fragment::id, primary_key(), autoincrement()),
 
@@ -50,7 +45,24 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("taken_home", &Fragment::takenHome),
                        make_column("spawning_order", &Fragment::spawningOrder),
                        make_column("composed_order", &Fragment::composedOrder)
-            ));
+            ),
+            make_table("Launches",
+                       make_column("id", &stats::Launch::id, primary_key(), autoincrement()),
+
+                       make_column("time", &stats::Launch::time)
+            ),
+            make_table("Balances",
+                       make_column("id", &stats::Balance::id, primary_key(), autoincrement()),
+
+                       make_column("time", &stats::Balance::time),
+                       make_column("base_balance", &stats::Balance::baseBalance),
+                       make_column("quote_balance", &stats::Balance::quoteBalance),
+                       make_column("base_buy_potential", &stats::Balance::baseBuyPotential),
+                       make_column("quote_buy_potential", &stats::Balance::quoteBuyPotential),
+                       make_column("base_sell_potential", &stats::Balance::baseSellPotential),
+                       make_column("quote_sell_potential", &stats::Balance::quoteSellPotential)
+            )
+            );
 }
 
 } // namespace detail
@@ -124,6 +136,13 @@ long Database::insert(stats::Launch & aLaunch)
     return aLaunch.id;
 }
 
+
+long Database::insert(stats::Balance & aBalance)
+{
+    aBalance.id = mImpl->storage.insert(aBalance);
+    spdlog::trace("Inserted balance {} in database", aBalance.id);
+    return aBalance.id;
+}
 
 
 void Database::update(const Order & aOrder)

@@ -65,6 +65,9 @@ public:
 
     SymbolFilters queryFilters();
 
+    /// \brief Populate a stats::Balance instance.
+    stats::Balance assembleBalance();
+
     //
     // High-level API
     //
@@ -72,6 +75,9 @@ public:
 
     /// \brief Write a stats::Launch to database.
     void recordLaunch();
+
+    /// \brief Write a stats::Balance to database.
+    void recordBalance(const MillisecondsSinceEpoch aTime);
 
     /// \brief Will place new market orders until it fulfills (by oposition to expiring).
     FulfilledOrder fillNewMarketOrder(Order & aOrder);

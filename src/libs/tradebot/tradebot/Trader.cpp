@@ -240,6 +240,29 @@ SymbolFilters Trader::queryFilters()
 }
 
 
+stats::Balance Trader::assembleBalance()
+{
+    stats::Balance result;
+    std::tie(result.baseBalance, result.quoteBalance) = exchange.getBalance(pair);
+
+    auto computePotential = [&](const Side aSide) -> std::pair<Decimal /*base*/, Decimal /*quote*/>
+    {
+        std::pair<Decimal, Decimal> accumulators{0, 0};
+        for(const auto & fragment : database.getUnassociatedFragments(aSide, pair))
+        {
+            trade::Spawn spawn{fragment.targetRate, trade::Base(fragment.amount)};
+            accumulators.first = trade::accumulateAmount<trade::Base>(accumulators.first, spawn);
+            accumulators.second = trade::accumulateAmount<trade::Quote>(accumulators.second, spawn);
+        }
+        return accumulators;
+    };
+
+    std::tie(result.baseBuyPotential, result.quoteBuyPotential) = computePotential(Side::Buy);
+    std::tie(result.baseSellPotential, result.quoteSellPotential) = computePotential(Side::Sell);
+    return result;
+}
+
+
 bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
 {
     // Important: Everything happening on the database in this member function
@@ -329,6 +352,14 @@ void Trader::cleanup()
 void Trader::recordLaunch()
 {
     database.insert(stats::Launch{});
+}
+
+
+void Trader::recordBalance(const MillisecondsSinceEpoch aTime)
+{
+    stats::Balance balance = assembleBalance();
+    balance.time = aTime;
+    database.insert(balance);
 }
 
 
