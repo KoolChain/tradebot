@@ -6,7 +6,7 @@ The spreadsheet must be created externally (e.g. via the web app) and have the f
 * `Orders`: columns A to N
 * `Fragments`: columns A to I
 
-**Important**: There is a 5M cell limit per spreadsheet, it is advised to removec excess columns
+**Important**: There is a 5M cell limit per spreadsheet, it is advised to remove unused columns
 from the sheets above.
 
 ## Authorizations
@@ -27,7 +27,11 @@ https://developers.google.com/sheets/api/quickstart/python
 ## Docker
 
 This repository can build a docker image that will use `updatesheet.py`
-to export the content of the database every hour.
+to export the content of the database every 15 minutes.
+
+**Important**: The recommended approach is to let [top-level Docker compose application](../README.md##Docker)
+takes care of building and running the container.
+The following instructions are development oriented.
 
 ### Cron based
 
