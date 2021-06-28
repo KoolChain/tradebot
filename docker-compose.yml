@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  tradebot:
+    build: .
+    command: ./dogebot.sh
+    restart: always
+    environment:
+        BINANCE_SECRETS_FILE: ${BINANCE_SECRETS_FILE:-/secrets/binance.json}
+        DOGEBOT_CONFIG: ${DOGEBOT_CONFIG:-/configs/dogebot.json}
+    volumes:
+        - sqlite-data:/sqlite-data
+        - ./secrets:/secrets
+        - ./configs:/configs
+
+  updatesheet:
+    build: ./python
+    init: true
+    environment:
+      GOOGLE_TOKEN_FILE: ${GOOGLE_TOKEN_FILE:-/secrets/googlesheet-tokens.json}
+      SQLITE_FILE: /sqlite-data/productionbot.sqlite
+    env_file:
+      - ${UPDATESHEET_CONFIG:-./configs/updatesheet.env}
+    volumes:
+        - sqlite-data:/sqlite-data
+        - ./secrets:/secrets
+
+volumes:
+  sqlite-data:
