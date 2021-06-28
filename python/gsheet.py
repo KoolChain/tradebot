@@ -43,7 +43,6 @@ def authorize(credentials_file, output_file):
         token.write(creds.to_json())
 
 
-
 class Spreadsheet(object):
 
     def __init__(self, token_file, spreadsheet_id):
