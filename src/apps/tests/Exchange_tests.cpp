@@ -7,6 +7,7 @@
 
 #include <tradebot/Database.h>
 #include <tradebot/Exchange.h>
+#include <tradebot/Logging.h>
 
 #include <list>
 

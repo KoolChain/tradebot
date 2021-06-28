@@ -1,8 +1,7 @@
 #include "ProductionBot.h"
 
 #include <tradebot/Exchange.h>
-
-#include <spdlog/spdlog.h>
+#include <tradebot/Logging.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/post.hpp>

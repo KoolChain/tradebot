@@ -2,10 +2,10 @@
 
 #include <tradebot/Database.h>
 #include <tradebot/Exchange.h>
+#include <tradebot/Logging.h>
 #include <tradebot/Order.h>
 #include <tradebot/Trader.h>
 
-#include <spdlog/spdlog.h>
 
 #include <boost/lexical_cast.hpp>
 

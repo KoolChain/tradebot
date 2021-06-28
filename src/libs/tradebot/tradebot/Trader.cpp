@@ -1,5 +1,7 @@
 #include "Trader.h"
 
+#include "Logging.h"
+
 #include <boost/lexical_cast.hpp>
 
 

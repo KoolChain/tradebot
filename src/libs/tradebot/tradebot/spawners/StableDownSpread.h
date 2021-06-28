@@ -3,6 +3,8 @@
 
 #include "../Spawner.h"
 
+#include <tradebot/Logging.h>
+
 #include <trademath/Spawn.h>
 
 

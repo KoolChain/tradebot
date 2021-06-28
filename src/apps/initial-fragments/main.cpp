@@ -1,11 +1,10 @@
 #include <tradebot/Database.h>
 #include <tradebot/Exchange.h>
+#include <tradebot/Logging.h>
 
 #include <trademath/Function.h>
 #include <trademath/Ladder.h>
 #include <trademath/Spawn.h>
-
-#include <spdlog/spdlog.h>
 
 #include <fstream>
 #include <iostream>

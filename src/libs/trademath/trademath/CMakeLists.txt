@@ -12,6 +12,7 @@ set(${PROJECT_NAME}_HEADERS
 )
 
 set(${PROJECT_NAME}_SOURCES
+    Interval.cpp
     Ladder.cpp
 )
 

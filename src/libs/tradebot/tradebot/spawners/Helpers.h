@@ -2,6 +2,8 @@
 
 #include "../Fragment.h"
 
+#include "../Logging.h"
+
 #include <trademath/Ladder.h>
 
 
