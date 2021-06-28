@@ -29,6 +29,8 @@ set(${PROJECT_NAME}_SOURCES
     Trader.cpp
 
     spawners/NaiveDownSpread.cpp
+
+    stats/LaunchCount.h
 )
 
 cmc_find_dependencies()

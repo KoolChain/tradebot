@@ -34,6 +34,11 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("commissionAsset", &Order::commissionAsset),
                        make_column("exchange_id", &Order::exchangeId)
             ),
+            make_table("Launches",
+                       make_column("id", &stats::Launch::id, primary_key(), autoincrement()),
+
+                       make_column("time", &stats::Launch::time)
+            ),
             make_table("Fragments",
                        make_column("id", &Fragment::id, primary_key(), autoincrement()),
 
@@ -109,6 +114,14 @@ long Database::insert(Fragment & aFragment)
     aFragment.id = mImpl->storage.insert(aFragment);
     spdlog::trace("Inserted fragment {} in database", aFragment.id);
     return aFragment.id;
+}
+
+
+long Database::insert(stats::Launch & aLaunch)
+{
+    aLaunch.id = mImpl->storage.insert(aLaunch);
+    spdlog::trace("Inserted launch {} in database", aLaunch.id);
+    return aLaunch.id;
 }
 
 

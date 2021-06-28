@@ -70,6 +70,9 @@ public:
     //
     void cleanup();
 
+    /// \brief Write a stats::Launch to database.
+    void recordLaunch();
+
     /// \brief Will place new market orders until it fulfills (by oposition to expiring).
     FulfilledOrder fillNewMarketOrder(Order & aOrder);
 

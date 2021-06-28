@@ -167,6 +167,7 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
     //
     // Run
     //
+    bot.trader.recordLaunch();
     bot.run();
 
     return EXIT_SUCCESS;

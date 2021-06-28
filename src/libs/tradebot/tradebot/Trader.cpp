@@ -326,6 +326,12 @@ void Trader::cleanup()
 }
 
 
+void Trader::recordLaunch()
+{
+    database.insert(stats::Launch{});
+}
+
+
 FulfilledOrder Trader::fillExistingMarketOrder(Order & aOrder)
 {
     database.update(aOrder.setStatus(Order::Status::Sending));

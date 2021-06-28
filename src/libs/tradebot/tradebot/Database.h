@@ -2,6 +2,7 @@
 
 #include "Fragment.h"
 #include "Order.h"
+#include "stats/LaunchCount.h"
 
 #include <experimental/propagate_const>
 
@@ -35,6 +36,10 @@ public:
     long insert(Fragment & aFragment);
     long insert(Fragment && aFragment)
     { return insert(aFragment); }
+
+    long insert(stats::Launch & aLaunch);
+    long insert(stats::Launch && aLaunch)
+    { return insert(aLaunch); }
 
     void update(const Order & aOrder);
     void update(const Fragment & aFragment);
