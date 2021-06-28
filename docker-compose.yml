@@ -12,5 +12,17 @@ services:
         - ./secrets:/secrets
         - ./configs:/configs
 
+  updatesheet:
+    build: ./python
+    init: true
+    environment:
+      GOOGLE_TOKEN_FILE: ${GOOGLE_TOKEN_FILE:-/secrets/googlesheet-tokens.json}
+      SQLITE_FILE: /sqlite-data/productionbot.sqlite
+    env_file:
+      - ${UPDATESHEET_CONFIG:-./configs/updatesheet.env}
+    volumes:
+        - sqlite-data:/sqlite-data
+        - ./secrets:/secrets
+
 volumes:
   sqlite-data:
