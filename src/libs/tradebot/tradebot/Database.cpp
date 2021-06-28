@@ -183,6 +183,13 @@ std::size_t Database::countFragments()
 }
 
 
+std::size_t Database::countBalances(MillisecondsSinceEpoch aStartingFrom)
+{
+    using namespace sqlite_orm;
+    return mImpl->storage.count<stats::Balance>(where(c(&stats::Balance::time) >= aStartingFrom));
+}
+
+
 std::vector<Decimal> Database::getSellRatesBelow(Decimal aRateLimit, const Pair & aPair)
 {
     using namespace sqlite_orm;

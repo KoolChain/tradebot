@@ -57,6 +57,8 @@ public:
     Fragment getFragment(decltype(Fragment::id) aIndex);
     std::size_t countFragments();
 
+    std::size_t countBalances(MillisecondsSinceEpoch aStartingFrom = 0);
+
     std::vector<Fragment> getFragmentsComposing(const Order & aOrder);
     std::vector<Fragment> getUnassociatedFragments(Side aSide, Decimal aRate, const Pair & aPair);
     std::vector<Fragment> getUnassociatedFragments(Side aSide, const Pair & aPair);

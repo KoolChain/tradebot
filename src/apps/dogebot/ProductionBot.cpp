@@ -64,6 +64,66 @@ void IntervalTracker::reset()
 }
 
 
+void StatsWriter::start()
+{
+    initializeAndCatchUp();
+    timer.expires_at(nextTime);
+    async_wait();
+}
+
+
+void StatsWriter::initializeAndCatchUp()
+{
+    MillisecondsSinceEpoch todayMidnight = getMidnightTimestamp();
+    if (trader.database.countBalances(todayMidnight) == 0)
+    {
+        // there are no balance recorded for the current day, write one now
+        // This will cover both the first balance on to be written on first launch
+        // as well as catching up in case the application was not up at the timer expiry
+        spdlog::info("Balance statistics for the current day were not found, recording now.");
+        writeStats();
+    }
+
+    //nextTime = std::chrono::milliseconds{todayMidnight} + std::chrono::hours{24};
+    nextTime =
+        std::chrono::time_point<std::chrono::steady_clock>{std::chrono::milliseconds{todayMidnight}}
+        + std::chrono::hours{24};
+}
+
+void StatsWriter::async_wait()
+{
+    timer.async_wait(std::bind(&StatsWriter::onTimer, this, std::placeholders::_1));
+}
+
+
+void StatsWriter::writeStats()
+{
+    trader.recordBalance(getTimestamp());
+}
+
+
+void StatsWriter::onTimer(const boost::system::error_code & aErrorCode)
+{
+    if (aErrorCode == boost::asio::error::operation_aborted)
+    {
+        spdlog::debug("Stats timer aborted.");
+        return;
+    }
+    else if (aErrorCode)
+    {
+        spdlog::error("Error on stats timer: {}. Will try to go on.", aErrorCode.message());
+    }
+    else
+    {
+        nextTime += std::chrono::hours{24};
+        writeStats();
+    }
+
+    timer.expires_at(nextTime);
+    async_wait();
+}
+
+
 void ProductionBot::onAggregateTrade(Json aMessage)
 {
     Decimal latestPrice{aMessage.at("p").get<std::string>()};
@@ -113,8 +173,10 @@ void ProductionBot::connectMarketStream()
 
 int ProductionBot::run()
 {
-    trader.cleanup();
     trader.exchange.restApi.setReceiveWindow(gProdbotReceiveWindow);
+    trader.cleanup();
+
+    stats.start();
 
     tracker.reset();
     connectMarketStream();
