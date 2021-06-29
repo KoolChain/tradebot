@@ -206,9 +206,10 @@ void WebSocket::impl::onRead(beast::error_code aErrorCode, std::size_t aBytesTra
     }
     else
     {
-        spdlog::trace("Successfully read {} bytes: {}.",
-                      aBytesTransferred,
-                      beast::buffers_to_string(mBuffer.cdata()));
+        // Disabled: tends to represent the vast majority of logging volume of trading bots
+        //spdlog::trace("Successfully read {} bytes: {}.",
+        //              aBytesTransferred,
+        //              beast::buffers_to_string(mBuffer.cdata()));
 
         mReceiveCallback(beast::buffers_to_string(mBuffer.cdata()));
         mBuffer.consume(aBytesTransferred);
