@@ -216,3 +216,23 @@ src/apps/tests/tests
 ### TODO
 
 * Move `websocket` library to a more generic repository.
+* Clean bot shutdown. In particular, have it shutdown when Docker is stopping the container.
+* Record more information when spawning counter-fragments:
+  * Currently, when spawning counter-fragments, only the spawning `Order` is recorded. Maybe
+    there could be an additional table recording the spawning `Fragment`s and the corresponding
+    proportion (relative to the counter-fragment total).
+    Note that counter-fragments have potentially several spawning `Fragment`s.
+    (see [spawning relation](doc/design.md#spawning-relation))
+* Ability to compose an order with fragments of different target rates.
+  * This would allow to satisfy at once all beneficial fragments,
+    instead of placing one order per rate.
+  * It would not be possible anymore to have the `fragmentsRate` on `Order`.
+  * This requires the above features of augmenting the spawning relation records when spawning
+    (because the parent order would not allow to get the spawning fragment rate anymore).
+* Investigate the cause for HTTP response with status 0
+  * Is it related to cpr lib? Because it is using the system's Curl?
+  * Should the application retry the query in this situation?
+* Better handle order cancellation on the exchange:
+  * Is it possible to specify the canceled client id?
+  * In the user stream report, `c` vs `C` field.
+
