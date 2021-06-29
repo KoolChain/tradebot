@@ -187,18 +187,29 @@ int main(int argc, char * argv[])
     configureLogging(botname);
     const std::string secretsfile{argv[1]};
 
-    if (botname == std::string{"naivebot"} || botname == std::string{"NaiveBot"})
+    // The topmost catch all, to ensure stack unwinding (notably flushing logs).
+    try
     {
-        return runNaiveBot(argc, argv, secretsfile);
+        if (botname == std::string{"naivebot"} || botname == std::string{"NaiveBot"})
+        {
+            return runNaiveBot(argc, argv, secretsfile);
+        }
+        else if (botname == std::string{"productionbot"} || botname == std::string{"productionbot"})
+        {
+            return runProductionBot(argc, argv, secretsfile);
+        }
+        else
+        {
+            std::cerr << "Unknown botname '" << botname << "'.\n";
+            std::cerr << "Usage: " << argv[0] << " secretsfile botname [bot-args...]\n";
+            return EXIT_FAILURE;
+        }
     }
-    else if (botname == std::string{"productionbot"} || botname == std::string{"productionbot"})
+    catch (std::exception & aException)
     {
-        return runProductionBot(argc, argv, secretsfile);
-    }
-    else
-    {
-        std::cerr << "Unknown botname '" << botname << "'.\n";
-        std::cerr << "Usage: " << argv[0] << " secretsfile botname [bot-args...]\n";
+        spdlog::critical("Unhandled exception while running '{}': {}.",
+                botname,
+                aException.what());
         return EXIT_FAILURE;
     }
 }
