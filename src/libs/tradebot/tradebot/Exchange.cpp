@@ -84,6 +84,32 @@ Json Exchange::getExchangeInformation(std::optional<Pair> aPair)
 }
 
 
+std::pair<Decimal, Decimal> Exchange::getBalance(Pair aPair)
+{
+    binance::Response response = restApi.getAccountInformation();
+
+    if (response.status == 200)
+    {
+        std::pair<Decimal, Decimal> result;
+        for (const Json & asset : response.json->at("balances"))
+        {
+            if      (asset.at("asset") == aPair.base)  result.first = jstod(asset.at("free"));
+            else if (asset.at("asset") == aPair.quote) result.second = jstod(asset.at("free"));
+        }
+        if (result.first == 0 || result.second == 0)
+        {
+            spdlog::critical("Unavailable balance for {}.", aPair.symbol());
+            throw std::logic_error("Cannot fetch balance.");
+        }
+        return result;
+    }
+    else
+    {
+        unhandledResponse(response, "account information");
+    }
+}
+
+
 SymbolFilters Exchange::queryFilters(const Pair & aPair)
 {
     SymbolFilters result;

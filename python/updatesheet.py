@@ -6,25 +6,57 @@ import argparse
 from datetime import date
 
 
-def append_orders(sheet_api, database):
-    """ returns ID of last appended Order """
-    first_column = sheet_api.read("A:A")
+def last_integer(sheet_api, range_a1, default):
+    column = sheet_api.read(range_a1)
     try:
-        previous_id = int(first_column[-1][0] if first_column else 0)
+        return int(column[-1][0] if column else default)
     except ValueError:
-        previous_id = 0
+        return default
+
+
+def insert_order_formulas(orders):
+    for order in orders:
+        yield order[:1] \
+            + ('=from_epoch(INDIRECT(CONCAT("K"; ROW())))',) \
+            + order[1:] \
+            + ('=DSUM(Fragments!$A:$I; "taken_home"; {Fragments!$I$1;INDIRECT(CONCAT("A"; ROW()))})',) \
+            + ('=IF(H:H=0; P:P/F:F; P:P/(F:F*L:L))',)   \
+            + ('=IF(H:H=0; F:F*(G:G-L:L); "")',)
+
+
+def append_orders(sheet_api, database):
+    """ returns ID of last order in the sheet """
+    previous_id = last_integer(sheet_api, "Orders!A:A", 0)
     print("Previous order id {}.".format(previous_id))
 
     new_orders = database.get_orders_idrange(previous_id)
     if new_orders:
-        sheet_api.append("Orders", new_orders)
-        return (previous_id, new_orders[-1][0]) # Last row, first column -> the ID of last appended order
+        sheet_api.append("Orders", list(insert_order_formulas(new_orders)))
+        return new_orders[-1][0] # Last row, first column -> the ID of last appended order
     else:
-        return None
+        return previous_id # no orders appended, so last order id stays the same
 
 
-def append_fragments(sheet_api, database, orders_range):
-    sheet_api.append("Fragments", database.get_fragments(orders_range[0], orders_range[1]))
+def append_fragments(sheet_api, database, last_order):
+    try:
+        max_order_id = max([int(value[0]) for value in sheet_api.read("Fragments!I2:I")])
+    except ValueError:
+        max_order_id = 0
+    print("Maximum order id in Fragments {}.".format(max_order_id))
+    sheet_api.append("Fragments", database.get_fragments(max_order_id, last_order))
+
+
+def append_balances(sheet_api, database):
+    previous_time = last_integer(sheet_api, "Balances!B:B", 0)
+    print("Previous balance time {}.".format(previous_time))
+    balances = database.get_balances_after_time(previous_time)
+    values = []
+    for balance in balances:
+        time = balance[1]
+        count = database.count_launch_period(previous_time, time)
+        values.append(balance + (count,))
+        previous_time = time
+    sheet_api.append("Balances", values)
 
 
 def main():
@@ -36,9 +68,9 @@ def main():
 
     database = dbaccess.Database(args.sqlitefile)
     sheet_api = gsheet.Spreadsheet(args.tokenfile, args.spreadsheet)
-    orders_range = append_orders(sheet_api, database)
-    if orders_range:
-        append_fragments(sheet_api, database, orders_range)
+    last_order_id = append_orders(sheet_api, database)
+    append_fragments(sheet_api, database, last_order_id)
+    append_balances(sheet_api, database)
 
 
 if __name__ == "__main__":

@@ -49,3 +49,20 @@ class Database(object):
                                                             previous_order_id,
                                                             last_order_id)))
             return cursor.fetchall()
+
+
+    def get_balances_after_time(self, previous_time):
+        with sqlite3.connect(self.sqlitefile) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM Balances WHERE time > {};"\
+                    .format(previous_time))
+            return cursor.fetchall()
+
+
+    def count_launch_period(self, previous_time, last_time):
+        """ Count launches that occured during the provided interval (previous_time, last_time] """
+        with sqlite3.connect(self.sqlitefile) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT Count() FROM Launches WHERE time > {} AND time <= {};"\
+                    .format(previous_time, last_time))
+            return (cursor.fetchone()[0])

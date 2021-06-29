@@ -31,7 +31,7 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("fulfill_time", &Order::fulfillTime),
                        make_column("execution_rate", &Order::executionRate),
                        make_column("commission", &Order::commission),
-                       make_column("commissionAsset", &Order::commissionAsset),
+                       make_column("commission_asset", &Order::commissionAsset),
                        make_column("exchange_id", &Order::exchangeId)
             ),
             make_table("Fragments",
@@ -45,7 +45,24 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("taken_home", &Fragment::takenHome),
                        make_column("spawning_order", &Fragment::spawningOrder),
                        make_column("composed_order", &Fragment::composedOrder)
-            ));
+            ),
+            make_table("Launches",
+                       make_column("id", &stats::Launch::id, primary_key(), autoincrement()),
+
+                       make_column("time", &stats::Launch::time)
+            ),
+            make_table("Balances",
+                       make_column("id", &stats::Balance::id, primary_key(), autoincrement()),
+
+                       make_column("time", &stats::Balance::time),
+                       make_column("base_balance", &stats::Balance::baseBalance),
+                       make_column("quote_balance", &stats::Balance::quoteBalance),
+                       make_column("base_buy_potential", &stats::Balance::baseBuyPotential),
+                       make_column("quote_buy_potential", &stats::Balance::quoteBuyPotential),
+                       make_column("base_sell_potential", &stats::Balance::baseSellPotential),
+                       make_column("quote_sell_potential", &stats::Balance::quoteSellPotential)
+            )
+            );
 }
 
 } // namespace detail
@@ -112,6 +129,21 @@ long Database::insert(Fragment & aFragment)
 }
 
 
+long Database::insert(stats::Launch & aLaunch)
+{
+    aLaunch.id = mImpl->storage.insert(aLaunch);
+    spdlog::trace("Inserted launch {} in database", aLaunch.id);
+    return aLaunch.id;
+}
+
+
+long Database::insert(stats::Balance & aBalance)
+{
+    aBalance.id = mImpl->storage.insert(aBalance);
+    spdlog::trace("Inserted balance {} in database", aBalance.id);
+    return aBalance.id;
+}
+
 
 void Database::update(const Order & aOrder)
 {
@@ -148,6 +180,13 @@ Fragment Database::getFragment(decltype(Fragment::id) aIndex)
 std::size_t Database::countFragments()
 {
     return mImpl->storage.count<Fragment>();
+}
+
+
+std::size_t Database::countBalances(MillisecondsSinceEpoch aStartingFrom)
+{
+    using namespace sqlite_orm;
+    return mImpl->storage.count<stats::Balance>(where(c(&stats::Balance::time) >= aStartingFrom));
 }
 
 

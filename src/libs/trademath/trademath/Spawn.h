@@ -5,6 +5,8 @@
 
 #include <boost/serialization/strong_typedef.hpp>
 
+#include <algorithm>
+
 
 namespace ad {
 namespace trade {
@@ -55,7 +57,7 @@ struct Spawn
     {}
 
     template <class T_amount>
-    Decimal getAmount();
+    Decimal getAmount() const;
 
     Decimal rate;
     Decimal base;
@@ -63,14 +65,14 @@ struct Spawn
 
 
 template <>
-inline Decimal Spawn::getAmount<Base>()
+inline Decimal Spawn::getAmount<Base>() const
 {
     return base;
 }
 
 
 template <>
-inline Decimal Spawn::getAmount<Quote>()
+inline Decimal Spawn::getAmount<Quote>() const
 {
     return base * rate;
 }
@@ -89,10 +91,11 @@ inline bool operator!=(const Spawn aLhs, const Spawn aRhs)
 }
 
 
-/// \brief Helper function to accumulate the base amounts of a range of Spawn instances.
-inline Decimal accumulateBaseAmount(Decimal aLhs, const Spawn & aRhs)
+/// \brief Helper function to accumulate the base or quote amounts of a range of Spawn instances.
+template <class T_amount>
+inline Decimal accumulateAmount(Decimal aLhs, const Spawn & aRhs)
 {
-    return aLhs + aRhs.base;
+    return aLhs + aRhs.getAmount<T_amount>();
 }
 
 
@@ -101,23 +104,15 @@ inline Decimal sumSpawnBase(const T_spawnRange & aSpawn)
 {
     return std::accumulate(aSpawn.begin(), aSpawn.end(),
                            Decimal{0},
-                           accumulateBaseAmount);
+                           accumulateAmount<Base>);
 }
-
-
-/// \brief Helper function to accumulate the quote amounts of a range of Spawn instances.
-inline Decimal accumulateQuoteAmount(Decimal aLhs, const Spawn & aRhs)
-{
-    return aLhs + aRhs.base*aRhs.rate;
-}
-
 
 template <class T_spawnRange>
 inline Decimal sumSpawnQuote(const T_spawnRange & aSpawn)
 {
     return std::accumulate(aSpawn.begin(), aSpawn.end(),
                            Decimal{0},
-                           accumulateQuoteAmount);
+                           accumulateAmount<Quote>);
 }
 
 

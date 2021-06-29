@@ -2,6 +2,8 @@
 
 #include "Fragment.h"
 #include "Order.h"
+#include "stats/Balance.h"
+#include "stats/LaunchCount.h"
 
 #include <experimental/propagate_const>
 
@@ -36,6 +38,14 @@ public:
     long insert(Fragment && aFragment)
     { return insert(aFragment); }
 
+    long insert(stats::Launch & aLaunch);
+    long insert(stats::Launch && aLaunch)
+    { return insert(aLaunch); }
+
+    long insert(stats::Balance & aBalance);
+    long insert(stats::Balance && aBalance)
+    { return insert(aBalance); }
+
     void update(const Order & aOrder);
     void update(const Fragment & aFragment);
 
@@ -46,6 +56,8 @@ public:
     std::size_t countOrders();
     Fragment getFragment(decltype(Fragment::id) aIndex);
     std::size_t countFragments();
+
+    std::size_t countBalances(MillisecondsSinceEpoch aStartingFrom = 0);
 
     std::vector<Fragment> getFragmentsComposing(const Order & aOrder);
     std::vector<Fragment> getUnassociatedFragments(Side aSide, Decimal aRate, const Pair & aPair);

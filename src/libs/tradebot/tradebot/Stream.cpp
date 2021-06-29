@@ -61,7 +61,7 @@ RefreshTimer::~RefreshTimer()
         });
 
     thread.join(); // From this point, intendedClose is known to be `true`.
-    spdlog::debug("Refresht timer successfully stopped.");
+    spdlog::debug("Refresh timer successfully stopped.");
 }
 
 
