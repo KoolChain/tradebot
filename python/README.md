@@ -2,7 +2,6 @@
 
 Statitics can be published to Google sheet via `updatesheet.py`.
 
-
 ## Prerequisites
 
 ### Google Sheet
@@ -21,13 +20,13 @@ It should also define the following script function:
 
     function from_epoch(epoch_in_milliseconds)
     {
-      return new Date(epoch_in_milliseconds);
+        return new Date(epoch_in_milliseconds);
     }
 
 ### Authorizations
 
 To access a user's spreadsheet, this program reads tokens from a file (`tokens.json`)
-that can be generated via `authorize.py`.
+that can be generated using `authorize.py` script.
 
 **Note**: `authorize.py` must be run from a graphical session, as it will open a web browser
 to follow the oauth2 procedure.
@@ -35,7 +34,7 @@ to follow the oauth2 procedure.
 `authorize.py` requires the applications credentials (`credentials.json`),
 that can be obtained via the [Google Cloud Console](https://console.cloud.google.com/).
 
-The authorization procedure for the application itself is detailed in
+The procedure to enable the Sheet API and authorize the application itself is detailed in
 https://developers.google.com/sheets/api/quickstart/python
 
 
@@ -45,7 +44,7 @@ This repository can build a docker image that will use `updatesheet.py`
 to export the content of the database every 15 minutes.
 
 **Important**: The recommended approach is to let
-[top-level Docker compose application](../README.md##Docker)
+[top-level Docker compose application](../README.md#docker)
 takes care of building and running the container.
 The following instructions are development oriented.
 
@@ -66,8 +65,8 @@ From this folder run:
 The container is configured via the following required environment variables:
 
 * `SQLITE_FILE`: path the the SQLite3 database file.
-* `GOOGLE_TOKEN_FILE`: path to a token file authorizing access to user spreadsheets (see: Authorize).
-* `SPREADSHEET_ID`: ID of the spreadsheet used as export destination (extracted from its URL).
+* `GOOGLE_TOKEN_FILE`: path to a token file authorizing access to user spreadsheets (see [Authorizations](#authorizations)).
+* `SPREADSHEET_ID`: ID of the spreadsheet used as export destination (extracted from the spreadheet URL).
 
 The pointed files must be accessible in the running container, usually via mounts.
 
@@ -103,7 +102,7 @@ From this folder run:
 
 ## Development
 
-### To revisit
+### TODO
 
 * There is a 5M cells limit on each spreadsheet. This will cause perpetual errors once reached.
 * The Docker container should notify (e.g. e-mail) when a run does not succeed.
