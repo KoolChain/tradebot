@@ -31,7 +31,7 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("fulfill_time", &Order::fulfillTime),
                        make_column("execution_rate", &Order::executionRate),
                        make_column("commission", &Order::commission),
-                       make_column("commissionAsset", &Order::commissionAsset),
+                       make_column("commission_asset", &Order::commissionAsset),
                        make_column("exchange_id", &Order::exchangeId)
             ),
             make_table("Fragments",
