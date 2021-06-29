@@ -97,6 +97,29 @@ a. Remove all fragments association.
 
 b. Delete order from database.
 
+## Data model
+
+### Spawning relation
+
+When an order is fulfilled, actually each composing `Fragment` is visited in turn, each given
+the opportunity to spawn counter fragments.
+
+Yet, after all the composing `Fragment`s are visited, the different spawns at the same target rate
+are consolidated into a single counter-fragment, instead of each spawn becoming a counter-fragment directly.
+**A limitation is imposed:" each fulfilled order spawns at most **one** fragment at any given rate.
+
+It would have been simpler to allow each fragment to spawn counter-fragments directly,
+and to associate each counter-fragment with its spawning fragment.
+Yet, this approach could lead to a very rapid explosion in the number of `Fragment`s,
+so the limitation was defined.
+
+E.g. Imagine 10 fragments which spawn 10 counter-fragments, in each direction, over the same 10 rates.
+After the 10 intial fragments are sold, there are 100 counter fragments, after the 100 counter-fragments
+are bought, there are 1000 counter fragments, growing x10 at each step.
+With the limitation above, it becomes:
+After the 10 intial fragments are sold, there are 100 counter fragments, after the 100 counter-fragments
+are bought, there are **still 100** counter fragments, and keeping stable at 100 at each step.
+
 ## Old notes
 
 Use decimals not floats
