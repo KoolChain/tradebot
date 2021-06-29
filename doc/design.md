@@ -1,26 +1,8 @@
 # Trade bot design
 
+This design corresponds to the `productionbot` in `tradebot` application.
+
 ## Functional outline
-
-### Initialization - deprecated
-
-1. At launch, list all "transitioning orders".
-(Transitioning are `sending` or `cancelling`, but confirmation not received. There might have been a crash)
-    * Update to their actual status, either `Inactive` if they did not make it to Binance, or `Active`.
-
-2. For each `Active` order:
-    * If it fulfilled, complete the order.
-    * If it is still live, cancel the order.
-
-3. Delete all `Inactive` orders.
-    * Also remove all fragments associated with the `Inactive` orders.
-
-4. Get the current rate.
-    * Issue separate `BUY` **market** orders for all `BUY` constituants with target rates **above** current, grouped by target rate.
-    * Issue separate `SELL` **market** orders for all `SELL` constituants with target rates **below** current, grouped by target rate.
-    * Invoke fulfill callbacks, to distribute counter-order constituants.
-
-   **Important**: The counter order will still be computed from the original target rates, not the actual fulfill rate.
 
 ### Initialization
 
@@ -40,27 +22,39 @@ So they were not taken out of the transition status.
         (`Sending` that were not received, `Cancelling` that were received), mark it `Inactive` and clean-up the order.
         * If it is `FILLED`, query the trades to accumulate them and complete the order.
 
-3. Get the current rate.
-    * Issue separate `BUY` **market** orders for all `BUY` constituants with target rates **above** current, grouped by target rate.
-    * Issue separate `SELL` **market** orders for all `SELL` constituants with target rates **below** current, grouped by target rate.
-    * Complete orders as the fill on the exchange.
+3. Start listening to the aggregate trade market stream (websocket)
 
-   **Important**: The counter order should still be computed from the original target rates, not the actual fulfill rate.
+### Main loop
+
+Each time the market stream reports that a step on the predefined ladder of fragments rates is crossed:
+
+4. From the reported trade rate.
+    * Issue separate `BUY` orders for all `BUY` fragments with target rates **above** current, grouped by target rate.
+    * Issue separate `SELL` orders for all `SELL` fragments with target rates **below** current, grouped by target rate.
+   **Note**: The orders are issued as **limit FOK** orders, so they either immediately and completely fill, or are discarded.
+
+5. Upon each order *fulfill*:
+    * Distribute resulting counter-fragments
+    * Complete order.
+
+   **Important**: The counter-fragments should still be computed from the original target rates, not the actual fulfill rate.
 
 
-#### Finding outstanding orders
+## Operations outline
 
-List all rates for which there are fragments in the group of interest (GROUP BY `targetRate`)
+### Finding outstanding orders
+
+List all fragments target rates for which there are fragments in of interest (GROUP BY `targetRate`)
 
   * Filter on `direction`.
   * Filter on > or < `targetRate`.
-  * Fragments which are `Inactive` (or not associated to any order).
+  * Fragments which are not associated to any order.
 
-#### Placing orders
+### Placing orders
 
 For each rate:
 
-  1. Create a new `Inactive` order in DB, get the `order id`.
+  1. Create a new `Inactive` order in DB, get the `order id`. Set `fragmentsRate`.
 
   2. Assign all matching fragments to this `order id`.
 
@@ -76,18 +70,17 @@ For each rate:
     * record the order creation time.
     * record the `exchange id`.
 
-#### Completing order
+### Completing order
 
-a. Spawn fragments (counter orders).
+a. Spawn fragments (counter-fragments) by visiting each fragment associated to the completed order:
+  * Record the completed fragments `takenHome`
 
 b. Update the order in database:
-
   * Record `executionRate`
-  * Record `takenHome`
   * Record `fulfillTime`
   * Set state to `Fulfilled`.
 
-#### Cancelling order
+### Cancelling order
 
 a. Mark the order `Cancelling`.
 
@@ -98,28 +91,13 @@ c.  Upon confirmation:
   2. Clean-up
 
 
-##### Clean-up Inactive order
+#### Clean-up Inactive order
 
 a. Remove all fragments association.
 
 b. Delete order from database.
 
-
-### Main loop (2 orders active at the same time)
-
-4. Place the `SELL` and `BUY` around the current rate.
-  They emit *events* upon fulfilling.
-  **Note**: This is the only moment the two active orders will be direct neighbors on the "rate scale".
-
-5. Upon *fulfill event*:
-    * Distribute resulting counter-order fragments, and complete order.
-    * Cancel the other active order.
-    * Place a `SELL` order at the rate step immediately **above** the fulfill rate.
-    * Place a `BUY` order at the rate step immediately **below** the fulfill rate.
-    * Start again at next *fulfill event*.
-
-
-## Reminders
+## Old notes
 
 Use decimals not floats
 
@@ -138,48 +116,3 @@ The "order emitter" must be aware of the current rate:
 How to address websocket 24h transition (risk of missing an order fulfil maybe?) This is a more generic problem in case of crash, some orders might be missed: should it only be checked at launch though?
 
 Handle 400 errors (such as 400 Client error -1021 "Timestamp for this request is outside of the recvWindow."). Probably retrying.
-
-Mark all constituants as done once their order is fulfilled.
-
-
-## Data model
-
-Order
-+ Client ID
-+ Creation time
-+ Direction (Buy / Sell)
-+ Pair
-+ Amount
-+ Fulfill times (can be composed of several trades...)
-+ Fulfill callback (the function that specifies the counter orders)
-+ Status (Sending, Confirmed, Cancelling, Fulfilled)
-+ Broker id (to match against Binance records)
-
-Only in DB?
-+ Constituants -> vector< pair<origin-order, amount> >
-+ Fulfill spread ->  vector< pair<counter-order, amount> >
-+ Fulfill taken-home (the amount taken out of the trade pool, into a wallet)
-+ Fulfill rate
-+ target rate (to be redeployed to the correct target rate in the live map of orders)
-
-
-Permanent storage:
-Orders active and inactive
-
-## Statistics
-
-* Partially filled orders
-* Fees
-
-Get stats for Day, Week, Month, Year, All:
-* Money taken-home
-* Money the could be re-invested
-* Rate window
-* Number of orders (Sell / Buy)
-  * Orders fullfilled
-  * Orders emitted
-  * Orders cancelled
-* Trade volume, in Doge and converted to $ and €
-* * Longest buy-sell chain
-* Backoff # and total time
-* Crash count
