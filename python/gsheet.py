@@ -78,6 +78,6 @@ class Spreadsheet(object):
 
         result = self.service.spreadsheets().values().append(
             spreadsheetId=self.spreadsheet_id, range=range_a1,
-            valueInputOption="RAW", body=body).execute()
+            valueInputOption="USER_ENTERED", body=body).execute()
 
         return result.get('updates').get('updatedCells')

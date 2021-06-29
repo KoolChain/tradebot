@@ -2,14 +2,29 @@
 
 Statitics can be published to Google sheet via `updatesheet.py`.
 
-The spreadsheet must be created externally (e.g. via the web app) and have the following sheets:
+
+## Prerequisites
+
+### Google Sheet
+
+A Google Sheet spreadsheet must be created externally (e.g. via the web app).
+
+I should have the following sheets:
 * `Orders`: columns A to N
 * `Fragments`: columns A to I
+* `Balances`: columns A to I
 
 **Important**: There is a 5M cell limit per spreadsheet, it is advised to remove unused columns
 from the sheets above.
 
-## Authorizations
+It should also define the following script function:
+
+    function from_epoch(epoch_in_milliseconds)
+    {
+      return new Date(epoch_in_milliseconds);
+    }
+
+### Authorizations
 
 To access a user's spreadsheet, this program reads tokens from a file (`tokens.json`)
 that can be generated via `authorize.py`.
@@ -29,7 +44,8 @@ https://developers.google.com/sheets/api/quickstart/python
 This repository can build a docker image that will use `updatesheet.py`
 to export the content of the database every 15 minutes.
 
-**Important**: The recommended approach is to let [top-level Docker compose application](../README.md##Docker)
+**Important**: The recommended approach is to let
+[top-level Docker compose application](../README.md##Docker)
 takes care of building and running the container.
 The following instructions are development oriented.
 
@@ -94,7 +110,3 @@ From this folder run:
   * `Jobber` instead of `cron` seemed promising, but I did not succeed in retrieving error messages.
 * `updatesheet.py` operations are not atomic.
   * The `Orders` might be updated, but not the `Fragment`
-  * The state might become inconsistent: the fragments are only retrieved for orders that were retrieved
-    during the same run.
-    In case of a run only updating orders, its fragments will not be exported on next run.
-

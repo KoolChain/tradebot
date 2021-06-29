@@ -13,6 +13,17 @@ def last_integer(sheet_api, range_a1, default):
     except ValueError:
         return default
 
+
+def insert_order_formulas(orders):
+    for order in orders:
+        yield order[:1] \
+            + ('=from_epoch(INDIRECT(CONCAT("K"; ROW())))',) \
+            + order[1:] \
+            + ('=DSUM(Fragments!$A:$I; "taken_home"; {Fragments!$I$1;INDIRECT(CONCAT("A"; ROW()))})',) \
+            + ('=IF(H:H=0; P:P/F:F; P:P/(F:F*L:L))',)   \
+            + ('=IF(H:H=0; F:F*(G:G-L:L); "")',)
+
+
 def append_orders(sheet_api, database):
     """ returns ID of last order in the sheet """
     previous_id = last_integer(sheet_api, "Orders!A:A", 0)
@@ -20,7 +31,7 @@ def append_orders(sheet_api, database):
 
     new_orders = database.get_orders_idrange(previous_id)
     if new_orders:
-        sheet_api.append("Orders", new_orders)
+        sheet_api.append("Orders", list(insert_order_formulas(new_orders)))
         return new_orders[-1][0] # Last row, first column -> the ID of last appended order
     else:
         return previous_id # no orders appended, so last order id stays the same
