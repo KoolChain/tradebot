@@ -11,6 +11,7 @@
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <fstream>
@@ -24,33 +25,72 @@ using namespace ad;
 
 void configureLogging(const std::string aBotname, const std::string aLogPathPrefix = "./")
 {
+    //
+    // Stdout sink
+    //
     auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     consoleSink->set_level(spdlog::level::trace);
 
-    std::ostringstream logpath;
-    logpath << aLogPathPrefix << aBotname << "-" << getTimestamp() << ".log";
-    auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logpath.str(), true);
-    fileSink->set_level(spdlog::level::trace);
+    auto makeLogpath = [&](const std::string & aSuffix)
+    {
+        std::ostringstream logpath;
+        logpath << aLogPathPrefix << aBotname << "-" << aSuffix
+              /*<< "-" << getTimestamp() */ // Append to the same file for log rotation
+                << ".log";
+        return logpath.str();
+    };
 
-    auto logger = std::make_shared<spdlog::logger>(spdlog::logger{"multi_sink", {consoleSink, fileSink}});
+    //
+    // Rotating log file showing everything
+    //
+    auto maxSize = 10 * (1024*1024)/*Mb*/;
+    auto maxFiles = 3;
+    auto rotatingFileSink =
+        std::make_shared<spdlog::sinks::rotating_file_sink_mt>(makeLogpath("rotating"),
+                                                               maxSize,
+                                                               maxFiles);
+    rotatingFileSink->set_level(spdlog::level::trace);
+    rotatingFileSink->set_pattern("[%t][%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
+
+    //
+    // Permanent log file, showing only warnings and above
+    //
+    auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(makeLogpath("warnings"), false/*do not truncate*/);
+    fileSink->set_level(spdlog::level::warn);
+    fileSink->set_pattern("[%t][%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
+
+    auto logger = std::make_shared<spdlog::logger>(spdlog::logger{"multi_sink",
+                                                                  {
+                                                                    consoleSink,
+                                                                    rotatingFileSink,
+                                                                    fileSink
+                                                                  }});
+    // Otherwise, the traces are not written to the sinks, even when they set it explicitly
     logger->set_level(spdlog::level::trace);
-    logger->set_pattern("[%t][%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
+
+    // Now, only set the custom pattern on file sink (as it disables the color output on stdout)
+    //logger->set_pattern("[%t][%Y-%m-%d %H:%M:%S.%e] [%n] [%l] %v");
+
+    // On unhandled exception exit,
+    // it seems the file logs do not show everything (even though there is a catch all).
+    // Try to flush starting at warning level.
+    logger->flush_on(spdlog::level::warn);
 
     spdlog::set_default_logger(logger);
 }
 
 
-int runNaiveBot(int argc, char * argv[], const std::string & aSecretsFile)
+int runNaiveBot(int argc, char * argv[], const std::string & aSecretsFile, const Json & /*aConfig*/)
 {
-    if (argc != 7)
+    if (argc != 8)
     {
-        std::cerr << "Usage: " << argv[0] << " secretsfile naivebot base quote amount percentage\n";
+        std::cerr << "Usage: " << argv[0] << " secretsfile config-path naivebot base quote amount percentage\n";
         return EXIT_FAILURE;
     }
 
-    tradebot::Pair pair{argv[3], argv[4]};
-    Decimal amount{argv[5]};
-    double percentage{std::stod(argv[6])};
+    tradebot::Pair pair{argv[4], argv[5]};
+    Decimal amount{argv[6]};
+    double percentage{std::stod(argv[7])};
 
     if (percentage < 0. || percentage > 1.)
     {
@@ -94,28 +134,27 @@ int runNaiveBot(int argc, char * argv[], const std::string & aSecretsFile)
 }
 
 
-int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile)
+int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile, const Json & aConfig)
 {
     if (argc != 5)
     {
-        std::cerr << "Usage: " << argv[0] << " secretsfile productionbot database-path config-path\n";
+        std::cerr << "Usage: " << argv[0] << " secretsfile config-path productionbot database-path\n";
         return EXIT_FAILURE;
 
     }
 
-    const std::string databasePath{argv[3]};
+    const std::string databasePath{argv[4]};
 
-    Json config = Json::parse(std::ifstream{argv[4]});
-    tradebot::Pair pair{config.at("base"), config.at("quote")};
-    //Decimal amount{config.at("amount")};
-    Decimal firstStop{config.at("ladder").at("firstStop").get<std::string>()};
-    Decimal factor{config.at("ladder").at("factor").get<std::string>()};
-    int stopCount = std::stoi(config.at("ladder").at("stopCount").get<std::string>());
-    Decimal tickSize{config.at("ladder").at("tickSize").get<std::string>()};
+    tradebot::Pair pair{aConfig.at("base"), aConfig.at("quote")};
+    //Decimal amount{aConfig.at("amount")};
+    Decimal firstStop{aConfig.at("ladder").at("firstStop").get<std::string>()};
+    Decimal factor{aConfig.at("ladder").at("factor").get<std::string>()};
+    int stopCount = std::stoi(aConfig.at("ladder").at("stopCount").get<std::string>());
+    Decimal tickSize{aConfig.at("ladder").at("tickSize").get<std::string>()};
     const std::string botName =
-        config.at("bot").value("name", "productionbot") + '_' + std::to_string(getTimestamp());
+        aConfig.at("bot").value("name", "productionbot") + '_' + std::to_string(getTimestamp());
 
-    Json spawnerConfig = config.at("spawner");
+    Json spawnerConfig = aConfig.at("spawner");
 
     spdlog::info("Starting bot '{}' to trade {}.",
                  botName,
@@ -179,29 +218,35 @@ int main(int argc, char * argv[])
     // Hardcoded to testnet ATM
     if (argc < 3)
     {
-        std::cerr << "Usage: " << argv[0] << " secretsfile botname [bot-args...]\n";
+        std::cerr << "Usage: " << argv[0] << " secretsfile config-path botname [bot-args...]\n";
         return EXIT_FAILURE;
     }
 
-    const std::string botname{argv[2]};
-    configureLogging(botname);
     const std::string secretsfile{argv[1]};
+
+    Json config = Json::parse(std::ifstream{argv[2]});
+    const std::string logPrefix = config.value("logPath", "./");
+
+    const std::string botname{argv[3]};
+
+    configureLogging(botname, logPrefix);
+
 
     // The topmost catch all, to ensure stack unwinding (notably flushing logs).
     try
     {
         if (botname == std::string{"naivebot"} || botname == std::string{"NaiveBot"})
         {
-            return runNaiveBot(argc, argv, secretsfile);
+            return runNaiveBot(argc, argv, secretsfile, config);
         }
         else if (botname == std::string{"productionbot"} || botname == std::string{"productionbot"})
         {
-            return runProductionBot(argc, argv, secretsfile);
+            return runProductionBot(argc, argv, secretsfile, config);
         }
         else
         {
             std::cerr << "Unknown botname '" << botname << "'.\n";
-            std::cerr << "Usage: " << argv[0] << " secretsfile botname [bot-args...]\n";
+            std::cerr << "Usage: " << argv[0] << " secretsfile config-path botname [bot-args...]\n";
             return EXIT_FAILURE;
         }
     }

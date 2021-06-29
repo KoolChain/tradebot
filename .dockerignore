@@ -1,5 +1,9 @@
 .git/
 build/
-pythonserver/
+configs/
+doc/
+json-payloads/
+python/
+runs/
 secrets/
 Vagrant/

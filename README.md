@@ -91,12 +91,14 @@ The one command to build containers and run the application:
 
     docker-compose up --build
 
-By default, the application expects the following files to exist from the host working directory:
+By default, the application expects the following files and folder to
+exist from the host working directory:
 
 * `./secrets/binance.json`: The credentials to access Binance API
 * `./secrets/googlesheet-tokens.json`: The user authorization for Google Sheet API access
 * `./configs/dogebot.json`: The tradebot configuration
 * `./configs/updatesheet.env`: `python/updatesheet.py` configuration
+* `./logs/`: Folder where the bot will write its logs.
 
 It mounts the corresponding folders at the root of the container.
 
@@ -115,6 +117,11 @@ set in the shell executing `docker-compose up`:
 on the host.
 If the _dirname_ is changed, or if the folders are not named as expected on the host,
 new mounts will also have to be provided.
+
+The location where the container will write the bot logs on the host can be change via environment
+variable:
+
+* BOT_LOG_FOLDER (default: `./logs`)
 
 ## Production
 

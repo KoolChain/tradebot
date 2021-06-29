@@ -11,6 +11,7 @@ services:
         - sqlite-data:/sqlite-data
         - ./secrets:/secrets
         - ./configs:/configs
+        - ${BOT_LOG_FOLDER:-./logs}:/prodbot-logs
 
   updatesheet:
     build: ./python

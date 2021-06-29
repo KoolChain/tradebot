@@ -1,4 +1,6 @@
 {
+    "logPath": "./prodbot-logs/",
+
     "base": "BTC",
     "quote": "USDT",
     "amount": "1.0",
