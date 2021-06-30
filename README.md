@@ -74,7 +74,9 @@ They should be provided to the application via a JSON file containing:
 
 ### Binance (production) exchange
 
-The tokens are obtained via the web application.
+The tokens are obtained via the web application: https://www.binance.com/en/my/settings/api-management
+
+The restrictions should be edited to add `Enable Spot & Margin Trading`.
 
 ### Spot test network credentials
 
@@ -216,6 +218,13 @@ src/apps/tests/tests
 ### TODO
 
 * Move `websocket` library to a more generic repository.
+* Implement placing order with fixed quote quantity (currently only fixed base is implemented).
+  * This would notably be beneficial for buy counter-fragments: currently `productionbot`
+    decides how much quote should be re-invested in the buy counter-fragment, then have to convert
+    it to the base amount at expected target rate. This might lead to missed opportunities in base
+    space, if the order executes at a lower rate than target
+    (currently providing "leftover quote" that was not invested to reach the fixed buy base amount,
+    instead of spending the exact amount of quote and provide more base when the rate is lower).
 * Clean bot shutdown. In particular, have it shutdown when Docker is stopping the container.
 * Record more information when spawning counter-fragments:
   * Currently, when spawning counter-fragments, only the spawning `Order` is recorded. Maybe
