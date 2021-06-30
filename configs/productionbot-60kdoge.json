@@ -1,0 +1,43 @@
+{
+    "logPath": "./prodbot-logs/",
+
+    "base": "DOGE",
+    "quote": "USDT",
+    "amount": "60000",
+
+    "bot": {
+        "name": "smallspread_60k"
+    },
+
+    "initial": {
+        "spawnBeginOffset": 10,
+        "spawnEndOffset": 0
+    },
+
+    "ladder": {
+        "firstStop": "0.16",
+        "factor": "1.0225",
+        "stopCount": "83",
+        "tickSize": "0.00001"
+    },
+
+    "spawner": {
+        "spreader": {
+            "proportions": [
+                "0.05",
+                "0.10",
+                "0.10",
+                "0.15",
+                "0.15",
+                "0.15",
+                "0.10",
+                "0.10",
+                "0.05",
+                "0.05"
+            ]
+        },
+        "takeHomeFactorInitialSell": "0.1",
+        "takeHomeFactorSubsequentSell": "0.25",
+        "takeHomeFactorSubsequentBuy": "0.25"
+    }
+}
