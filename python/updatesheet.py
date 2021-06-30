@@ -19,8 +19,9 @@ def insert_order_formulas(orders):
         yield order[:1] \
             + ('=from_epoch(INDIRECT(CONCAT("K"; ROW())))',) \
             + order[1:] \
-            + ('=DSUM(Fragments!$A:$I; "taken_home"; {Fragments!$I$1;INDIRECT(CONCAT("A"; ROW()))})',) \
-            + ('=IF(H:H=0; P:P/F:F; P:P/(F:F*L:L))',)   \
+            + ('=DSUM(Fragments!$A:$I; "taken_home"; {"composed_order"\\"spawning_order";INDIRECT("A" & ROW())\\-1})',) \
+            + ('=DSUM(Fragments!$A:$I; "taken_home"; {"composed_order"\\"spawning_order";INDIRECT("A" & ROW())\\"<>-1"})',) \
+            + ('=IF(H:H=0; (P:P+Q:Q)/F:F; (P:P+Q:Q)/T:T)',)   \
             + ('=IF(H:H=0; F:F*(G:G-L:L); "")',)        \
             + ('=F:F*L:L',)
 

@@ -9,9 +9,9 @@ Statitics can be published to Google sheet via `updatesheet.py`.
 A Google Sheet spreadsheet must be created externally (e.g. via the web app).
 
 I should have the following sheets:
-* `Orders`: columns A to N
+* `Orders`: columns A to T
 * `Fragments`: columns A to I
-* `Balances`: columns A to I
+* `Balances`: columns A to J
 
 **Important**: There is a 5M cell limit per spreadsheet, it is advised to remove unused columns
 from the sheets above.
