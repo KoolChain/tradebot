@@ -68,7 +68,7 @@ They should be provided to the application via a JSON file containing:
 
     {
         "server": "production", // or "test"
-        "apikey": "your_api_key"
+        "apikey": "your_api_key",
         "secretkey": "your_secret_key"
     }
 
