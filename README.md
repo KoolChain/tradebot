@@ -89,10 +89,18 @@ To use the testnet, API key and secret should be obtained from https://testnet.b
 ### Docker
 
 There is a docker application (multi-container docker compose).
-It starts both:
+It automatically starts both:
 
 * `productionbot` (via `tradebot` application).
 * A container periodically running `updatesheet.py`.
+
+It also contains some utilities, to be called explicitly via `docker-compose run`:
+
+* `binance-cli`
+* `initial-fragments`
+
+**Note**: They should be called via the `.sh` wrapper in the container working directory,
+as they forward configurations and secrets to the utilities.
 
 #### Build
 

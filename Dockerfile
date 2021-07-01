@@ -40,6 +40,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder src/apps/dogebot/dogebot src/apps/initial-fragments/initial-fragments ./
+COPY --from=builder src/apps/binance-cli/binance-cli \
+                    src/apps/dogebot/dogebot \
+                    src/apps/initial-fragments/initial-fragments \
+                    ./
 COPY Docker/* ./
 #ENTRYPOINT ["./dogebot"]
