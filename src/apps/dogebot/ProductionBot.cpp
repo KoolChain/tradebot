@@ -69,9 +69,7 @@ void StatsWriter::start()
     initializeAndCatchUp();
     timer.expires_at(nextTime);
     spdlog::debug("Statistics timer first expiry set at '{}'.",
-                  timeToString(clock_cast<std::chrono::time_point<std::chrono::system_clock,
-                                                                  decltype(nextTime)::duration>>
-                                         (nextTime)));
+                  timeToString(nextTime));
     async_wait();
 }
 
@@ -90,7 +88,7 @@ void StatsWriter::initializeAndCatchUp()
 
     //nextTime = std::chrono::milliseconds{todayMidnight} + std::chrono::hours{24};
     nextTime =
-        std::chrono::time_point<std::chrono::steady_clock>{std::chrono::milliseconds{todayMidnight}}
+        std::chrono::system_clock::time_point{std::chrono::milliseconds{todayMidnight}}
         + std::chrono::hours{24};
 }
 

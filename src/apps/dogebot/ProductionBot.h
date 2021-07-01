@@ -8,6 +8,8 @@
 
 #include <trademath/Interval.h>
 
+#include <boost/asio/system_timer.hpp>
+
 
 namespace ad {
 namespace trade {
@@ -42,8 +44,8 @@ private:
 
 public:
     tradebot::Trader & trader;
-    boost::asio::steady_timer timer;
-    std::chrono::time_point<std::chrono::steady_clock> nextTime{};
+    boost::asio::system_timer timer;
+    std::chrono::time_point<std::chrono::system_clock> nextTime{};
 };
 
 
@@ -63,7 +65,7 @@ struct ProductionBot
     tradebot::SymbolFilters symbolFilters{trader.queryFilters()};
     EventLoop mainLoop;
     StatsWriter stats{trader,
-                      boost::asio::steady_timer{mainLoop.getContext()}};
+                      boost::asio::system_timer{mainLoop.getContext()}};
 };
 
 
