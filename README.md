@@ -175,7 +175,7 @@ in the calling shell if their value should be overriden.
 
 4. Then, launch the long-running stack.
    ```
-   docker-compose up [--build #force build even if images already exist]
+   docker-compose up -d [--build #force build even if images already exist]
    ```
 
 
