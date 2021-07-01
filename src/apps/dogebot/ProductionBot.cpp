@@ -68,6 +68,10 @@ void StatsWriter::start()
 {
     initializeAndCatchUp();
     timer.expires_at(nextTime);
+    spdlog::debug("Statistics timer first expiry set at '{}'.",
+                  timeToString(clock_cast<std::chrono::time_point<std::chrono::system_clock,
+                                                                  decltype(nextTime)::duration>>
+                                         (nextTime)));
     async_wait();
 }
 
@@ -104,14 +108,15 @@ void StatsWriter::writeStats()
 
 void StatsWriter::onTimer(const boost::system::error_code & aErrorCode)
 {
+    spdlog::trace("Statistics timer event.");
     if (aErrorCode == boost::asio::error::operation_aborted)
     {
-        spdlog::debug("Stats timer aborted.");
+        spdlog::debug("Statistics timer aborted.");
         return;
     }
     else if (aErrorCode)
     {
-        spdlog::error("Error on stats timer: {}. Will try to go on.", aErrorCode.message());
+        spdlog::error("Error on statistics timer: {}. Will try to go on.", aErrorCode.message());
     }
     else
     {

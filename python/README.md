@@ -37,6 +37,9 @@ that can be obtained via the [Google Cloud Console](https://console.cloud.google
 The procedure to enable the Sheet API and authorize the application itself is detailed in
 https://developers.google.com/sheets/api/quickstart/python
 
+Once created, the applications credentials can be later retrieved via the cloud console:
+Project dropdown -> APIs & Services -> Credentials -> OAuth 2.0 clients ID
+
 
 ## Docker
 
