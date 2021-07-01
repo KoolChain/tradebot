@@ -12,6 +12,8 @@ services:
         - ./secrets:/secrets
         - ./configs:/configs
         - ${BOT_LOG_FOLDER:-./logs}:/prodbot-logs
+        - /etc/timezone:/etc/timezone:ro
+        - /etc/localtime:/etc/localtime:ro
 
   updatesheet:
     build: ./python
@@ -24,6 +26,8 @@ services:
     volumes:
         - sqlite-data:/sqlite-data
         - ./secrets:/secrets
+        - /etc/timezone:/etc/timezone:ro
+        - /etc/localtime:/etc/localtime:ro
 
 volumes:
   sqlite-data:
