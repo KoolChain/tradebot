@@ -5,6 +5,7 @@
 #include <trademath/Function.h>
 #include <trademath/Ladder.h>
 #include <trademath/Spawn.h>
+#include <trademath/DecimalLog.h>
 
 #include <fstream>
 #include <iostream>
@@ -78,7 +79,7 @@ int main(int argc, char * argv[])
     auto spawnEnd = ladder.end() - spawnEndOffset;
 
     Decimal integral = initialDistribution.integrate(*spawnBegin, *(spawnEnd-1));
-    Decimal ratio = fromFP(amount/integral); // lets round it
+    Decimal ratio = amount/integral; // Not rounded to 8 digits, to give more precision over the spawn integration
     spdlog::debug("Integration produces {}, target is {}, so the factor is {}.",
                  integral,
                  amount,
@@ -90,8 +91,8 @@ int main(int argc, char * argv[])
     if (! isEqual(spawnedAmount, amount))
     {
         spdlog::critical("Spawned amount {} is different from requested amount {}.",
-                spawnedAmount,
-                amount);
+                to_str(spawnedAmount),
+                to_str(amount));
         return EXIT_FAILURE;
     }
 
