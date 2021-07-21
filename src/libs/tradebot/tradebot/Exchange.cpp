@@ -90,17 +90,13 @@ std::pair<Decimal, Decimal> Exchange::getBalance(Pair aPair)
 
     if (response.status == 200)
     {
-        std::pair<Decimal, Decimal> result;
+        std::pair<Decimal, Decimal> result{0, 0};
         for (const Json & asset : response.json->at("balances"))
         {
             if      (asset.at("asset") == aPair.base)  result.first = jstod(asset.at("free"));
             else if (asset.at("asset") == aPair.quote) result.second = jstod(asset.at("free"));
         }
-        if (result.first == 0 || result.second == 0)
-        {
-            spdlog::critical("Unavailable balance for {}.", aPair.symbol());
-            throw std::logic_error("Cannot fetch balance.");
-        }
+        // If the asset is not listed, it means the balance is zero.
         return result;
     }
     else
