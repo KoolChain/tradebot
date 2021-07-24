@@ -10,14 +10,14 @@
     },
 
     "initial": {
-        "spawnBeginOffset": 10,
+        "spawnBeginOffset": 9,
         "spawnEndOffset": 0
     },
 
     "ladder": {
-        "firstStop": "0.16",
-        "factor": "1.0225",
-        "stopCount": "83",
+        "firstStop": "0.135",
+        "factor": "1.021",
+        "stopCount": "96",
         "tickSize": "0.00001"
     },
 
