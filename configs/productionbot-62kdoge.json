@@ -3,37 +3,36 @@
 
     "base": "DOGE",
     "quote": "USDT",
-    "amount": "60000",
+    "amount": "61955",
 
     "bot": {
-        "name": "smallspread_60k"
+        "name": "smallspread_62k"
     },
 
     "initial": {
-        "spawnBeginOffset": 9,
+        "spawnBeginOffset": 8,
         "spawnEndOffset": 0
     },
 
     "ladder": {
         "firstStop": "0.135",
         "factor": "1.021",
-        "stopCount": "96",
+        "stopCount": "90",
         "tickSize": "0.00001"
     },
 
     "spawner": {
         "spreader": {
             "proportions": [
-                "0.05",
-                "0.10",
-                "0.10",
+                "0.09",
+                "0.09",
+                "0.09",
+                "0.14",
                 "0.15",
                 "0.15",
-                "0.15",
                 "0.10",
                 "0.10",
-                "0.05",
-                "0.05"
+                "0.09"
             ]
         },
         "takeHomeFactorInitialSell": "0.1",
