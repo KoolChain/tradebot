@@ -18,7 +18,9 @@
         "firstStop": "0.135",
         "factor": "1.021",
         "stopCount": "90",
-        "tickSize": "0.0001"
+        "exchangeTickSize": "0.0001",
+        "internalTickSize": "0.00001",
+        "priceOffset": "0.0001"
     },
 
     "spawner": {

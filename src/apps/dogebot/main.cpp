@@ -150,7 +150,9 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile, 
     Decimal firstStop{aConfig.at("ladder").at("firstStop").get<std::string>()};
     Decimal factor{aConfig.at("ladder").at("factor").get<std::string>()};
     int stopCount = std::stoi(aConfig.at("ladder").at("stopCount").get<std::string>());
-    Decimal tickSize{aConfig.at("ladder").at("tickSize").get<std::string>()};
+    Decimal exchangeTickSize{aConfig.at("ladder").at("exchangeTickSize").get<std::string>()};
+    Decimal internalTickSize{aConfig.at("ladder").at("internalTickSize").get<std::string>()};
+    Decimal priceOffset{aConfig.at("ladder").at("priceOffset").get<std::string>()};
     const std::string botName =
         aConfig.at("bot").value("name", "productionbot") + '_' + std::to_string(getTimestamp());
 
@@ -163,7 +165,12 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile, 
     //
     // Ladder
     //
-    trade::Ladder ladder = trade::makeLadder(firstStop, factor, stopCount, tickSize);
+    trade::Ladder ladder = trade::makeLadder(firstStop,
+                                             factor,
+                                             stopCount,
+                                             exchangeTickSize,
+                                             internalTickSize,
+                                             priceOffset);
 
     //
     // Production Bot
