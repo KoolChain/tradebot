@@ -18,7 +18,7 @@
         "firstStop": "0.135",
         "factor": "1.021",
         "stopCount": "90",
-        "tickSize": "0.00001"
+        "tickSize": "0.0001"
     },
 
     "spawner": {
