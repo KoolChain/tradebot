@@ -33,14 +33,21 @@ int main(int argc, char * argv[])
     Decimal firstStop{config.at("ladder").at("firstStop").get<std::string>()};
     Decimal factor{config.at("ladder").at("factor").get<std::string>()};
     int stopCount = std::stoi(config.at("ladder").at("stopCount").get<std::string>());
-    Decimal tickSize{config.at("ladder").at("tickSize").get<std::string>()};
+    Decimal exchangeTickSize{config.at("ladder").at("exchangeTickSize").get<std::string>()};
+    Decimal internalTickSize{config.at("ladder").at("internalTickSize").get<std::string>()};
+    Decimal priceOffset{config.at("ladder").at("priceOffset").get<std::string>()};
     std::size_t spawnBeginOffset{config.at("initial").at("spawnBeginOffset")};
     std::size_t spawnEndOffset{config.at("initial").at("spawnEndOffset")};
 
     tradebot::Exchange exchange{binance::Api{std::ifstream{secretsfile}}};
     tradebot::SymbolFilters filters = exchange.queryFilters(pair);
 
-    trade::Ladder ladder = trade::makeLadder(firstStop, factor, stopCount, tickSize);
+    trade::Ladder ladder = trade::makeLadder(firstStop,
+                                             factor,
+                                             stopCount,
+                                             exchangeTickSize,
+                                             internalTickSize,
+                                             priceOffset);
 
     // Sanity check
     {
@@ -52,11 +59,11 @@ int main(int argc, char * argv[])
                              filters.price.minimum, filters.price.maximum);
             throw std::invalid_argument{"Configured ladder is not contained withing the exchange's price interval."};
         }
-        if (trade::applyTickSize(tickSize, filters.price.tickSize) != tickSize)
+        if (trade::applyTickSize(exchangeTickSize, filters.price.tickSize) != exchangeTickSize)
         {
             spdlog::critical("Configured price tick-size {} is too permissive compared "
                              "to exchange's tick size {}.",
-                             tickSize,
+                             exchangeTickSize,
                              filters.price.tickSize);
             throw std::invalid_argument{"Configured price tick-size is not compatible with the filters on the exchange."};
         }
@@ -66,7 +73,7 @@ int main(int argc, char * argv[])
             stopCount,
             ladder.front(),
             ladder.back(),
-            tickSize);
+            exchangeTickSize);
 
     trade::Function initialDistribution{
         [](Decimal aValue) -> Decimal
