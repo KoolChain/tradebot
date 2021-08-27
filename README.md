@@ -19,14 +19,14 @@ from the command line.
 * `initial-fragments`: populate a database with `Sell` fragments following the provided configuration.
   This is essential when first deploying a `productionbot`, since it only place orders for corresponding
   fragments.
-* `tests`: unit, integratin, regression testing using Catch2 framework.
+* `tests`: unit, integration, regression testing using Catch2 framework.
 * `tradelist`: present a list of all the exchange's trades corresponding to a filled order.
 
 The applications are implemented upon the following [libraries](src/libs):
 
 * `binance`: implementation of the [Binance REST Api](https://binance-docs.github.io/apidocs).
 * `trademath`: general mathematics functions and classes that can be applied to trading.
-* `websocket`: a simple websocket library on top of Boost::Beast. Should be taken out of this repo.
+* `websocket`: a simple websocket library on top of Boost::Beast. (Should be moved out of this repo as it is generic.)
 * `tradebot`: relies on all the libraries above to provide the features required to implement a
   trading bot. It notably provides the `Trader` class, which is a high-level interface
   to interract with an exchange's REST Api and its websocket streams

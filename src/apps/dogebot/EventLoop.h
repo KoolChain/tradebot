@@ -7,7 +7,7 @@
 namespace ad {
 
 
-/// \brief An event loop implementation base on boost::Asio
+/// \brief An event loop implementation based on boost::Asio
 class EventLoop
 {
 public:
