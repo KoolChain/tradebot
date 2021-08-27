@@ -47,6 +47,8 @@ public:
                 return {{}, aFilledFragment.amount};
             case Side::Sell:
                 return {{}, aFilledFragment.amount * aOrder.executionRate};
+            default:
+                throw std::domain_error{"Invalid Side enumerator."};
         }
     }
 };

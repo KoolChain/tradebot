@@ -146,6 +146,8 @@ inline std::ostream & operator<<(std::ostream & aOut, const Order::Status & aSta
                     return "Active";
                 case Order::Status::Fulfilled:
                     return "Fulfilled";
+                default:
+                    throw std::domain_error{"Invalid Status enumerator."};
             }
         }(aStatus)};
 }

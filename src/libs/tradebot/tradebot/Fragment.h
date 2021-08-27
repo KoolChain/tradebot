@@ -67,6 +67,8 @@ inline std::ostream & operator<<(std::ostream & aOut, const Side & aSide)
                     return "Sell";
                 case Side::Buy:
                     return "Buy";
+                default:
+                    throw std::domain_error{"Invalid Side enumerator."};
             }
         }
         (aSide);

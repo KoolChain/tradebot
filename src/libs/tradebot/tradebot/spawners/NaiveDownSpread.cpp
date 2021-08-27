@@ -41,6 +41,8 @@ SpawnerBase::Result NaiveDownSpread::computeResultingFragments(const Fragment & 
                 Decimal{0}
             };
         }
+        default:
+            throw std::domain_error{"Invalid Side enumerator."};
     }
 }
 

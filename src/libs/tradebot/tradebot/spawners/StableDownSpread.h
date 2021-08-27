@@ -119,6 +119,8 @@ StableDownSpread<TMP_ARGS>::computeResultingFragments(const Fragment & aFilledFr
             }
             return onSubsequentBuy(aFilledFragment, aOrder, aDatabase);
         }
+        default:
+            throw std::domain_error{"Invalid Side enumerator."};
     }
 }
 

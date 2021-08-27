@@ -228,6 +228,8 @@ std::vector<Decimal> Database::getProfitableRates(Side aSide,
             return getSellRatesBelow(aRateLimit, aPair);
         case Side::Buy:
             return getBuyRatesAbove(aRateLimit, aPair);
+        default:
+            throw std::domain_error{"Invalid Side enumerator."};
     }
 }
 
