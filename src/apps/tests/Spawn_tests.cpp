@@ -761,3 +761,56 @@ SCENARIO("Consolidation of counter-fragments.", "[spawn]")
         }
     }
 }
+
+
+SCENARIO("Fix tradebot#1: change in filter price.", "[spawn]")
+{
+    GIVEN("Different internal and exchange price tick sizes.")
+    {
+        Decimal internalTick{"0.00001"};
+        Decimal exchangeTick{"0.0001"};
+
+        Decimal firstRate{"0.135"};
+        Decimal factor{"1.021"};
+        std::size_t stops = 90;
+
+        WHEN("An internal ladder is generated from internal tick sizes")
+        {
+            Ladder internalLadder =
+                trade::makeLadder(firstRate, factor, stops, internalTick);
+
+            THEN("It matches the ladders generated from both tick sizes, "
+                 "once truncated at exchange tick size.")
+            {
+                // Without offset
+                {
+                    Ladder exchangeLadder =
+                        trade::makeLadder(firstRate, factor, stops, exchangeTick, internalTick, 0);
+
+                    REQUIRE(internalLadder.size() == exchangeLadder.size());
+                    for (std::size_t i = 0; i != exchangeLadder.size(); ++i)
+                    {
+                        REQUIRE(exchangeLadder.at(i)
+                                == applyTickSize(internalLadder.at(i), exchangeTick));
+                    }
+                }
+
+                // With offset
+                {
+                    Decimal offset = exchangeTick;
+                    Ladder exchangeLadder =
+                        trade::makeLadder(firstRate, factor, stops,
+                                          exchangeTick, internalTick, offset);
+
+                    REQUIRE(internalLadder.size() == exchangeLadder.size());
+                    for (std::size_t i = 0; i != exchangeLadder.size(); ++i)
+                    {
+                        REQUIRE(exchangeLadder.at(i)
+                                == applyTickSize(internalLadder.at(i), exchangeTick) + offset);
+                    }
+                }
+            }
+
+        }
+    }
+}

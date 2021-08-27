@@ -13,11 +13,31 @@ namespace trade {
 using Ladder = std::vector<Decimal>;
 
 
+/// \param aExchangeTickSize    The tick size for the resulting ladder stops,
+/// which will be the tick size used for trades sent to the exchange.
+/// \param aInternalTickSize    The tick size used internally when generating the values.
+/// This is the tick size the "previous" value is stored with.
+/// \param aPriceOffset         Offset that will be added to the generated exchange stop value
+/// (before applying aExchangeTickSize).
+/// It will not influence the overall ladder growth, just offset all stops by the same amount.
+/// This is the tick size the "previous" value is stored with.
+///
+/// \important The distinct exhange and internal tick size were introduced when binance
+/// changed the filter price tick size on a traded pair already in production:
+/// it was needed to generate a ladder with the new price tick, while producing values following
+/// the previous tick size.
 Ladder makeLadder(Decimal aFirstRate,
                   Decimal aFactor,
                   std::size_t aStopCount,
-                  Decimal aTickSize = gDefaultTickSize);
+                  Decimal aExchangeTickSize,
+                  Decimal aInternalTickSize,
+                  Decimal aPriceOffset);
 
+inline Ladder makeLadder(Decimal aFirstRate,
+                         Decimal aFactor,
+                         std::size_t aStopCount,
+                         Decimal aTickSize = gDefaultTickSize)
+{ return makeLadder(aFirstRate, aFactor, aStopCount, aTickSize, aTickSize, 0); }
 
 // Only exist so getStopFor can log without exposing the spdlog header here.
 void logCritical(const std::string aMessage);
