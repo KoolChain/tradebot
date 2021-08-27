@@ -13,7 +13,9 @@ namespace trade {
 Ladder makeLadder(Decimal aFirstRate,
                   Decimal aFactor,
                   std::size_t aStopCount,
-                  Decimal aTickSize)
+                  Decimal aExchangeTickSize,
+                  Decimal aInternalTickSize,
+                  Decimal aPriceOffset)
 {
     if (aFactor <= 1)
     {
@@ -27,20 +29,30 @@ Ladder makeLadder(Decimal aFirstRate,
         throw std::domain_error{"Invalid stop count for ladder generation."};
     }
 
-    Decimal previous = applyTickSize(aFirstRate, aTickSize);
-    Ladder result{previous};
+    if (aInternalTickSize > aExchangeTickSize)
+    {
+        spdlog::critical("Invalid relative tick size, internal's '{}' cannot be bigger than exchange's '{}'.",
+                         aInternalTickSize, aExchangeTickSize);
+        throw std::domain_error{"Invalid relative tick sizes."};
+    }
+
+    Decimal previousInternal = applyTickSize(aFirstRate, aInternalTickSize);
+    Decimal previousExchange = applyTickSize(aFirstRate + aPriceOffset, aExchangeTickSize);
+    Ladder result{previousExchange};
 
     std::generate_n(std::back_inserter(result), aStopCount-1, [&]()
             {
-                Decimal next = applyTickSize(previous * aFactor, aTickSize);
-                if (next <= previous)
+                Decimal nextInternal = applyTickSize(previousInternal * aFactor, aInternalTickSize);
+                Decimal nextExchange = applyTickSize(nextInternal + aPriceOffset, aExchangeTickSize);
+                if (nextExchange <= previousExchange)
                 {
                     spdlog::critical("Two consecutive stops are not strictly incremental: {} then {}.",
-                            previous,
-                            next);
+                            previousExchange,
+                            nextExchange);
                     throw std::logic_error{"Cannot generate a strictly incremental ladder from arguments."};
                 }
-                return previous=next;
+                previousInternal = nextInternal;
+                return previousExchange = nextExchange;
             });
 
     return result;
