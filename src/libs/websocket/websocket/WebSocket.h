@@ -1,7 +1,10 @@
 #pragma once
 
 
+
+#if not defined(_MSC_VER)
 #include <experimental/propagate_const>
+#endif
 
 #include <functional>
 #include <memory>
@@ -75,7 +78,11 @@ private:
 
 private:
     struct impl;
+#if not defined(_MSC_VER)
     std::experimental::propagate_const<std::unique_ptr<impl>> mImpl;
+#else
+    std::unique_ptr<impl> mImpl;
+#endif
 };
 
 
