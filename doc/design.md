@@ -106,7 +106,7 @@ the opportunity to spawn counter fragments.
 
 Yet, after all the composing `Fragment`s are visited, the different spawns at the same target rate
 are consolidated into a single counter-fragment, instead of each spawn becoming a counter-fragment directly.
-**A limitation is imposed:" each fulfilled order spawns at most **one** fragment at any given rate.
+**A limitation is imposed:** each fulfilled order spawns at most **one** fragment at any given rate.
 
 It would have been simpler to allow each fragment to spawn counter-fragments directly,
 and to associate each counter-fragment with its spawning fragment.
