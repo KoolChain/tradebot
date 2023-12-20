@@ -14,7 +14,8 @@ using Coin = std::string;
 
 enum class Side
 {
-    Buy,
+    Buy = 1, // The default value of zero was leading to an "ambiguous overload" error with MSVC 
+             // when using it within orm expressions.
     Sell,
 };
 
