@@ -24,13 +24,19 @@ target_link_libraries(${PROJECT_NAME}
         jsonformoderncpp::jsonformoderncpp
     PRIVATE
         Boost::boost
-        spdlog::libspdlog
+        spdlog::spdlog
         OpenSSL::SSL
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
                       VERSION "${${PROJECT_NAME}_VERSION}"
 )
+
+if(MSVC)
+    # Otherwise big object files might error with:
+    # "fatal  error C1128: number of sections exceeded object file format limit: compile with /bigobj"
+    target_compile_options(${PROJECT_NAME} PRIVATE "/bigobj")
+endif()
 
 
 ##

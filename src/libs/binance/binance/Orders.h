@@ -29,11 +29,15 @@ inline const std::string & to_string(Side aSide)
     switch (aSide)
     {
         case Side::BUY:
+        {
             static const std::string buy{"BUY"};
             return buy;
+        }
         case Side::SELL:
+        {
             static const std::string sell{"SELL"};
             return sell;
+        }
     }
     throw std::invalid_argument{"Unexpected Side: " + std::to_string(static_cast<int>(aSide))};
 }
@@ -51,11 +55,15 @@ inline const std::string & to_string(Type aType)
     switch (aType)
     {
         case Type::MARKET:
+        {
             static const std::string market{"MARKET"};
             return market;
+        }
         case Type::LIMIT:
+        {
             static const std::string limit{"LIMIT"};
             return limit;
+        }
     }
     throw std::invalid_argument{"Unexpected Type: " + std::to_string(static_cast<int>(aType))};
 }

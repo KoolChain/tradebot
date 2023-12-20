@@ -97,10 +97,10 @@ public:
 private:
     enum class Verb
     {
-        DELETE,
-        GET,
-        POST,
-        PUT,
+        Delete,
+        Get,
+        Post,
+        Put,
     };
 
     Response makeRequest(const std::string & aEndpoint);

@@ -16,6 +16,7 @@ Vagrantfile
 /conan/test_package/build/
 
 # Clang tooling #
+.cache/
 .clangd/
 compile_commands.json
 

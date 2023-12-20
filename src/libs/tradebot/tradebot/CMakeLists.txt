@@ -51,7 +51,7 @@ target_link_libraries(${PROJECT_NAME}
 
         Boost::boost
     PRIVATE
-        spdlog::libspdlog
+        spdlog::spdlog
         sqlite_orm::sqlite_orm
 )
 

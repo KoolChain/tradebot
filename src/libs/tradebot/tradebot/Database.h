@@ -5,7 +5,9 @@
 #include "stats/Balance.h"
 #include "stats/LaunchCount.h"
 
+#if not defined(_MSC_VER)
 #include <experimental/propagate_const>
+#endif
 
 
 namespace ad {
@@ -111,7 +113,11 @@ public:
     bool onFillOrder(const FulfilledOrder & aOrder);
 
 private:
+#if not defined(_MSC_VER)
     std::experimental::propagate_const<std::unique_ptr<Impl>> mImpl;
+#else
+    std::unique_ptr<Impl> mImpl;
+#endif
 };
 
 

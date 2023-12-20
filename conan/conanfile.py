@@ -34,7 +34,7 @@ class TradebotConan(ConanFile):
     )
 
 
-    build_requires = ("cmake/3.16.9",)
+    build_requires = ("cmake/3.27.9",)
 
     build_policy = "missing"
     generators = "cmake_paths", "cmake", "cmake_find_package"

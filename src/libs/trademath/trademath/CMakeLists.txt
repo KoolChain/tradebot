@@ -31,7 +31,7 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC
         Boost::boost
     PRIVATE
-        spdlog::libspdlog
+        spdlog::spdlog
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
