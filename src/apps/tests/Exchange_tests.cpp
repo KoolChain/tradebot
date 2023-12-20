@@ -478,7 +478,10 @@ SCENARIO("Listening to SPOT user data stream.")
             std::list<Json> reports;
             auto onReport = [&](Json aReport)
             {
-                reports.push_back(std::move(aReport));
+                if(aReport.at("e") == "executionReport")
+                {
+                    reports.push_back(std::move(aReport));
+                }
             };
             REQUIRE(exchange.openUserStream(onReport));
 
@@ -505,6 +508,8 @@ SCENARIO("Listening to SPOT user data stream.")
 
                 THEN("Execution reports are received.")
                 {
+                    REQUIRE(reports.size() > 1);
+
                     REQUIRE(reports.front().at("i") == immediateOrder.exchangeId);
                     REQUIRE(reports.front().at("s") == immediateOrder.symbol());
                     REQUIRE(reports.front().at("c") == immediateOrder.clientId());
@@ -517,6 +522,7 @@ SCENARIO("Listening to SPOT user data stream.")
                     Fulfillment fulfillment;
                     //for(const Json & report : reports)
                     std::size_t reportId = 0;
+
                     for(auto reportIt = reports.begin();
                         reportIt != reports.end();
                         ++reportId, ++reportIt)
