@@ -24,7 +24,7 @@ target_link_libraries(${PROJECT_NAME}
         jsonformoderncpp::jsonformoderncpp
     PRIVATE
         Boost::boost
-        spdlog::libspdlog
+        spdlog::spdlog
         OpenSSL::SSL
 )
 

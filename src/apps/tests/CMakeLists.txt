@@ -38,7 +38,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
-find_package(spdlog REQUIRED COMPONENTS libspdlog)
+find_package(spdlog REQUIRED COMPONENTS spdlog)
 find_package(SqliteOrm REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}
@@ -47,7 +47,7 @@ target_link_libraries(${PROJECT_NAME}
         ad::tradebot
         ad::websocket
 
-        spdlog::libspdlog
+        spdlog::spdlog
         sqlite_orm::sqlite_orm
 )
 

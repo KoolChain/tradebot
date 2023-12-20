@@ -18,14 +18,14 @@ add_executable(${PROJECT_NAME}
                ${${PROJECT_NAME}_SOURCES}
 )
 
-find_package(spdlog REQUIRED COMPONENTS libspdlog)
+find_package(spdlog REQUIRED COMPONENTS spdlog)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         ad::binance
         ad::tradebot
 
-        spdlog::libspdlog
+        spdlog::spdlog
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
