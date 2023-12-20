@@ -208,71 +208,71 @@ Response Api::getExchangeInformation()
 
 Response Api::getExchangeInformation(const Symbol & aSymbol)
 {
-    return makeRequest(Verb::GET, {"/api/v3/exchangeInfo"}, Security::None,
+    return makeRequest(Verb::Get, {"/api/v3/exchangeInfo"}, Security::None,
                        cpr::Parameters{{"symbol", aSymbol}});
 }
 
 
 Response Api::getAllCoinsInformation()
 {
-    return makeRequest(Verb::GET, {"/sapi/v1/capital/config/getall"}, Security::Signed);
+    return makeRequest(Verb::Get, {"/sapi/v1/capital/config/getall"}, Security::Signed);
 }
 
 
 Response Api::getAccountInformation()
 {
-    return makeRequest(Verb::GET, {"/api/v3/account"}, Security::Signed);
+    return makeRequest(Verb::Get, {"/api/v3/account"}, Security::Signed);
 }
 
 
 Response Api::createSpotListenKey()
 {
-    return makeRequest(Verb::POST, {"/api/v3/userDataStream"}, Security::ApiOnly);
+    return makeRequest(Verb::Post, {"/api/v3/userDataStream"}, Security::ApiOnly);
 }
 
 
 Response Api::pingSpotListenKey()
 {
-    return makeRequest(Verb::PUT, {"/api/v3/userDataStream"}, Security::ApiOnly);
+    return makeRequest(Verb::Put, {"/api/v3/userDataStream"}, Security::ApiOnly);
 }
 
 
 Response Api::closeSpotListenKey(const std::string aListenKey)
 {
-    return makeRequest(Verb::DELETE, {"/api/v3/userDataStream"}, Security::ApiOnly,
+    return makeRequest(Verb::Delete, {"/api/v3/userDataStream"}, Security::ApiOnly,
                        cpr::Parameters{{"listenKey", aListenKey}});
 }
 
 
 Response Api::getCurrentAveragePrice(const Symbol & aSymbol)
 {
-    return makeRequest(Verb::GET, {"/api/v3/avgPrice"}, Security::None,
+    return makeRequest(Verb::Get, {"/api/v3/avgPrice"}, Security::None,
                        cpr::Parameters{{"symbol", aSymbol}});
 }
 
 
 Response Api::placeOrderTrade(const MarketOrder & aOrder)
 {
-    return makeRequest(Verb::POST, {"/api/v3/order"}, Security::Signed, aOrder);
+    return makeRequest(Verb::Post, {"/api/v3/order"}, Security::Signed, aOrder);
 }
 
 
 Response Api::placeOrderTrade(const LimitOrder & aOrder)
 {
-    return makeRequest(Verb::POST, {"/api/v3/order"}, Security::Signed, aOrder);
+    return makeRequest(Verb::Post, {"/api/v3/order"}, Security::Signed, aOrder);
 }
 
 
 Response Api::listOpenOrders(const Symbol & aSymbol)
 {
-    return makeRequest(Verb::GET, {"/api/v3/openOrders"}, Security::Signed,
+    return makeRequest(Verb::Get, {"/api/v3/openOrders"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol}});
 }
 
 
 Response Api::listAllOrders(const Symbol & aSymbol)
 {
-    return makeRequest(Verb::GET, {"/api/v3/allOrders"}, Security::Signed,
+    return makeRequest(Verb::Get, {"/api/v3/allOrders"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol}});
 }
 
@@ -281,7 +281,7 @@ Response Api::listAccountTradesFromTime(const Symbol & aSymbol,
                                         MillisecondsSinceEpoch aStartTime,
                                         int aLimit)
 {
-    return makeRequest(Verb::GET, {"/api/v3/myTrades"}, Security::Signed,
+    return makeRequest(Verb::Get, {"/api/v3/myTrades"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol},
                                        {"startTime", std::to_string(aStartTime)},
                                        {"limit", std::to_string(aLimit)}
@@ -293,7 +293,7 @@ Response Api::listAccountTradesFromId(const Symbol & aSymbol,
                                       long aTradeId,
                                       int aLimit)
 {
-    return makeRequest(Verb::GET, {"/api/v3/myTrades"}, Security::Signed,
+    return makeRequest(Verb::Get, {"/api/v3/myTrades"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol},
                                        {"fromId", std::to_string(aTradeId)},
                                        {"limit", std::to_string(aLimit)}
@@ -303,7 +303,7 @@ Response Api::listAccountTradesFromId(const Symbol & aSymbol,
 
 Response Api::queryOrder(const Symbol & aSymbol, const ClientId & aClientOrderId)
 {
-    return makeRequest(Verb::GET, {"/api/v3/order"}, Security::Signed,
+    return makeRequest(Verb::Get, {"/api/v3/order"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol},
                                        {"origClientOrderId", static_cast<const std::string &>(aClientOrderId)},
                                       });
@@ -312,7 +312,7 @@ Response Api::queryOrder(const Symbol & aSymbol, const ClientId & aClientOrderId
 
 Response Api::queryOrderForExchangeId(const Symbol & aSymbol, long aExchangeId)
 {
-    return makeRequest(Verb::GET, {"/api/v3/order"}, Security::Signed,
+    return makeRequest(Verb::Get, {"/api/v3/order"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol},
                                        {"orderId", std::to_string(aExchangeId)},
                                       });
@@ -321,7 +321,7 @@ Response Api::queryOrderForExchangeId(const Symbol & aSymbol, long aExchangeId)
 
 Response Api::cancelOrder(const Symbol & aSymbol, const ClientId & aClientOrderId)
 {
-    return makeRequest(Verb::DELETE, {"/api/v3/order"}, Security::Signed,
+    return makeRequest(Verb::Delete, {"/api/v3/order"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol},
                                        {"origClientOrderId", static_cast<const std::string &>(aClientOrderId)}});
 
@@ -330,14 +330,14 @@ Response Api::cancelOrder(const Symbol & aSymbol, const ClientId & aClientOrderI
 
 Response Api::cancelAllOpenOrders(const Symbol & aSymbol)
 {
-    return makeRequest(Verb::DELETE, {"/api/v3/openOrders"}, Security::Signed,
+    return makeRequest(Verb::Delete, {"/api/v3/openOrders"}, Security::Signed,
                        cpr::Parameters{{"symbol", aSymbol}});
 }
 
 
 Response Api::getSwapHistory()
 {
-    return makeRequest(Verb::GET, {"/sapi/v1/bswap/swap"}, Security::Signed,
+    return makeRequest(Verb::Get, {"/sapi/v1/bswap/swap"}, Security::Signed,
                        cpr::Parameters{{"limit", "100"},
                                        {"status", "1"}});
 }
@@ -345,7 +345,7 @@ Response Api::getSwapHistory()
 
 Response Api::getCompletedWidthdrawHistory()
 {
-    return makeRequest(Verb::GET, {"/wapi/v3/withdrawHistory.html"}, Security::Signed,
+    return makeRequest(Verb::Get, {"/wapi/v3/withdrawHistory.html"}, Security::Signed,
                        cpr::Parameters{{"status", "6"} // completed
                                       });
 }
@@ -399,13 +399,13 @@ Response Api::makeRequest(Verb aVerb,
 
     switch (aVerb)
     {
-        case Verb::DELETE:
-            return analyzeResponse("DELETE", session.Delete());
-        case Verb::GET:
+        case Verb::Delete:
+            return analyzeResponse("Delete", session.Delete());
+        case Verb::Get:
             return analyzeResponse("GET", session.Get());
-        case Verb::POST:
+        case Verb::Post:
             return analyzeResponse("POST", session.Post());
-        case Verb::PUT:
+        case Verb::Put:
             return analyzeResponse("PUT", session.Post());
         default:
             spdlog::critical("Unhandled HTTP verb, enum value '{}'.", aVerb);
