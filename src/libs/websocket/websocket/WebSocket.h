@@ -77,11 +77,11 @@ private:
     void setReceiveCallback(ReceiveCallback aOnReceive);
 
 private:
-    struct impl;
+    struct Impl;
 #if not defined(_MSC_VER)
     std::experimental::propagate_const<std::unique_ptr<impl>> mImpl;
 #else
-    std::unique_ptr<impl> mImpl;
+    std::unique_ptr<Impl> mImpl;
 #endif
 };
 

@@ -68,7 +68,7 @@ void logFailure(beast::error_code aErrorCode, const std::string & aWhat)
 }
 
 
-struct WebSocket::impl
+struct WebSocket::Impl
 {
     void run(std::string aHost, const std::string & aPort, const std::string & aTarget);
 
@@ -104,10 +104,10 @@ struct WebSocket::impl
 };
 
 
-const std::string WebSocket::impl::gFifoGuard{"NOT-CONNECTED-GUARD"};
+const std::string WebSocket::Impl::gFifoGuard{"NOT-CONNECTED-GUARD"};
 
 
-void WebSocket::impl::run(std::string aHost, const std::string & aPort, const std::string & aTarget)
+void WebSocket::Impl::run(std::string aHost, const std::string & aPort, const std::string & aTarget)
 {
     ::net::ip::tcp::resolver resolver{mIoc};
 
@@ -152,12 +152,12 @@ void WebSocket::impl::run(std::string aHost, const std::string & aPort, const st
     mStream.async_handshake(
         aHost,  // The Host field
         aTarget,     // The request-target
-        std::bind(&impl::onHandshake, this, std::placeholders::_1)
+        std::bind(&Impl::onHandshake, this, std::placeholders::_1)
     );
 }
 
 
-void WebSocket::impl::onHandshake(beast::error_code aErrorCode)
+void WebSocket::Impl::onHandshake(beast::error_code aErrorCode)
 {
     if(aErrorCode)
     {
@@ -181,7 +181,7 @@ void WebSocket::impl::onHandshake(beast::error_code aErrorCode)
 }
 
 
-void WebSocket::impl::onClose(beast::error_code aErrorCode)
+void WebSocket::Impl::onClose(beast::error_code aErrorCode)
 {
     if(aErrorCode)
     {
@@ -198,7 +198,7 @@ void WebSocket::impl::onClose(beast::error_code aErrorCode)
 }
 
 
-void WebSocket::impl::onRead(beast::error_code aErrorCode, std::size_t aBytesTransferred)
+void WebSocket::Impl::onRead(beast::error_code aErrorCode, std::size_t aBytesTransferred)
 {
     if(aErrorCode)
     {
@@ -218,15 +218,15 @@ void WebSocket::impl::onRead(beast::error_code aErrorCode, std::size_t aBytesTra
 }
 
 
-void WebSocket::impl::readNext()
+void WebSocket::Impl::readNext()
 {
     mStream.async_read(
         mBuffer,
-        std::bind(&impl::onRead, this, std::placeholders::_1, std::placeholders::_2));
+        std::bind(&Impl::onRead, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 
-void WebSocket::impl::onWrite(beast::error_code aErrorCode, std::size_t aBytesTransferred)
+void WebSocket::Impl::onWrite(beast::error_code aErrorCode, std::size_t aBytesTransferred)
 {
     if(aErrorCode)
     {
@@ -240,7 +240,7 @@ void WebSocket::impl::onWrite(beast::error_code aErrorCode, std::size_t aBytesTr
 }
 
 
-void WebSocket::impl::writeNext()
+void WebSocket::Impl::writeNext()
 {
     std::scoped_lock queueLock{mWriteMutex};
     mMessageFifo.pop(); // pop the message corresponding to this completion handler
@@ -251,7 +251,7 @@ void WebSocket::impl::writeNext()
 }
 
 
-void WebSocket::impl::async_send(const std::string & aMessage)
+void WebSocket::Impl::async_send(const std::string & aMessage)
 {
     {
         std::scoped_lock queueLock{mWriteMutex};
@@ -269,14 +269,14 @@ void WebSocket::impl::async_send(const std::string & aMessage)
 }
 
 
-void WebSocket::impl::async_close()
+void WebSocket::Impl::async_close()
 {
     if (! mClosing.exchange(true))
     {
         spdlog::trace("Request for websocket to close.");
         mStream.async_close(
             beast::websocket::close_code::normal,
-            std::bind(&impl::onClose, this, std::placeholders::_1));
+            std::bind(&Impl::onClose, this, std::placeholders::_1));
     }
     else
     {
@@ -285,17 +285,17 @@ void WebSocket::impl::async_close()
 }
 
 
-void WebSocket::impl::writeImplementation()
+void WebSocket::Impl::writeImplementation()
 {
     // The message will be popped by the completion handler
     mStream.async_write(
             ::net::buffer(mMessageFifo.front()),
-            std::bind(&impl::onWrite, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&Impl::onWrite, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 
 WebSocket::WebSocket() :
-        mImpl{std::make_unique<impl>()}
+        mImpl{std::make_unique<Impl>()}
 {}
 
 
