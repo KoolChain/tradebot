@@ -699,61 +699,71 @@ SCENARIO("Symbol filters", "[trader]")
         {
             SymbolFilters filters = trader.queryFilters();
 
-            // Expected filters at the time this test is implemented
+            // Expected filters at the time this test is implemented 2023/12/21: 
             //"filters": [
             //    {
-            //        "filterType": "PRICE_FILTER",
-            //        "maxPrice": "1000000.00000000",
-            //        "minPrice": "0.01000000",
-            //        "tickSize": "0.01000000"
+            //        "filterType":"PRICE_FILTER",
+            //        "maxPrice":"1000000.00000000",
+            //        "minPrice":"0.01000000",
+            //        "tickSize":"0.01000000"
             //    },
             //    {
-            //        "avgPriceMins": 5,
-            //        "filterType": "PERCENT_PRICE",
-            //        "multiplierDown": "0.2",
-            //        "multiplierUp": "5"
+            //        "filterType":"LOT_SIZE",
+            //        "maxQty":"9000.00000000",
+            //        "minQty":"0.00001000",
+            //        "stepSize":"0.00001000"
             //    },
             //    {
-            //        "filterType": "LOT_SIZE",
-            //        "maxQty": "900.00000000",
-            //        "minQty": "0.00000100",
-            //        "stepSize": "0.00000100"
+            //        "filterType":"ICEBERG_PARTS",
+            //        "limit":10
             //    },
             //    {
-            //        "applyToMarket": true,
-            //        "avgPriceMins": 5,
-            //        "filterType": "MIN_NOTIONAL",
-            //        "minNotional": "10.00000000"
+            //        "filterType":"MARKET_LOT_SIZE",
+            //        "maxQty":"113.82525454",
+            //        "minQty":"0.00000000",
+            //        "stepSize":"0.00000000"
             //    },
             //    {
-            //        "filterType": "ICEBERG_PARTS",
-            //        "limit": 10
+            //        "filterType":"TRAILING_DELTA",
+            //        "maxTrailingAboveDelta":2000,
+            //        "maxTrailingBelowDelta":2000,
+            //        "minTrailingAboveDelta":10,
+            //        "minTrailingBelowDelta":10
             //    },
             //    {
-            //        "filterType": "MARKET_LOT_SIZE",
-            //        "maxQty": "100.00000000",
-            //        "minQty": "0.00000000",
-            //        "stepSize": "0.00000000"
+            //        "askMultiplierDown":"0.2",
+            //        "askMultiplierUp":"5",
+            //        "avgPriceMins":5,
+            //        "bidMultiplierDown":"0.2",
+            //        "bidMultiplierUp":"5",
+            //        "filterType":"PERCENT_PRICE_BY_SIDE"
             //    },
             //    {
-            //        "filterType": "MAX_NUM_ORDERS",
-            //        "maxNumOrders": 200
+            //        "applyMaxToMarket":false,
+            //        "applyMinToMarket":true,
+            //        "avgPriceMins":5,
+            //        "filterType":"NOTIONAL",
+            //        "maxNotional":"9000000.00000000",
+            //        "minNotional":"5.00000000"
             //    },
             //    {
-            //        "filterType": "MAX_NUM_ALGO_ORDERS",
-            //        "maxNumAlgoOrders": 5
+            //        "filterType":"MAX_NUM_ORDERS",
+            //        "maxNumOrders":200
+            //    },
+            //    {
+            //        "filterType":"MAX_NUM_ALGO_ORDERS",
+            //        "maxNumAlgoOrders":5
             //    }
             //]
-
             CHECK(filters.price.minimum == Decimal{"0.01"});
             CHECK(filters.price.maximum == Decimal{"1000000.00000000"});
             CHECK(filters.price.tickSize == Decimal{"0.01"});
 
-            CHECK(filters.amount.minimum == Decimal{"0.000001"});
-            CHECK(filters.amount.maximum == Decimal{"900"});
-            CHECK(filters.amount.tickSize == Decimal{"0.000001"});
+            CHECK(filters.amount.minimum == Decimal{"0.00001"});
+            CHECK(filters.amount.maximum == Decimal{"9000"});
+            CHECK(filters.amount.tickSize == Decimal{"0.00001"});
 
-            CHECK(filters.minimumNotional == Decimal{"10"});
+            CHECK(filters.minimumNotional == Decimal{"5"});
         }
     }
 }
