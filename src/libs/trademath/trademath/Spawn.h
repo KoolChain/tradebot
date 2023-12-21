@@ -5,7 +5,7 @@
 
 #include <boost/serialization/strong_typedef.hpp>
 
-#include <algorithm>
+#include <numeric>
 
 
 namespace ad {

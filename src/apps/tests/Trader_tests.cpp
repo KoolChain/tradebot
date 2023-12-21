@@ -180,8 +180,8 @@ SCENARIO("Trader low-level functions.", "[trader]")
                 REQUIRE(impossible.base     == pair.base);
                 REQUIRE(impossible.quote    == pair.quote);
                 // Is not strictly equal: the is an exact Decimal
-                REQUIRE(isEqual(impossible.amount, 0.001 + 0.002));
-                REQUIRE(impossible.amount == Decimal{"0.001"} + Decimal{"0.002"});
+                REQUIRE(isEqual(impossible.baseAmount, 0.001 + 0.002));
+                REQUIRE(impossible.baseAmount == Decimal{"0.001"} + Decimal{"0.002"});
                 REQUIRE(impossible.fragmentsRate == impossiblePrice);
                 REQUIRE(impossible.side     == Side::Sell);
                 REQUIRE(impossible.exchangeId != -1);
@@ -197,7 +197,7 @@ SCENARIO("Trader low-level functions.", "[trader]")
                     REQUIRE(orderJson["symbol"] == impossible.symbol());
                     REQUIRE(orderJson["orderId"] == impossible.exchangeId);
                     REQUIRE(jstod(orderJson["price"]) == impossible.fragmentsRate);
-                    REQUIRE(jstod(orderJson["origQty"]) == impossible.amount);
+                    REQUIRE(jstod(orderJson["origQty"]) == impossible.baseAmount);
                     REQUIRE(orderJson["timeInForce"] == "GTC");
                     REQUIRE(orderJson["type"] == "LIMIT");
                     REQUIRE(orderJson["side"] == "SELL");
@@ -457,7 +457,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                     db.reload(marketFulfilledFragment);
                     REQUIRE(marketFulfilledFragment.composedOrder == marketFulfilled.id);
-                    REQUIRE(marketFulfilledFragment.amount == marketFulfilled.amount);
+                    REQUIRE(marketFulfilledFragment.amount == marketFulfilled.baseAmount);
 
                     db.reload(limitFulfilled);
                     REQUIRE(limitFulfilled.status == Order::Status::Fulfilled);
@@ -468,7 +468,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                     db.reload(limitFulfilledFragment);
                     REQUIRE(limitFulfilledFragment.composedOrder == limitFulfilled.id);
-                    REQUIRE(limitFulfilledFragment.amount == limitFulfilled.amount);
+                    REQUIRE(limitFulfilledFragment.amount == limitFulfilled.baseAmount);
                 }
 
                 THEN("There are no more orders to cancel")
@@ -500,9 +500,29 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 }
 
 
-Decimal filterPrice(Decimal aPrice)
+Decimal filterPrice(Decimal aPrice, SymbolFilters aFilters)
 {
-    return trade::applyTickSize(aPrice, Decimal{"0.01"});
+    return trade::applyTickSize(aPrice, aFilters.price.tickSize);
+}
+
+
+Decimal computeMinimalAmount(Decimal aPrice, SymbolFilters aFilters)
+{
+    Decimal quantity = aFilters.minimumNotional / aPrice;
+    Decimal remainder = 0;
+    std::tie(quantity, remainder) = trade::computeTickFilter(quantity, aFilters.amount.tickSize);
+    if(remainder != 0)
+    {
+        assert(quantity * aPrice < aFilters.minimumNotional);
+        quantity += aFilters.amount.tickSize;
+        assert(quantity * aPrice > aFilters.minimumNotional);
+    }
+    else
+    {
+        assert(quantity * aPrice == aFilters.minimumNotional);
+    }
+    assert(quantity >= aFilters.amount.minimum && quantity <= aFilters.amount.maximum);
+    return quantity;
 }
 
 
@@ -533,11 +553,13 @@ SCENARIO("Fill profitable orders.", "[trader]")
 
         WHEN("3 sell fragments at 2 different rates below average are written to DB.")
         {
-            Decimal amount{"0.001"};
-            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice/1.2), Side::Sell};
+            const Decimal filteredOrderPrice = filterPrice(averagePrice / 1.1, symbolFilters);
+            Decimal amount = computeMinimalAmount(filteredOrderPrice, symbolFilters);
+
+            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice/1.2, symbolFilters), Side::Sell};
             db.insert(f);
             db.insert(f);
-            f.targetRate = filterPrice(averagePrice/1.3);
+            f.targetRate = filterPrice(averagePrice/1.3, symbolFilters);
             db.insert(f);
 
             // Sanity check
@@ -547,7 +569,7 @@ SCENARIO("Fill profitable orders.", "[trader]")
             THEN("They can be filled at once as profitable orders.")
             {
                 auto [sellCount, buyCount] =
-                    trader.makeAndFillProfitableOrders({averagePrice, averagePrice}, symbolFilters);
+                    trader.makeAndFillProfitableOrders({filteredOrderPrice, filteredOrderPrice}, symbolFilters);
 
                 REQUIRE(sellCount == 2);
                 REQUIRE(buyCount == 0);
@@ -559,12 +581,14 @@ SCENARIO("Fill profitable orders.", "[trader]")
 
         WHEN("3 buy fragments at 3 different rates above average are written to DB.")
         {
-            Decimal amount{"0.001"};
-            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice*1.2), Side::Buy};
+            const Decimal filteredOrderPrice = filterPrice(averagePrice * 1.1, symbolFilters);
+            Decimal amount = computeMinimalAmount(filteredOrderPrice, symbolFilters);
+
+            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice*1.2, symbolFilters), Side::Buy};
             db.insert(f);
-            f.targetRate = filterPrice(averagePrice*1.3);
+            f.targetRate = filterPrice(averagePrice*1.3, symbolFilters);
             db.insert(f);
-            f.targetRate = filterPrice(averagePrice*1.4);
+            f.targetRate = filterPrice(averagePrice*1.4, symbolFilters);
             db.insert(f);
 
             // Sanity check
@@ -574,7 +598,7 @@ SCENARIO("Fill profitable orders.", "[trader]")
             THEN("They can be filled at once as profitable orders.")
             {
                 auto [sellCount, buyCount] =
-                    trader.makeAndFillProfitableOrders({averagePrice, averagePrice}, symbolFilters);
+                    trader.makeAndFillProfitableOrders({filteredOrderPrice, filteredOrderPrice}, symbolFilters);
 
                 REQUIRE(sellCount == 0);
                 REQUIRE(buyCount == 3);
@@ -615,7 +639,7 @@ SCENARIO("Fill profitable orders limit bug.", "[trader][bug]")
         WHEN("A sell fragments at rates much below is written to DB (it would trigger price filter).")
         {
             Decimal amount{"0.01"};
-            Decimal offendingLowPrice = filterPrice(averagePrice/10);
+            Decimal offendingLowPrice = filterPrice(averagePrice/10, symbolFilters);
             Fragment f{pair.base, pair.quote, amount, offendingLowPrice, Side::Sell};
             db.insert(f);
 
@@ -644,7 +668,7 @@ SCENARIO("Fill profitable orders limit bug.", "[trader][bug]")
 
                     Order filledOrder = db.selectOrders(pair, Order::Status::Fulfilled).at(0);
 
-                    CHECK(filledOrder.amount == amount);
+                    CHECK(filledOrder.baseAmount == amount);
                     CHECK(filledOrder.fragmentsRate == offendingLowPrice);
                     // Ideally, we would like to check the actual limit price sent to the exchange.
                     // Yet this is difficult without a mocked up exchange.
@@ -675,61 +699,71 @@ SCENARIO("Symbol filters", "[trader]")
         {
             SymbolFilters filters = trader.queryFilters();
 
-            // Expected filters at the time this test is implemented
+            // Expected filters at the time this test is implemented 2023/12/21: 
             //"filters": [
             //    {
-            //        "filterType": "PRICE_FILTER",
-            //        "maxPrice": "1000000.00000000",
-            //        "minPrice": "0.01000000",
-            //        "tickSize": "0.01000000"
+            //        "filterType":"PRICE_FILTER",
+            //        "maxPrice":"1000000.00000000",
+            //        "minPrice":"0.01000000",
+            //        "tickSize":"0.01000000"
             //    },
             //    {
-            //        "avgPriceMins": 5,
-            //        "filterType": "PERCENT_PRICE",
-            //        "multiplierDown": "0.2",
-            //        "multiplierUp": "5"
+            //        "filterType":"LOT_SIZE",
+            //        "maxQty":"9000.00000000",
+            //        "minQty":"0.00001000",
+            //        "stepSize":"0.00001000"
             //    },
             //    {
-            //        "filterType": "LOT_SIZE",
-            //        "maxQty": "900.00000000",
-            //        "minQty": "0.00000100",
-            //        "stepSize": "0.00000100"
+            //        "filterType":"ICEBERG_PARTS",
+            //        "limit":10
             //    },
             //    {
-            //        "applyToMarket": true,
-            //        "avgPriceMins": 5,
-            //        "filterType": "MIN_NOTIONAL",
-            //        "minNotional": "10.00000000"
+            //        "filterType":"MARKET_LOT_SIZE",
+            //        "maxQty":"113.82525454",
+            //        "minQty":"0.00000000",
+            //        "stepSize":"0.00000000"
             //    },
             //    {
-            //        "filterType": "ICEBERG_PARTS",
-            //        "limit": 10
+            //        "filterType":"TRAILING_DELTA",
+            //        "maxTrailingAboveDelta":2000,
+            //        "maxTrailingBelowDelta":2000,
+            //        "minTrailingAboveDelta":10,
+            //        "minTrailingBelowDelta":10
             //    },
             //    {
-            //        "filterType": "MARKET_LOT_SIZE",
-            //        "maxQty": "100.00000000",
-            //        "minQty": "0.00000000",
-            //        "stepSize": "0.00000000"
+            //        "askMultiplierDown":"0.2",
+            //        "askMultiplierUp":"5",
+            //        "avgPriceMins":5,
+            //        "bidMultiplierDown":"0.2",
+            //        "bidMultiplierUp":"5",
+            //        "filterType":"PERCENT_PRICE_BY_SIDE"
             //    },
             //    {
-            //        "filterType": "MAX_NUM_ORDERS",
-            //        "maxNumOrders": 200
+            //        "applyMaxToMarket":false,
+            //        "applyMinToMarket":true,
+            //        "avgPriceMins":5,
+            //        "filterType":"NOTIONAL",
+            //        "maxNotional":"9000000.00000000",
+            //        "minNotional":"5.00000000"
             //    },
             //    {
-            //        "filterType": "MAX_NUM_ALGO_ORDERS",
-            //        "maxNumAlgoOrders": 5
+            //        "filterType":"MAX_NUM_ORDERS",
+            //        "maxNumOrders":200
+            //    },
+            //    {
+            //        "filterType":"MAX_NUM_ALGO_ORDERS",
+            //        "maxNumAlgoOrders":5
             //    }
             //]
-
             CHECK(filters.price.minimum == Decimal{"0.01"});
             CHECK(filters.price.maximum == Decimal{"1000000.00000000"});
             CHECK(filters.price.tickSize == Decimal{"0.01"});
 
-            CHECK(filters.amount.minimum == Decimal{"0.000001"});
-            CHECK(filters.amount.maximum == Decimal{"900"});
-            CHECK(filters.amount.tickSize == Decimal{"0.000001"});
+            CHECK(filters.amount.minimum == Decimal{"0.00001"});
+            CHECK(filters.amount.maximum == Decimal{"9000"});
+            CHECK(filters.amount.tickSize == Decimal{"0.00001"});
 
-            CHECK(filters.minimumNotional == Decimal{"10"});
+            CHECK(filters.minimumNotional == Decimal{"5"});
         }
     }
 }

@@ -44,15 +44,15 @@ struct Order
     std::string traderName;
     Coin base;
     Coin quote;
-    Decimal amount; // Quantity of base to exchange
+    Decimal baseAmount; // Quantity of base to exchange
     Decimal fragmentsRate;
     Side side;
 
     MillisecondsSinceEpoch activationTime{0};
     Status status{Status::Inactive};
     MillisecondsSinceEpoch fulfillTime{0};
-    Decimal executionRate{"0"};
-    Decimal commission{"0"};
+    Decimal executionRate{0};
+    Decimal commission{0};
     Coin commissionAsset;
     long exchangeId{-1}; // assigned by Binance
     long id{-1}; // auto-increment by ORM
@@ -94,7 +94,7 @@ inline binance::MarketOrder to_marketOrder(const Order & aOrder)
     return {
         aOrder.symbol(),
         (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
-        aOrder.amount,
+        aOrder.baseAmount,
         aOrder.clientId(),
     };
 }
@@ -103,10 +103,12 @@ inline binance::MarketOrder to_marketOrder(const Order & aOrder)
 inline binance::LimitOrder to_limitOrder(const Order & aOrder)
 {
     return {
-        aOrder.symbol(),
-        (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
-        aOrder.amount,
-        aOrder.clientId(),
+        binance::OrderBase{
+            aOrder.symbol(),
+            (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
+            aOrder.baseAmount,
+            aOrder.clientId(),
+        },
         aOrder.fragmentsRate,
     };
 }

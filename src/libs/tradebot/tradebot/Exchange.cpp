@@ -128,7 +128,7 @@ SymbolFilters Exchange::queryFilters(const Pair & aPair)
                 Decimal{filter["stepSize"].get<std::string>()},
             };
         }
-        else if (filter.at("filterType") == "MIN_NOTIONAL")
+        else if (filter.at("filterType") == "NOTIONAL")
         {
             result.minimumNotional = Decimal{filter["minNotional"].get<std::string>()};
         }
@@ -218,10 +218,12 @@ std::optional<FulfilledOrder> fillOrderImpl(const T_order & aBinanceOrder,
         }
         else if (json["status"] == "EXPIRED")
         {
+            // TODO the fragment rate is not necessarily the order rate.
+            // This is confusing.
             spdlog::warn("{} order '{}' for {} {} at {} {} is expired.",
                          aOrderType,
                          aOrder.getIdentity(),
-                         aOrder.amount,
+                         aOrder.baseAmount,
                          aOrder.base,
                          aOrder.fragmentsRate,
                          aOrder.quote
@@ -497,13 +499,13 @@ Fulfillment Exchange::accumulateTradesFor(const Order & aOrder, int aPageSize)
     {
         unhandledResponse(response, "accumulates order trades");
     }
-    else if (! isEqual(result.amountBase, aOrder.amount))
+    else if (! isEqual(result.amountBase, aOrder.baseAmount))
     {
         spdlog::critical("Accumulated trades for order '{}' amount to {} {}, but the order was for {} {}.",
                          aOrder.getIdentity(),
                          result.amountBase,
                          aOrder.base,
-                         aOrder.amount,
+                         aOrder.baseAmount,
                          aOrder.base
                          );
         throw std::logic_error{"Trades accumulation does not match the order amount."};

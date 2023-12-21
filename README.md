@@ -24,7 +24,7 @@ from the command line.
 
 The applications are implemented upon the following [libraries](src/libs):
 
-* `binance`: implementation of the [Binance REST Api](https://binance-docs.github.io/apidocs).
+* `binance`: implementation of the [Binance REST Api](https://github.com/binance/binance-spot-api-docs).
 * `trademath`: general mathematics functions and classes that can be applied to trading.
 * `websocket`: a simple websocket library on top of Boost::Beast. (Should be moved out of this repo as it is generic.)
 * `tradebot`: relies on all the libraries above to provide the features required to implement a

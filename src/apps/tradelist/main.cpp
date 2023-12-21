@@ -46,7 +46,7 @@ int main(int argc, char * argv[])
     };
 
     spdlog::info("Reconstructed order for {} {} at {} {}. Client order id: '{}', exchange status: {}, executed quantity: {}",
-            epochOrder.amount,
+            epochOrder.baseAmount,
             epochOrder.base,
             epochOrder.executionRate,
             epochOrder.quote,

@@ -15,7 +15,7 @@ namespace detail {
     {
         Decimal remainder;
         Decimal tickSize = aFilters.amount.tickSize;
-        std::tie(aOrder.amount, remainder) = trade::computeTickFilter(aOrder.amount, tickSize);
+        std::tie(aOrder.baseAmount, remainder) = trade::computeTickFilter(aOrder.baseAmount, tickSize);
         if (! isEqual(remainder, Decimal{0}))
         {
             spdlog::warn("Prepared order '{}' had to be filtered to respect tick size {}."
@@ -27,16 +27,16 @@ namespace detail {
     }
 
 
-    bool testAmountFilters(Order & aOrder, SymbolFilters aFilters)
+    bool testAmountFilters(Order & aOrder, Decimal aOrderRate, SymbolFilters aFilters)
     {
-        if (! testAmount(aFilters, aOrder.amount, aOrder.fragmentsRate))
+        if (! testAmount(aFilters, aOrder.baseAmount, aOrderRate))
         {
             spdlog::info("Order '{}' (amount: {}, rate: {}, notional: {} {}) does not pass "
                          "amount filters (min: {}, max: {}, min notional: {}).",
                          aOrder.getIdentity(),
-                         aOrder.amount,
-                         aOrder.fragmentsRate,
-                         aOrder.amount * aOrder.fragmentsRate,
+                         aOrder.baseAmount,
+                         aOrderRate,
+                         aOrder.baseAmount * aOrderRate,
                          aOrder.quote,
                          aFilters.amount.minimum,
                          aFilters.amount.maximum,
@@ -45,6 +45,25 @@ namespace detail {
         }
         return true;
     }
+
+
+    bool testPriceFilters(Order & aOrder, Decimal aOrderRate, SymbolFilters aFilters)
+    {
+        if (! testPrice(aFilters, aOrderRate))
+        {
+            spdlog::info("Order '{}' (price: {} {}) does not pass "
+                         "price filters (min: {}, max: {}, tick: {}).",
+                         aOrder.getIdentity(),
+                         aOrderRate,
+                         aOrder.quote,
+                         aFilters.price.minimum,
+                         aFilters.price.maximum,
+                         aFilters.price.tickSize);
+            return false;
+        }
+        return true;
+    }
+
 
 
 } // namespace detail
@@ -115,7 +134,7 @@ bool Trader::cancel(Order & aOrder)
                 spdlog::critical("Order {} was cancelled but partially filled for {}/{} {}.",
                                  static_cast<const std:: string &>(aOrder.clientId()),
                                  partialFill,
-                                 aOrder.amount,
+                                 aOrder.baseAmount,
                                  aOrder.base);
                 throw std::logic_error("Cannot handle partially filled orders.");
             }
@@ -136,12 +155,12 @@ bool Trader::cancel(Order & aOrder)
         // but I think I observed the opposite during some runs of the tests.
 
         Decimal executed = jstod(orderJson->at("executedQty"));
-        if (executed != aOrder.amount)
+        if (executed != aOrder.baseAmount)
         {
             spdlog::critical("Order '{}' was marked 'FILLED' but partially filled for {}/{} {}.",
                              aOrder.getIdentity(),
                              executed,
-                             aOrder.amount,
+                             aOrder.baseAmount,
                              aOrder.base);
             throw std::logic_error("Does not expect 'FILLED' order to be partially filled.");
         }
@@ -279,7 +298,7 @@ bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
         spdlog::info("Recorded completion of {} order '{}' for {} {} at a price of {} {}.",
                 boost::lexical_cast<std::string>(aFulfilledOrder.side),
                 aFulfilledOrder.getIdentity(),
-                aFulfilledOrder.amount,
+                aFulfilledOrder.baseAmount,
                 aFulfilledOrder.base,
                 aFulfilledOrder.executionRate,
                 aFulfilledOrder.quote
@@ -419,8 +438,15 @@ Trader::makeAndFillProfitableOrders(Interval aRateInterval,
         for (const Decimal rate : database.getProfitableRates(aSide, aRate, pair))
         {
             Order order = database.prepareOrder(name, aSide, rate, pair);
-            if (detail::testAmountFilters(order, aFilters))
+            // TODO: it is a complication to forward a rate that takes over the fragment rate in passing the order
+            // I have to dig around and understand what is the fragment rate used for,
+            // to see if we could override it in the order directly: order.fragmentsRate = aRate
+            // or if we want to introduce a distince rate in the Order struct.
+            if (detail::testAmountFilters(order, aRate, aFilters)
+                && detail::testPriceFilters(order, aRate, aFilters))
             {
+                // TODO Do we want to filter after the fact? 
+                // Advantage: this makes it more robust to changes in filters **after** the fragments are written to the DB.
                 detail::filterAmountTickSize(order, aFilters);
                 if(! fillExistingLimitFokOrder(order, aRate, predicate))
                 {

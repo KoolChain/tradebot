@@ -400,7 +400,7 @@ Response Api::makeRequest(Verb aVerb,
     switch (aVerb)
     {
         case Verb::Delete:
-            return analyzeResponse("Delete", session.Delete());
+            return analyzeResponse("DELETE", session.Delete());
         case Verb::Get:
             return analyzeResponse("GET", session.Get());
         case Verb::Post:
