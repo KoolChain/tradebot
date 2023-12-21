@@ -57,13 +57,14 @@ inline Fulfillment Fulfillment::fromTradeJson(const Json & aTrade)
 inline Fulfillment Fulfillment::fromFillJson(const Json & aTrade)
 {
     return {
-        jstod(aTrade.at("qty")),
-        0, // The cumulative quote qty, available on the overall order response, has to be set by the calling context.
-           // (e.g. in fillOrderImpl())
-        jstod(aTrade.at("commission")),
-        aTrade.at("commissionAsset"),
-        0,
-        1, // 1 trade
+        .amountBase = jstod(aTrade.at("qty")),
+        .amountQuote = 0, // The individual fills do not contain the quote qty.
+            // The cumulative quote qty, available on the overall order response, has to be set by the calling context.
+            // (e.g. in fillOrderImpl())
+        .fee = jstod(aTrade.at("commission")),
+        .feeAsset = aTrade.at("commissionAsset"),
+        .latestTrade = 0,
+        .tradeCount = 1,
     };
 }
 

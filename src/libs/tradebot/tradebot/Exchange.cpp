@@ -208,7 +208,7 @@ std::optional<FulfilledOrder> fillOrderImpl(const T_order & aBinanceOrder,
                 std::accumulate(json.at("fills").begin(),
                                 json.at("fills").end(),
                                 Fulfillment{},
-                                [&aOrder](Fulfillment & fulfillment, const auto & fillJson)
+                                [&aOrder](Fulfillment fulfillment, const Json & fillJson)
                                 {
                                     return fulfillment.accumulate(Fulfillment::fromFillJson(fillJson), aOrder);
                                 });
