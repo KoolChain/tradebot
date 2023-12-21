@@ -5,11 +5,14 @@
 #include <thread>
 
 
-SCENARIO("Websocket simple communication")
+SCENARIO("Websocket simple communication", "[.]")
 {
     GIVEN("An echo websocket server and a message")
     {
-        const std::string host = "wss://echo.websocket.org";
+        // TODO Ad 2023/12/21: Find an echo websocket server that is still working.
+        // or address the "sslv3 alert handshake failure" with ws.ifelse.io
+        //const std::string host = "echo.websocket.org";
+        const std::string host = "ws.ifelse.io";
         const std::string message = "I am DOGE";
 
         THEN("A connection can be established, and message repeated")
@@ -23,7 +26,7 @@ SCENARIO("Websocket simple communication")
                     ws.async_close();
                 }};
             ws.async_send(message);
-            ws.run("echo.websocket.org", "443");
+            ws.run(host, "443");
             REQUIRE(received == message);
         }
     }
