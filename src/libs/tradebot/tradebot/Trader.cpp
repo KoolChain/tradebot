@@ -27,16 +27,16 @@ namespace detail {
     }
 
 
-    bool testAmountFilters(Order & aOrder, SymbolFilters aFilters)
+    bool testAmountFilters(Order & aOrder, Decimal aOrderRate, SymbolFilters aFilters)
     {
-        if (! testAmount(aFilters, aOrder.amount, aOrder.fragmentsRate))
+        if (! testAmount(aFilters, aOrder.amount, aOrderRate))
         {
             spdlog::info("Order '{}' (amount: {}, rate: {}, notional: {} {}) does not pass "
                          "amount filters (min: {}, max: {}, min notional: {}).",
                          aOrder.getIdentity(),
                          aOrder.amount,
-                         aOrder.fragmentsRate,
-                         aOrder.amount * aOrder.fragmentsRate,
+                         aOrderRate,
+                         aOrder.amount * aOrderRate,
                          aOrder.quote,
                          aFilters.amount.minimum,
                          aFilters.amount.maximum,
@@ -45,6 +45,25 @@ namespace detail {
         }
         return true;
     }
+
+
+    bool testPriceFilters(Order & aOrder, Decimal aOrderRate, SymbolFilters aFilters)
+    {
+        if (! testPrice(aFilters, aOrderRate))
+        {
+            spdlog::info("Order '{}' (price: {} {}) does not pass "
+                         "price filters (min: {}, max: {}, tick: {}).",
+                         aOrder.getIdentity(),
+                         aOrderRate,
+                         aOrder.quote,
+                         aFilters.price.minimum,
+                         aFilters.price.maximum,
+                         aFilters.price.tickSize);
+            return false;
+        }
+        return true;
+    }
+
 
 
 } // namespace detail
@@ -419,8 +438,15 @@ Trader::makeAndFillProfitableOrders(Interval aRateInterval,
         for (const Decimal rate : database.getProfitableRates(aSide, aRate, pair))
         {
             Order order = database.prepareOrder(name, aSide, rate, pair);
-            if (detail::testAmountFilters(order, aFilters))
+            // TODO: it is a complication to forward a rate that takes over the fragment rate in passing the order
+            // I have to dig around and understand what is the fragment rate used for,
+            // to see if we could override it in the order directly: order.fragmentsRate = aRate
+            // or if we want to introduce a distince rate in the Order struct.
+            if (detail::testAmountFilters(order, aRate, aFilters)
+                && detail::testPriceFilters(order, aRate, aFilters))
             {
+                // TODO Do we want to filter after the fact? 
+                // Advantage: this makes it more robust to changes in filters **after** the fragments are written to the DB.
                 detail::filterAmountTickSize(order, aFilters);
                 if(! fillExistingLimitFokOrder(order, aRate, predicate))
                 {

@@ -500,9 +500,29 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 }
 
 
-Decimal filterPrice(Decimal aPrice)
+Decimal filterPrice(Decimal aPrice, SymbolFilters aFilters)
 {
-    return trade::applyTickSize(aPrice, Decimal{"0.01"});
+    return trade::applyTickSize(aPrice, aFilters.price.tickSize);
+}
+
+
+Decimal computeMinimalAmount(Decimal aPrice, SymbolFilters aFilters)
+{
+    Decimal quantity = aFilters.minimumNotional / aPrice;
+    Decimal remainder = 0;
+    std::tie(quantity, remainder) = trade::computeTickFilter(quantity, aFilters.amount.tickSize);
+    if(remainder != 0)
+    {
+        assert(quantity * aPrice < aFilters.minimumNotional);
+        quantity += aFilters.amount.tickSize;
+        assert(quantity * aPrice > aFilters.minimumNotional);
+    }
+    else
+    {
+        assert(quantity * aPrice == aFilters.minimumNotional);
+    }
+    assert(quantity >= aFilters.amount.minimum && quantity <= aFilters.amount.maximum);
+    return quantity;
 }
 
 
@@ -533,11 +553,13 @@ SCENARIO("Fill profitable orders.", "[trader]")
 
         WHEN("3 sell fragments at 2 different rates below average are written to DB.")
         {
-            Decimal amount{"0.001"};
-            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice/1.2), Side::Sell};
+            const Decimal filteredOrderPrice = filterPrice(averagePrice / 1.1, symbolFilters);
+            Decimal amount = computeMinimalAmount(filteredOrderPrice, symbolFilters);
+
+            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice/1.2, symbolFilters), Side::Sell};
             db.insert(f);
             db.insert(f);
-            f.targetRate = filterPrice(averagePrice/1.3);
+            f.targetRate = filterPrice(averagePrice/1.3, symbolFilters);
             db.insert(f);
 
             // Sanity check
@@ -547,7 +569,7 @@ SCENARIO("Fill profitable orders.", "[trader]")
             THEN("They can be filled at once as profitable orders.")
             {
                 auto [sellCount, buyCount] =
-                    trader.makeAndFillProfitableOrders({averagePrice, averagePrice}, symbolFilters);
+                    trader.makeAndFillProfitableOrders({filteredOrderPrice, filteredOrderPrice}, symbolFilters);
 
                 REQUIRE(sellCount == 2);
                 REQUIRE(buyCount == 0);
@@ -559,12 +581,14 @@ SCENARIO("Fill profitable orders.", "[trader]")
 
         WHEN("3 buy fragments at 3 different rates above average are written to DB.")
         {
-            Decimal amount{"0.001"};
-            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice*1.2), Side::Buy};
+            const Decimal filteredOrderPrice = filterPrice(averagePrice * 1.1, symbolFilters);
+            Decimal amount = computeMinimalAmount(filteredOrderPrice, symbolFilters);
+
+            Fragment f{pair.base, pair.quote, amount, filterPrice(averagePrice*1.2, symbolFilters), Side::Buy};
             db.insert(f);
-            f.targetRate = filterPrice(averagePrice*1.3);
+            f.targetRate = filterPrice(averagePrice*1.3, symbolFilters);
             db.insert(f);
-            f.targetRate = filterPrice(averagePrice*1.4);
+            f.targetRate = filterPrice(averagePrice*1.4, symbolFilters);
             db.insert(f);
 
             // Sanity check
@@ -574,7 +598,7 @@ SCENARIO("Fill profitable orders.", "[trader]")
             THEN("They can be filled at once as profitable orders.")
             {
                 auto [sellCount, buyCount] =
-                    trader.makeAndFillProfitableOrders({averagePrice, averagePrice}, symbolFilters);
+                    trader.makeAndFillProfitableOrders({filteredOrderPrice, filteredOrderPrice}, symbolFilters);
 
                 REQUIRE(sellCount == 0);
                 REQUIRE(buyCount == 3);
@@ -615,7 +639,7 @@ SCENARIO("Fill profitable orders limit bug.", "[trader][bug]")
         WHEN("A sell fragments at rates much below is written to DB (it would trigger price filter).")
         {
             Decimal amount{"0.01"};
-            Decimal offendingLowPrice = filterPrice(averagePrice/10);
+            Decimal offendingLowPrice = filterPrice(averagePrice/10, symbolFilters);
             Fragment f{pair.base, pair.quote, amount, offendingLowPrice, Side::Sell};
             db.insert(f);
 

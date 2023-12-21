@@ -103,10 +103,12 @@ inline binance::MarketOrder to_marketOrder(const Order & aOrder)
 inline binance::LimitOrder to_limitOrder(const Order & aOrder)
 {
     return {
-        aOrder.symbol(),
-        (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
-        aOrder.amount,
-        aOrder.clientId(),
+        binance::OrderBase{
+            aOrder.symbol(),
+            (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
+            aOrder.amount,
+            aOrder.clientId(),
+        },
         aOrder.fragmentsRate,
     };
 }
