@@ -167,6 +167,8 @@ FulfilledOrder fulfill(Order & aOrder,
         {
             Decimal difference = aOrder.executionRate - jstod(aQueryStatus["price"]);
             // Just warning, and use the fulfillment averaged price.
+            // NOTE Ad 2023/12/21: Sadly, the average price is likely to be a rational number without finite decimal representation.
+            // Even though each individual fill seems to respect the exchange filters, sum(quoteQty)/sum(baseQty) is not constrained.
             spdlog::log(   (aOrder.side == Side::Sell && difference > 0)
                         || (aOrder.side == Side::Buy  && difference < 0) ? spdlog::level::info
                                                                          : spdlog::level::warn,

@@ -58,7 +58,8 @@ inline Fulfillment Fulfillment::fromFillJson(const Json & aTrade)
 {
     return {
         jstod(aTrade.at("qty")),
-        0,
+        0, // The cumulative quote qty, available on the overall order response, has to be set by the calling context.
+           // (e.g. in fillOrderImpl())
         jstod(aTrade.at("commission")),
         aTrade.at("commissionAsset"),
         0,

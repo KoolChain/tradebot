@@ -51,8 +51,8 @@ struct Order
     MillisecondsSinceEpoch activationTime{0};
     Status status{Status::Inactive};
     MillisecondsSinceEpoch fulfillTime{0};
-    Decimal executionRate{"0"};
-    Decimal commission{"0"};
+    Decimal executionRate{0};
+    Decimal commission{0};
     Coin commissionAsset;
     long exchangeId{-1}; // assigned by Binance
     long id{-1}; // auto-increment by ORM
