@@ -45,7 +45,8 @@ struct Order
     Coin base;
     Coin quote;
     Decimal baseAmount; // Quantity of base to exchange
-    Decimal fragmentsRate;
+    Decimal fragmentsRate; // This order was spawned from 1..n fragments at this rate.
+                           // IMPORTANT: This is not necessarily the price at which this order will be issued!
     Side side;
 
     MillisecondsSinceEpoch activationTime{0};
