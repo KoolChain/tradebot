@@ -180,8 +180,8 @@ SCENARIO("Trader low-level functions.", "[trader]")
                 REQUIRE(impossible.base     == pair.base);
                 REQUIRE(impossible.quote    == pair.quote);
                 // Is not strictly equal: the is an exact Decimal
-                REQUIRE(isEqual(impossible.amount, 0.001 + 0.002));
-                REQUIRE(impossible.amount == Decimal{"0.001"} + Decimal{"0.002"});
+                REQUIRE(isEqual(impossible.baseAmount, 0.001 + 0.002));
+                REQUIRE(impossible.baseAmount == Decimal{"0.001"} + Decimal{"0.002"});
                 REQUIRE(impossible.fragmentsRate == impossiblePrice);
                 REQUIRE(impossible.side     == Side::Sell);
                 REQUIRE(impossible.exchangeId != -1);
@@ -197,7 +197,7 @@ SCENARIO("Trader low-level functions.", "[trader]")
                     REQUIRE(orderJson["symbol"] == impossible.symbol());
                     REQUIRE(orderJson["orderId"] == impossible.exchangeId);
                     REQUIRE(jstod(orderJson["price"]) == impossible.fragmentsRate);
-                    REQUIRE(jstod(orderJson["origQty"]) == impossible.amount);
+                    REQUIRE(jstod(orderJson["origQty"]) == impossible.baseAmount);
                     REQUIRE(orderJson["timeInForce"] == "GTC");
                     REQUIRE(orderJson["type"] == "LIMIT");
                     REQUIRE(orderJson["side"] == "SELL");
@@ -457,7 +457,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                     db.reload(marketFulfilledFragment);
                     REQUIRE(marketFulfilledFragment.composedOrder == marketFulfilled.id);
-                    REQUIRE(marketFulfilledFragment.amount == marketFulfilled.amount);
+                    REQUIRE(marketFulfilledFragment.amount == marketFulfilled.baseAmount);
 
                     db.reload(limitFulfilled);
                     REQUIRE(limitFulfilled.status == Order::Status::Fulfilled);
@@ -468,7 +468,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                     db.reload(limitFulfilledFragment);
                     REQUIRE(limitFulfilledFragment.composedOrder == limitFulfilled.id);
-                    REQUIRE(limitFulfilledFragment.amount == limitFulfilled.amount);
+                    REQUIRE(limitFulfilledFragment.amount == limitFulfilled.baseAmount);
                 }
 
                 THEN("There are no more orders to cancel")
@@ -668,7 +668,7 @@ SCENARIO("Fill profitable orders limit bug.", "[trader][bug]")
 
                     Order filledOrder = db.selectOrders(pair, Order::Status::Fulfilled).at(0);
 
-                    CHECK(filledOrder.amount == amount);
+                    CHECK(filledOrder.baseAmount == amount);
                     CHECK(filledOrder.fragmentsRate == offendingLowPrice);
                     // Ideally, we would like to check the actual limit price sent to the exchange.
                     // Yet this is difficult without a mocked up exchange.

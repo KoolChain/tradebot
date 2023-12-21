@@ -64,8 +64,8 @@ SCENARIO("Placing orders", "[exchange]")
                     // For a market order, the price is created at 0,
                     // and apparently not updated once the order is filled.
                     REQUIRE(jstod(orderJson["price"]) == 0.);
-                    REQUIRE(jstod(orderJson["origQty"]) == immediateOrder.amount);
-                    REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.amount);
+                    REQUIRE(jstod(orderJson["origQty"]) == immediateOrder.baseAmount);
+                    REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.baseAmount);
                     REQUIRE(orderJson["type"] == "MARKET");
                     REQUIRE(orderJson["side"] == "BUY");
                 }
@@ -113,8 +113,8 @@ SCENARIO("Placing orders", "[exchange]")
                     REQUIRE(orderJson["orderId"] == immediateOrder.exchangeId);
                     REQUIRE(orderJson["clientOrderId"] == immediateOrder.clientId());
                     REQUIRE(jstod(orderJson["price"]) == immediateOrder.fragmentsRate);
-                    REQUIRE(jstod(orderJson["origQty"]) == immediateOrder.amount);
-                    REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.amount);
+                    REQUIRE(jstod(orderJson["origQty"]) == immediateOrder.baseAmount);
+                    REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.baseAmount);
                     REQUIRE(orderJson["type"] == "LIMIT");
                     REQUIRE(orderJson["side"] == "SELL");
                     REQUIRE(orderJson["timeInForce"] == "GTC");
@@ -160,8 +160,8 @@ SCENARIO("Placing orders", "[exchange]")
                     REQUIRE(orderJson["orderId"] == immediateOrder.exchangeId);
                     REQUIRE(orderJson["clientOrderId"] == immediateOrder.clientId());
                     REQUIRE(jstod(orderJson["price"]) == immediateOrder.fragmentsRate);
-                    REQUIRE(jstod(orderJson["origQty"]) == immediateOrder.amount);
-                    REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.amount);
+                    REQUIRE(jstod(orderJson["origQty"]) == immediateOrder.baseAmount);
+                    REQUIRE(jstod(orderJson["executedQty"]) == immediateOrder.baseAmount);
                     REQUIRE(orderJson["type"] == "LIMIT");
                     REQUIRE(orderJson["side"] == "BUY");
                     REQUIRE(orderJson["timeInForce"] == "FOK");
@@ -202,7 +202,7 @@ SCENARIO("Placing orders", "[exchange]")
                     REQUIRE(orderJson["orderId"] == impossibleOrder.exchangeId);
                     REQUIRE(orderJson["clientOrderId"] == impossibleOrder.clientId());
                     REQUIRE(jstod(orderJson["price"]) == impossibleOrder.fragmentsRate);
-                    REQUIRE(jstod(orderJson["origQty"]) == impossibleOrder.amount);
+                    REQUIRE(jstod(orderJson["origQty"]) == impossibleOrder.baseAmount);
                     REQUIRE(jstod(orderJson["executedQty"]) == Decimal{0});
                     REQUIRE(orderJson["type"] == "LIMIT");
                     REQUIRE(orderJson["side"] == "BUY");
@@ -416,7 +416,7 @@ SCENARIO("Listing trades.", "[exchange]")
                 // query order.
                 Json orderJson = *exchange.tryQueryOrder(buyLarge);
 
-                CHECK(fulfillment.amountBase == buyLarge.amount);
+                CHECK(fulfillment.amountBase == buyLarge.baseAmount);
                 CHECK(fulfillment.amountBase == jstod(orderJson.at("executedQty")));
                 CHECK(fulfillment.amountQuote == jstod(orderJson.at("cummulativeQuoteQty")));
                 REQUIRE(fulfillment.feeAsset != "");
@@ -513,7 +513,7 @@ SCENARIO("Listening to SPOT user data stream.")
                     REQUIRE(reports.front().at("i") == immediateOrder.exchangeId);
                     REQUIRE(reports.front().at("s") == immediateOrder.symbol());
                     REQUIRE(reports.front().at("c") == immediateOrder.clientId());
-                    REQUIRE(jstod(reports.front().at("q")) == immediateOrder.amount);
+                    REQUIRE(jstod(reports.front().at("q")) == immediateOrder.baseAmount);
                     REQUIRE(reports.front().at("o") == "MARKET");
                     REQUIRE(reports.front().at("x") == "NEW");
                     reports.pop_front();
@@ -542,7 +542,7 @@ SCENARIO("Listening to SPOT user data stream.")
                     }
 
                     Json orderJson = exchange.queryOrder(immediateOrder);
-                    CHECK(fulfillment.amountBase == immediateOrder.amount);
+                    CHECK(fulfillment.amountBase == immediateOrder.baseAmount);
                     CHECK(fulfillment.amountBase == jstod(orderJson.at("executedQty")));
                     CHECK(fulfillment.amountQuote == jstod(orderJson.at("cummulativeQuoteQty")));
                     REQUIRE(fulfillment.feeAsset != "");

@@ -421,7 +421,7 @@ SCENARIO("Not spawning counter-fragments with default NullSpawner.", "[spawn]")
             db.reload(fragment_2);
 
             // Sanity check
-            REQUIRE(order.amount == 2*amount);
+            REQUIRE(order.baseAmount == 2*amount);
             REQUIRE(fragment_1.composedOrder == order.id);
             REQUIRE(fragment_2.composedOrder == order.id);
             REQUIRE(db.countFragments() == 2);
@@ -533,7 +533,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
             db.reload(fragment);
 
             // Sanity check
-            REQUIRE(order.amount == amount);
+            REQUIRE(order.baseAmount == amount);
             REQUIRE(fragment.composedOrder == order.id);
             REQUIRE(db.countFragments() == 1);
 
@@ -725,7 +725,7 @@ SCENARIO("Consolidation of counter-fragments.", "[spawn]")
             db.reload(fragment_2);
 
             // Sanity check
-            REQUIRE(order.amount == 2 * amount);
+            REQUIRE(order.baseAmount == 2 * amount);
             REQUIRE(fragment_1.composedOrder == order.id);
             REQUIRE(fragment_2.composedOrder == order.id);
             REQUIRE(db.countFragments() == 2);

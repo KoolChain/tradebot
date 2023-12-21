@@ -32,7 +32,7 @@ binance::ClientId Order::clientId() const
     {
         spdlog::critical("Cannot retrieve the client id for an order ({} {})"
                           " which is not matched in database.",
-                          amount,
+                          baseAmount,
                           symbol());
         throw std::logic_error{"Cannot retrieve the client id for an order not matched in database."};
     }
@@ -48,7 +48,7 @@ Decimal Order::executionQuoteAmount() const
                           getIdentity());
         throw std::logic_error{"Cannot get execution quote amount for an order which is not fulfilled."};
     }
-    return amount * executionRate;
+    return baseAmount * executionRate;
 }
 
 
@@ -58,7 +58,7 @@ bool operator==(const Order & aLhs, const Order & aRhs)
         aLhs.traderName == aRhs.traderName
         && aLhs.base == aRhs.base
         && aLhs.quote == aRhs.quote
-        && isEqual(aLhs.amount, aRhs.amount)
+        && isEqual(aLhs.baseAmount, aRhs.baseAmount)
         && isEqual(aLhs.fragmentsRate, aRhs.fragmentsRate)
         && aLhs.side == aRhs.side
         && aLhs.activationTime == aRhs.activationTime
@@ -83,7 +83,7 @@ std::ostream & operator<<(std::ostream & aOut, const Order & aRhs)
     return aOut
         << aRhs.status << " order " << static_cast<const std::string &>(aRhs.clientId()) << ' '
         << std::string(aRhs.side == Side::Sell ? "Sell" : "Buy")
-        << ' ' << aRhs.amount << ' ' << aRhs.base
+        << ' ' << aRhs.baseAmount << ' ' << aRhs.base
         << " (fragments: " << aRhs.fragmentsRate
         << " execution: " << aRhs.executionRate << ' '
         << aRhs.quote << " per " << aRhs.base << ")"
@@ -122,20 +122,20 @@ FulfilledOrder fulfill(Order & aOrder,
 {
     // Sanity check
     {
-        if (! isEqual(aOrder.amount, jstod(aQueryStatus["executedQty"])))
+        if (! isEqual(aOrder.baseAmount, jstod(aQueryStatus["executedQty"])))
         {
             spdlog::critical("Mismatched order '{}' amount and executed quantity: {} vs. {}.",
                              aOrder.getIdentity(),
-                             aOrder.amount,
+                             aOrder.baseAmount,
                              aQueryStatus["executedQty"]);
             throw std::logic_error("Mismatched original amount and executed quantity on order.");
         }
 
-        if (! isEqual(aOrder.amount, aFulfillment.amountBase))
+        if (! isEqual(aOrder.baseAmount, aFulfillment.amountBase))
         {
             spdlog::critical("Mismatched order '{}' amount and accumulated fulfillment quantity: {} vs. {}.",
                              aOrder.getIdentity(),
-                             aOrder.amount,
+                             aOrder.baseAmount,
                              aFulfillment.amountBase);
             throw std::logic_error("Mismatched original amount and accumulated fulfillment quantity on order.");
         }

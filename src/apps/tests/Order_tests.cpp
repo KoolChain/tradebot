@@ -23,7 +23,7 @@ SCENARIO("Order usage.", "[order]")
         };
 
         REQUIRE(order.side == Side::Buy);
-        REQUIRE(order.amount == Decimal{"0.02"});
+        REQUIRE(order.baseAmount == Decimal{"0.02"});
 
 
         THEN("Its side can be reversed.")
@@ -50,13 +50,13 @@ SCENARIO("Order usage.", "[order]")
             THEN("Its execution quote amount can be obtained.")
             {
                 order.executionRate = Decimal(3);
-                CHECK(order.executionQuoteAmount() == order.amount * 3);
+                CHECK(order.executionQuoteAmount() == order.baseAmount * 3);
             }
 
             THEN("Its execution quote amount can be obtained.")
             {
                 order.executionRate = Decimal("0.02");
-                CHECK(order.executionQuoteAmount() == order.amount * Decimal{"0.02"});
+                CHECK(order.executionQuoteAmount() == order.baseAmount * Decimal{"0.02"});
             }
         }
     }

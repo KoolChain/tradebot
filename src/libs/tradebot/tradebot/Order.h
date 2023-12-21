@@ -44,7 +44,7 @@ struct Order
     std::string traderName;
     Coin base;
     Coin quote;
-    Decimal amount; // Quantity of base to exchange
+    Decimal baseAmount; // Quantity of base to exchange
     Decimal fragmentsRate;
     Side side;
 
@@ -94,7 +94,7 @@ inline binance::MarketOrder to_marketOrder(const Order & aOrder)
     return {
         aOrder.symbol(),
         (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
-        aOrder.amount,
+        aOrder.baseAmount,
         aOrder.clientId(),
     };
 }
@@ -106,7 +106,7 @@ inline binance::LimitOrder to_limitOrder(const Order & aOrder)
         binance::OrderBase{
             aOrder.symbol(),
             (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
-            aOrder.amount,
+            aOrder.baseAmount,
             aOrder.clientId(),
         },
         aOrder.fragmentsRate,

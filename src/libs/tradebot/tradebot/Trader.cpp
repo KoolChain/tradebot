@@ -15,7 +15,7 @@ namespace detail {
     {
         Decimal remainder;
         Decimal tickSize = aFilters.amount.tickSize;
-        std::tie(aOrder.amount, remainder) = trade::computeTickFilter(aOrder.amount, tickSize);
+        std::tie(aOrder.baseAmount, remainder) = trade::computeTickFilter(aOrder.baseAmount, tickSize);
         if (! isEqual(remainder, Decimal{0}))
         {
             spdlog::warn("Prepared order '{}' had to be filtered to respect tick size {}."
@@ -29,14 +29,14 @@ namespace detail {
 
     bool testAmountFilters(Order & aOrder, Decimal aOrderRate, SymbolFilters aFilters)
     {
-        if (! testAmount(aFilters, aOrder.amount, aOrderRate))
+        if (! testAmount(aFilters, aOrder.baseAmount, aOrderRate))
         {
             spdlog::info("Order '{}' (amount: {}, rate: {}, notional: {} {}) does not pass "
                          "amount filters (min: {}, max: {}, min notional: {}).",
                          aOrder.getIdentity(),
-                         aOrder.amount,
+                         aOrder.baseAmount,
                          aOrderRate,
-                         aOrder.amount * aOrderRate,
+                         aOrder.baseAmount * aOrderRate,
                          aOrder.quote,
                          aFilters.amount.minimum,
                          aFilters.amount.maximum,
@@ -134,7 +134,7 @@ bool Trader::cancel(Order & aOrder)
                 spdlog::critical("Order {} was cancelled but partially filled for {}/{} {}.",
                                  static_cast<const std:: string &>(aOrder.clientId()),
                                  partialFill,
-                                 aOrder.amount,
+                                 aOrder.baseAmount,
                                  aOrder.base);
                 throw std::logic_error("Cannot handle partially filled orders.");
             }
@@ -155,12 +155,12 @@ bool Trader::cancel(Order & aOrder)
         // but I think I observed the opposite during some runs of the tests.
 
         Decimal executed = jstod(orderJson->at("executedQty"));
-        if (executed != aOrder.amount)
+        if (executed != aOrder.baseAmount)
         {
             spdlog::critical("Order '{}' was marked 'FILLED' but partially filled for {}/{} {}.",
                              aOrder.getIdentity(),
                              executed,
-                             aOrder.amount,
+                             aOrder.baseAmount,
                              aOrder.base);
             throw std::logic_error("Does not expect 'FILLED' order to be partially filled.");
         }
@@ -298,7 +298,7 @@ bool Trader::completeFulfilledOrder(const FulfilledOrder & aFulfilledOrder)
         spdlog::info("Recorded completion of {} order '{}' for {} {} at a price of {} {}.",
                 boost::lexical_cast<std::string>(aFulfilledOrder.side),
                 aFulfilledOrder.getIdentity(),
-                aFulfilledOrder.amount,
+                aFulfilledOrder.baseAmount,
                 aFulfilledOrder.base,
                 aFulfilledOrder.executionRate,
                 aFulfilledOrder.quote

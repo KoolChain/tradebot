@@ -23,7 +23,7 @@ auto initializeStorage(const std::string & aFilename)
                        make_column("trader_name", &Order::traderName),
                        make_column("base", &Order::base),
                        make_column("quote", &Order::quote),
-                       make_column("amount", &Order::amount),
+                       make_column("amount", &Order::baseAmount),
                        make_column("fragments_rate", &Order::fragmentsRate),
                        make_column("side", &Order::side),
                        make_column("activation_time", &Order::activationTime),
@@ -386,7 +386,7 @@ Order Database::prepareOrder(const std::string & aTraderName,
 
     insert(order);
     assignAvailableFragments(order);
-    order.amount = sumFragmentsOfOrder(order);
+    order.baseAmount = sumFragmentsOfOrder(order);
     update(order);
 
     transaction.commit();

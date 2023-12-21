@@ -87,22 +87,22 @@ inline void NaiveBot::onCompletion(Json aReport)
     onPartialFill(aReport);
 
     // 'z' is cumulative filled quantity
-    if (jstod(aReport.at("z")) != currentOrder->order.amount)
+    if (jstod(aReport.at("z")) != currentOrder->order.baseAmount)
     {
         spdlog::critical("Order '{}' has missmatching amount vs. reported cumulative filled quantity: {} vs. {}.",
             currentOrder->order.getIdentity(),
-            currentOrder->order.amount,
+            currentOrder->order.baseAmount,
             jstod(aReport.at("z")));
         throw std::logic_error{"Mismatched order amount vs. reported cumulative filled quantity."};
 
     }
 
-    if (currentOrder->fulfillment.amountBase != currentOrder->order.amount)
+    if (currentOrder->fulfillment.amountBase != currentOrder->order.baseAmount)
     {
         spdlog::warn("Order '{}' has missmatching amount vs. fulfillment accumulated over user stream: {} vs. {}."
                      " Second attempt.",
             currentOrder->order.getIdentity(),
-            currentOrder->order.amount,
+            currentOrder->order.baseAmount,
             currentOrder->fulfillment.amountBase);
 
         // An attempt to retrieves all trades for the order after the fact
@@ -110,11 +110,11 @@ inline void NaiveBot::onCompletion(Json aReport)
         // This could make it more robust to network errors, 24h reconnections, etc.
         currentOrder->fulfillment = trader.exchange.accumulateTradesFor(currentOrder->order);
 
-        if (currentOrder->fulfillment.amountBase != currentOrder->order.amount)
+        if (currentOrder->fulfillment.amountBase != currentOrder->order.baseAmount)
         {
             spdlog::critical("Order '{}' has missmatching amount vs. fulfillment accumulated via rest API: {} vs. {}.",
                 currentOrder->order.getIdentity(),
-                currentOrder->order.amount,
+                currentOrder->order.baseAmount,
                 currentOrder->fulfillment.amountBase);
             throw std::logic_error{"Mismatched order amount vs. accumulated fulfillment."};
         }
