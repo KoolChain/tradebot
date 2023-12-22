@@ -39,7 +39,7 @@ SCENARIO("Spreader tick size", "[spreaders]")
 
             WHEN("The spreader is given a tick size of 1.")
             {
-                spreader.tickSize = Decimal{1};
+                spreader.amountTickSize = Decimal{1};
 
                 THEN("It spreads integers.")
                 {

@@ -23,7 +23,7 @@ struct ProportionSpreader
 
     Ladder ladder;
     std::vector<Decimal> proportions;
-    Decimal tickSize{trade::gDefaultTickSize};
+    Decimal amountTickSize{trade::gDefaultTickSize};
 };
 
 
@@ -37,7 +37,7 @@ SpawnResult<T_amount> ProportionSpreader::spreadDown(T_amount aAmount, Decimal a
                                    // +1 because no fragment should be assigned to the current stop.
                                    reverseStop+1, ladder.crend(),
                                    proportions.cbegin(), proportions.cend(),
-                                   tickSize);
+                                   amountTickSize);
 }
 
 
@@ -51,7 +51,7 @@ SpawnResult<T_amount> ProportionSpreader::spreadUp(T_amount aAmount, Decimal aFr
                                    // +1 because no fragment should be assigned to the current stop.
                                    forwardStop+1, ladder.cend(),
                                    proportions.cbegin(), proportions.cend(),
-                                   tickSize);
+                                   amountTickSize);
 }
 
 

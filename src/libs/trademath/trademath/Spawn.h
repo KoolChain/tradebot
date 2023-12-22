@@ -126,14 +126,14 @@ using SpawnResult = std::pair<std::vector<Spawn>, T_amount/*accumulation*/>;
 /// and apply the proportion to `aAmount` at each interval, assigning the resulting amount to the
 /// interval farthest stop.
 ///
-/// \note For normal iterators, farthest stop is the upper value in the interval,
+/// \note For forward iterators, farthest stop is the upper value in the interval,
 /// while for reverse iterators it the the lower value.
 template <class T_amount, class T_ladderIt, class T_function>
 SpawnResult<T_amount>
 spawnIntegration(const T_amount aAmount,
                  T_ladderIt aStopBegin, const T_ladderIt aStopEnd,
                  T_function aFunction,
-                 Decimal aTickSize = Decimal{0})
+                 Decimal aAmountTickSize = Decimal{0})
 {
     if (std::distance(aStopBegin, aStopEnd) < 1)
     {
@@ -148,11 +148,11 @@ spawnIntegration(const T_amount aAmount,
     {
         Decimal amount = (Decimal)aAmount * abs(aFunction.integrate(*aStopBegin, *nextStop));
         Spawn spawn{*nextStop, T_amount{amount}};
-        if (aTickSize != 0) // we would expect compilers to optimize that away on default value
+        if (aAmountTickSize != 0) // we would expect compilers to optimize that away on default value
         {
             // Always apply the tick size to base value.
-            // (For the moment the libraries only allow placing order by giving the base value).
-            spawn.base = applyTickSize(spawn.base, aTickSize);
+            // (For the moment binance only allow placing limit orders by giving the base value).
+            spawn.base = applyTickSize(spawn.base, aAmountTickSize);
         }
         accumulation += spawn.getAmount<T_amount>();
         result.push_back(std::move(spawn));
@@ -171,7 +171,7 @@ SpawnResult<T_amount>
 spawnProportions(const T_amount aAmount,
                  T_ladderIt aStopBegin, const T_ladderIt aStopEnd,
                  T_proportionsIt aProportionsBegin, const T_proportionsIt aProportionsEnd,
-                 Decimal aTickSize = Decimal{0})
+                 Decimal aAmountTickSize = Decimal{0})
 {
     std::vector<Spawn> result;
     Decimal accumulation{0};
@@ -179,11 +179,11 @@ spawnProportions(const T_amount aAmount,
     {
         Decimal amount = (Decimal)aAmount * (*aProportionsBegin);
         Spawn spawn{*aStopBegin, T_amount{amount}};
-        if (aTickSize != 0) // we would expect compilers to optimize that away on default value
+        if (aAmountTickSize != 0) // we would expect compilers to optimize that away on default value
         {
             // Always apply the tick size to base value
-            // (For the moment the libraries only allow placing order by giving the base value).
-            spawn.base = applyTickSize(spawn.base, aTickSize);
+            // (For the moment binance only allow placing limit orders by giving the base value).
+            spawn.base = applyTickSize(spawn.base, aAmountTickSize);
         }
         accumulation += spawn.getAmount<T_amount>();
         result.push_back(std::move(spawn));
