@@ -68,9 +68,11 @@ public:
     std::vector<Decimal> getSellRatesBelow(Decimal aRateLimit, const Pair & aPair);
     std::vector<Decimal> getBuyRatesAbove(Decimal aRateLimit, const Pair & aPair);
 
-    /// \brief Will call either `getSellRatesBelow()` or `getBuyRatesAbove()` depending on `aSide`.
+    /// \brief Will call either `getSellRatesBelow()` or `getBuyRatesAbove()` depending on `aSide`,
+    /// returning fragments with a profitable rate present in the DB.
     std::vector<Decimal> getProfitableRates(Side aSide, Decimal aRateLimit, const Pair & aPair);
 
+    /// \brief Assign to `aOrder` all unasigned fragments matching said order.
     void assignAvailableFragments(const Order & aOrder);
 
     /// \brief Sum the amounts of all fragments in the database.

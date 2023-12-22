@@ -101,7 +101,7 @@ inline binance::MarketOrder to_marketOrder(const Order & aOrder)
 }
 
 
-inline binance::LimitOrder to_limitOrder(const Order & aOrder)
+inline binance::LimitOrder to_limitOrder(const Order & aOrder, Decimal aLimitRate)
 {
     return {
         binance::OrderBase{
@@ -110,13 +110,13 @@ inline binance::LimitOrder to_limitOrder(const Order & aOrder)
             aOrder.baseAmount,
             aOrder.clientId(),
         },
-        aOrder.fragmentsRate,
+        aLimitRate,
     };
 }
 
-inline binance::LimitOrder to_limitFokOrder(const Order & aOrder)
+inline binance::LimitOrder to_limitFokOrder(const Order & aOrder, Decimal aLimitRate)
 {
-    binance::LimitOrder order = to_limitOrder(aOrder);
+    binance::LimitOrder order = to_limitOrder(aOrder, aLimitRate);
     order.timeInForce = binance::TimeInForce::FOK;
     return order;
 }

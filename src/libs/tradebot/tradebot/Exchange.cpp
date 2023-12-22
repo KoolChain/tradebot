@@ -165,6 +165,7 @@ binance::Response placeOrderImpl(const T_order & aBinanceOrder, Order & aOrder, 
 }
 
 // Place order returns 400 -1013 if the price is above the symbol limit.
+// \deprecated Uses the order fragment rate as order price limit, which is mixing two concepts
 Order & Exchange::placeOrder(Order & aOrder, Execution aExecution)
 {
     binance::Response response;
@@ -174,10 +175,10 @@ Order & Exchange::placeOrder(Order & aOrder, Execution aExecution)
             response = placeOrderImpl(to_marketOrder(aOrder), aOrder, restApi);
             break;
         case Execution::Limit:
-            response = placeOrderImpl(to_limitOrder(aOrder), aOrder, restApi);
+            response = placeOrderImpl(to_limitOrder(aOrder, aOrder.fragmentsRate), aOrder, restApi);
             break;
         case Execution::LimitFok:
-            response = placeOrderImpl(to_limitFokOrder(aOrder), aOrder, restApi);
+            response = placeOrderImpl(to_limitFokOrder(aOrder, aOrder.fragmentsRate), aOrder, restApi);
             break;
     }
 
@@ -253,13 +254,9 @@ std::optional<FulfilledOrder> Exchange::fillMarketOrder(Order & aOrder)
 
 
 std::optional<FulfilledOrder> Exchange::fillLimitFokOrder(Order & aOrder,
-                                                          std::optional<Decimal> aExplicitLimitRate)
+                                                          Decimal aLimitPrice)
 {
-    binance::LimitOrder limitOrder = to_limitFokOrder(aOrder);
-    if (aExplicitLimitRate)
-    {
-        limitOrder.price = *aExplicitLimitRate;
-    }
+    binance::LimitOrder limitOrder = to_limitFokOrder(aOrder, aLimitPrice);
     return fillOrderImpl(limitOrder, aOrder, restApi, "limit fok");
 }
 
