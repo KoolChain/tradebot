@@ -20,7 +20,6 @@ using Ladder = std::vector<Decimal>;
 /// \param aPriceOffset         Offset that will be added to the generated exchange stop value
 /// (before applying aExchangeTickSize).
 /// It will not influence the overall ladder growth, just offset all stops by the same amount.
-/// This is the tick size the "previous" value is stored with.
 ///
 /// \important The distinct exhange and internal tick size were introduced when binance
 /// changed the filter price tick size on a traded pair already in production:

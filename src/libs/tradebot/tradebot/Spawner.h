@@ -14,7 +14,7 @@ class SpawnerBase
 {
 public:
     /// \brief A list of spawn for fulfilling a fragment, and the taken home
-    /// The taken home is expressed in **quote** whe fulfilling a `Sell` fragment,
+    /// The taken home is expressed in **quote** when fulfilling a `Sell` fragment,
     /// and in **base** when fulfiling a `Buy` fragment.
     using Result = std::pair<std::vector<trade::Spawn>, Decimal /*takenHome*/>;
 

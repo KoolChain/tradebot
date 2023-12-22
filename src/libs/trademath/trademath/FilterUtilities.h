@@ -20,6 +20,7 @@ inline Decimal applyTickSize(Decimal aValue, Decimal aTickSize = gDefaultTickSiz
 }
 
 
+/// @return A pair of Decimal: {filtered result, remainder}.
 inline TickSizeFiltered computeTickFilter(Decimal aValue, Decimal aTickSize = gDefaultTickSize)
 {
     auto filtered = applyTickSize(aValue, aTickSize);

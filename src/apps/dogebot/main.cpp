@@ -193,6 +193,7 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile, 
     // spawner::StableDownSpread
     //
     std::vector<Decimal> proportions;
+    // Copy the values read from the spawnerConfig["spreader"]["proporitions"] in `proportions`.
     std::transform(spawnerConfig.at("spreader").at("proportions").begin(),
                    spawnerConfig.at("spreader").at("proportions").end(),
                    std::back_inserter(proportions),

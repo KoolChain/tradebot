@@ -12,7 +12,7 @@ namespace ad {
 namespace trade {
 
 
-// Note: this is a shitshow: these strong typedefs prevent usefull arithmetic between Base(or Quote) and Decimal
+// Note: this is a shitshow, these strong typedefs prevent usefull arithmetic between Base(or Quote) and Decimal
 // but allow dangerous `==` comparison between Base and Quote...
 // We were able to patch the comparison with deletions below.
 // TODO find something better with expected behaviour.

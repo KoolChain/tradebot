@@ -40,6 +40,7 @@ Ladder makeLadder(Decimal aFirstRate,
     Decimal previousExchange = applyTickSize(aFirstRate + aPriceOffset, aExchangeTickSize);
     Ladder result{previousExchange};
 
+    // Insert the sequence of `nextExchange` values in the `result` Ladder.
     std::generate_n(std::back_inserter(result), aStopCount-1, [&]()
             {
                 Decimal nextInternal = applyTickSize(previousInternal * aFactor, aInternalTickSize);

@@ -132,7 +132,7 @@ StableDownSpread<TMP_ARGS>::onFirstSell(const Fragment & aFilledFragment,
 {
     Decimal actualQuoteAmount{aFilledFragment.amount * aOrder.executionRate};
 
-    // The spreader takes care of applying tick size filter itself, as long as it was
+    // Note: The spreader takes care of applying tick size filter itself, as long as it was
     // constructed with one.
     auto [spawns, totalSpawnedQuote] =
         downSpreader.spreadDown(trade::Quote{actualQuoteAmount * (1-takeHomeFactorInitialSell)},
