@@ -30,6 +30,67 @@ SCENARIO("Binance REST API", "[binance][net][live]")
     }
 }
 
+
+SCENARIO("Binance REST API quote order quantity", "[binance][api]")
+{
+    GIVEN("A Binance interface connected to the testnet") 
+    {
+        binance::Api binance{secret::gTestnetCredentials};
+
+        // The nominal value on testnet as of 2023/12/22.
+        const Decimal quoteQuantity = 5;
+
+        GIVEN("A market order, with quantity expressed in quote")
+        {
+            binance::MarketOrder marketOrder{
+                binance::OrderBase{
+                    "BTCUSDT",
+                    binance::Side::BUY,
+                    quoteQuantity,
+                    binance::QuantityUnit::Quote,
+                    binance::ClientId{"apitest_limit_order"},
+                },
+                binance::Type::MARKET,
+            };
+
+            THEN("The order can execute")
+            {
+                binance::Response orderResponse = binance.placeOrderTrade(marketOrder);
+                CHECK(orderResponse.status == 200);
+            }
+        }
+
+        GIVEN("A market order, with quantity expressed in quote")
+        {
+            binance::LimitOrder limitOrder{
+                binance::OrderBase{
+                    "BTCUSDT",
+                    binance::Side::BUY,
+                    quoteQuantity,
+                    binance::QuantityUnit::Quote,
+                    binance::ClientId{"apitest_limit_order"},
+                },
+                4000,
+                binance::TimeInForce::FOK,
+                binance::Type::LIMIT,
+            };
+
+            THEN("The order can NOT execute")
+            {
+                binance::Response orderResponse = binance.placeOrderTrade(limitOrder);
+                INFO("Response: " << orderResponse.json->dump(2));
+                // IMPORTANT: A 200 here would be good news,
+                // meaning Binance finally implemented quote quantity on limit FOK orders.
+                REQUIRE(orderResponse.status == 400);
+                CHECK(orderResponse.json->at("code") == -1106);
+                CHECK(orderResponse.json->at("msg") == "Parameter 'quoteOrderQty' sent when not required.");
+            }
+        }
+    }
+
+}
+
+
 SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
 {
     GIVEN("A websocket reading a single message")
@@ -79,6 +140,7 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
                     symbol,
                     binance::Side::SELL,
                     0.001,
+                    binance::QuantityUnit::Base,
                     clientId,
                 };
                 REQUIRE(binance.placeOrderTrade(order).status == 200);
@@ -147,6 +209,7 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
                 symbol,
                 binance::Side::BUY,
                 0.001,
+                binance::QuantityUnit::Base,
                 clientId, // we can reuse it, since the order did complete
             };
             REQUIRE(binance.placeOrderTrade(order).status == 200);

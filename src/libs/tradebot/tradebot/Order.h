@@ -44,6 +44,8 @@ struct Order
     std::string traderName;
     Coin base;
     Coin quote;
+    // TODO: Ideally, we want to be able to set the amout to be in base or quote (see binance::OrderBase)
+    // But at the moment FOK orders only accept quantity in base, so we did not bother.
     Decimal baseAmount; // Quantity of base to exchange
     Decimal fragmentsRate; // This order was spawned from 1..n fragments at this rate.
                            // IMPORTANT: This is not necessarily the price at which this order will be issued!
@@ -96,27 +98,29 @@ inline binance::MarketOrder to_marketOrder(const Order & aOrder)
         aOrder.symbol(),
         (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
         aOrder.baseAmount,
+        binance::QuantityUnit::Base,
         aOrder.clientId(),
     };
 }
 
 
-inline binance::LimitOrder to_limitOrder(const Order & aOrder)
+inline binance::LimitOrder to_limitOrder(const Order & aOrder, Decimal aLimitRate)
 {
     return {
         binance::OrderBase{
             aOrder.symbol(),
             (aOrder.side == Side::Sell ? binance::Side::SELL : binance::Side::BUY),
             aOrder.baseAmount,
+            binance::QuantityUnit::Base,
             aOrder.clientId(),
         },
-        aOrder.fragmentsRate,
+        aLimitRate,
     };
 }
 
-inline binance::LimitOrder to_limitFokOrder(const Order & aOrder)
+inline binance::LimitOrder to_limitFokOrder(const Order & aOrder, Decimal aLimitRate)
 {
-    binance::LimitOrder order = to_limitOrder(aOrder);
+    binance::LimitOrder order = to_limitOrder(aOrder, aLimitRate);
     order.timeInForce = binance::TimeInForce::FOK;
     return order;
 }

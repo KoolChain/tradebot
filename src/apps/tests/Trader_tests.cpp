@@ -50,10 +50,13 @@ SCENARIO("Radical initialization clean-up", "[trader]")
         {
             binance::ClientId id{"testdog01"};
             binance::LimitOrder impossibleOrder{
-                pair.symbol(),
-                binance::Side::SELL,
-                0.01, // qty
-                id,
+                binance::OrderBase{
+                    pair.symbol(),
+                    binance::Side::SELL,
+                    0.01, // qty
+                    binance::QuantityUnit::Base,
+                    id,
+                },
                 floor(averagePrice * 4),  // price
             };
             binance.restApi.placeOrderTrade(impossibleOrder);

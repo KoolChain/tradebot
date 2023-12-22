@@ -45,7 +45,7 @@ struct Exchange
     std::optional<FulfilledOrder> fillMarketOrder(Order & aOrder);
 
     std::optional<FulfilledOrder> fillLimitFokOrder(Order & aOrder,
-                                                    std::optional<Decimal> aExplicitLimitRate = {});
+                                                    Decimal aLimitPrice);
 
     /// \return true if the order was cancelled, false otherwise
     ///         (because it was not present, already cancelled, etc.).
