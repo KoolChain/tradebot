@@ -505,7 +505,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
 Decimal filterPrice(Decimal aPrice, SymbolFilters aFilters)
 {
-    return trade::applyTickSize(aPrice, aFilters.price.tickSize);
+    return trade::applyTickSizeFloor(aPrice, aFilters.price.tickSize);
 }
 
 
@@ -653,8 +653,8 @@ SCENARIO("Fill profitable orders limit bug.", "[trader][bug]")
             GIVEN("A price interval satisfying the price filters.")
             {
                 Interval acceptableRange{
-                    trade::applyTickSize(averagePrice/1.5, symbolFilters.price.tickSize),
-                    trade::applyTickSize(averagePrice*1.5, symbolFilters.price.tickSize)
+                    trade::applyTickSizeFloor(averagePrice/1.5, symbolFilters.price.tickSize),
+                    trade::applyTickSizeFloor(averagePrice*1.5, symbolFilters.price.tickSize)
                 };
 
                 THEN("A profitable order can be filled within this valid range, despite the invalid low fragment price.")

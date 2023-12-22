@@ -791,7 +791,7 @@ SCENARIO("Fix tradebot#1: change in filter price.", "[spawn]")
                     for (std::size_t i = 0; i != exchangeLadder.size(); ++i)
                     {
                         REQUIRE(exchangeLadder.at(i)
-                                == applyTickSize(internalLadder.at(i), exchangeTick));
+                                == applyTickSizeFloor(internalLadder.at(i), exchangeTick));
                     }
                 }
 
@@ -806,7 +806,7 @@ SCENARIO("Fix tradebot#1: change in filter price.", "[spawn]")
                     for (std::size_t i = 0; i != exchangeLadder.size(); ++i)
                     {
                         REQUIRE(exchangeLadder.at(i)
-                                == applyTickSize(internalLadder.at(i), exchangeTick) + offset);
+                                == applyTickSizeFloor(internalLadder.at(i), exchangeTick) + offset);
                     }
                 }
             }

@@ -59,7 +59,7 @@ int main(int argc, char * argv[])
                              filters.price.minimum, filters.price.maximum);
             throw std::invalid_argument{"Configured ladder is not contained withing the exchange's price interval."};
         }
-        if (trade::applyTickSize(exchangeTickSize, filters.price.tickSize) != exchangeTickSize)
+        if (trade::applyTickSizeFloor(exchangeTickSize, filters.price.tickSize) != exchangeTickSize)
         {
             spdlog::critical("Configured price tick-size {} is too permissive compared "
                              "to exchange's tick size {}.",

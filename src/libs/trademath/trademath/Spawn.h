@@ -152,7 +152,7 @@ spawnIntegration(const T_amount aAmount,
         {
             // Always apply the tick size to base value.
             // (For the moment binance only allow placing limit orders by giving the base value).
-            spawn.base = applyTickSize(spawn.base, aAmountTickSize);
+            spawn.base = applyTickSizeFloor(spawn.base, aAmountTickSize);
         }
         accumulation += spawn.getAmount<T_amount>();
         result.push_back(std::move(spawn));
@@ -183,7 +183,7 @@ spawnProportions(const T_amount aAmount,
         {
             // Always apply the tick size to base value
             // (For the moment binance only allow placing limit orders by giving the base value).
-            spawn.base = applyTickSize(spawn.base, aAmountTickSize);
+            spawn.base = applyTickSizeFloor(spawn.base, aAmountTickSize);
         }
         accumulation += spawn.getAmount<T_amount>();
         result.push_back(std::move(spawn));

@@ -36,15 +36,15 @@ Ladder makeLadder(Decimal aFirstRate,
         throw std::domain_error{"Invalid relative tick sizes."};
     }
 
-    Decimal previousInternal = applyTickSize(aFirstRate, aInternalTickSize);
-    Decimal previousExchange = applyTickSize(aFirstRate + aPriceOffset, aExchangeTickSize);
+    Decimal previousInternal = applyTickSizeFloor(aFirstRate, aInternalTickSize);
+    Decimal previousExchange = applyTickSizeFloor(aFirstRate + aPriceOffset, aExchangeTickSize);
     Ladder result{previousExchange};
 
     // Insert the sequence of `nextExchange` values in the `result` Ladder.
     std::generate_n(std::back_inserter(result), aStopCount-1, [&]()
             {
-                Decimal nextInternal = applyTickSize(previousInternal * aFactor, aInternalTickSize);
-                Decimal nextExchange = applyTickSize(nextInternal + aPriceOffset, aExchangeTickSize);
+                Decimal nextInternal = applyTickSizeFloor(previousInternal * aFactor, aInternalTickSize);
+                Decimal nextExchange = applyTickSizeFloor(nextInternal + aPriceOffset, aExchangeTickSize);
                 if (nextExchange <= previousExchange)
                 {
                     spdlog::critical("Two consecutive stops are not strictly incremental: {} then {}.",
