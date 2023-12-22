@@ -79,6 +79,7 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
                     symbol,
                     binance::Side::SELL,
                     0.001,
+                    binance::QuantityUnit::Base,
                     clientId,
                 };
                 REQUIRE(binance.placeOrderTrade(order).status == 200);
@@ -147,6 +148,7 @@ SCENARIO("Raw Websocket use", "[binance][net][websocket][live]")
                 symbol,
                 binance::Side::BUY,
                 0.001,
+                binance::QuantityUnit::Base,
                 clientId, // we can reuse it, since the order did complete
             };
             REQUIRE(binance.placeOrderTrade(order).status == 200);

@@ -137,11 +137,20 @@ private:
     std::string mId;
 };
 
+
+enum class QuantityUnit
+{
+    Base,
+    Quote,
+};
+
+
 struct OrderBase
 {
     Symbol symbol;
     Side side;
     Decimal quantity;
+    QuantityUnit unit = QuantityUnit::Base;
     ClientId clientId;
 };
 
