@@ -37,7 +37,7 @@ struct Fragment
 
     Coin base;
     Coin quote;
-    Decimal amount;
+    Decimal baseAmount;
     Decimal targetRate;
     Side side;
 

@@ -460,7 +460,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                     db.reload(marketFulfilledFragment);
                     REQUIRE(marketFulfilledFragment.composedOrder == marketFulfilled.id);
-                    REQUIRE(marketFulfilledFragment.amount == marketFulfilled.baseAmount);
+                    REQUIRE(marketFulfilledFragment.baseAmount == marketFulfilled.baseAmount);
 
                     db.reload(limitFulfilled);
                     REQUIRE(limitFulfilled.status == Order::Status::Fulfilled);
@@ -471,7 +471,7 @@ SCENARIO("Controlled initialization clean-up", "[trader]")
 
                     db.reload(limitFulfilledFragment);
                     REQUIRE(limitFulfilledFragment.composedOrder == limitFulfilled.id);
-                    REQUIRE(limitFulfilledFragment.amount == limitFulfilled.baseAmount);
+                    REQUIRE(limitFulfilledFragment.baseAmount == limitFulfilled.baseAmount);
                 }
 
                 THEN("There are no more orders to cancel")
@@ -677,7 +677,7 @@ SCENARIO("Fill profitable orders limit bug.", "[trader][bug]")
                     // Yet this is difficult without a mocked up exchange.
                     CHECK(filledOrder.executionRate >= acceptableRange.front);
 
-                    revertOrder(exchange, db, makeOrder(trader.name, pair, f.side, Decimal{0}, f.amount));
+                    revertOrder(exchange, db, makeOrder(trader.name, pair, f.side, Decimal{0}, f.baseAmount));
                 }
             }
         }

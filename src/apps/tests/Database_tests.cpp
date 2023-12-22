@@ -245,7 +245,7 @@ SCENARIO("Order high-level creation.", "[db]")
             Order order =
                 db.prepareOrder("dbtest", Side::Sell, 2., {"DOGE", "BUSD"});
 
-            REQUIRE(order.baseAmount == 2*baseFragment.amount);
+            REQUIRE(order.baseAmount == 2*baseFragment.baseAmount);
             REQUIRE(order.status == Order::Status::Inactive);
 
             THEN("There are no more fragments at the same rate.")
@@ -269,7 +269,7 @@ SCENARIO("Order high-level creation.", "[db]")
                 {
                     REQUIRE(fragment.targetRate == 2.);
                     REQUIRE(fragment.composedOrder == order.id);
-                    accumulator += fragment.amount;
+                    accumulator += fragment.baseAmount;
                 }
                 REQUIRE(accumulator == order.baseAmount);
             }
@@ -326,7 +326,7 @@ SCENARIO("Order high-level creation.", "[db]")
                 {
                     REQUIRE(fragment.targetRate == 2.);
                     REQUIRE(fragment.composedOrder == order.id);
-                    accumulator += fragment.amount;
+                    accumulator += fragment.baseAmount;
                 }
                 REQUIRE(accumulator == order.baseAmount);
             }

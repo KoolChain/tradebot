@@ -44,9 +44,10 @@ public:
         switch (aFilledFragment.side)
         {
             case Side::Buy:
-                return {{}, aFilledFragment.amount};
+                return {{}, aFilledFragment.baseAmount};
             case Side::Sell:
-                return {{}, aFilledFragment.amount * aOrder.executionRate};
+                // Taken home value has to be returned in quote for a `Sell`.
+                return {{}, aFilledFragment.baseAmount * aOrder.executionRate};
             default:
                 throw std::domain_error{"Invalid Side enumerator."};
         }
