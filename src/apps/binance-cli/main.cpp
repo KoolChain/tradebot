@@ -28,7 +28,7 @@ tradebot::Exchange getExchange(const std::string & aSecretsFile)
 void printUsage(const std::string aCommand)
 {
     std::cerr << "Usage: " << aCommand << " secretsfile action args... \n"
-        << "\taction might be: buy, sell, query-order, exchange-info, account-info, filters\n"
+        << "\taction might be: buy, sell, query-order, exchange-info, account-info, filters, average-price\n"
         ;
 }
 
@@ -78,6 +78,20 @@ int main(int argc, char * argv[])
         tradebot::Exchange exchange{getExchange(secretsFile)};
 
         std::cout << exchange.queryFilters(ad::tradebot::Pair{argv[3], argv[4]}) << '\n';
+    }
+    else if (argv[2] == std::string{"average-price"})
+    {
+        if (argc != 5)
+        {
+            std::cerr << "Usage: " << argv[0] << " secretsfile average-price base quote\n";
+            return EXIT_FAILURE;
+        }
+
+        spdlog::info("Retrieving average price for pair '{}{}'.", argv[3], argv[4]);
+
+        tradebot::Exchange exchange{getExchange(secretsFile)};
+
+        std::cout << exchange.getCurrentAveragePrice(ad::tradebot::Pair{argv[3], argv[4]}) << '\n';
     }
     else if (argv[2] == std::string{"buy"}
              || argv[2] == std::string{"sell"})
