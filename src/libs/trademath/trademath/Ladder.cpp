@@ -13,8 +13,8 @@ namespace trade {
 Ladder makeLadder(Decimal aFirstRate,
                   Decimal aFactor,
                   std::size_t aStopCount,
-                  Decimal aExchangeTickSize,
-                  Decimal aInternalTickSize,
+                  Decimal aEffectivePriceTickSize,
+                  Decimal aInternalPriceTickSize,
                   Decimal aPriceOffset)
 {
     if (aFactor <= 1)
@@ -29,22 +29,22 @@ Ladder makeLadder(Decimal aFirstRate,
         throw std::domain_error{"Invalid stop count for ladder generation."};
     }
 
-    if (aInternalTickSize > aExchangeTickSize)
+    if (aInternalPriceTickSize > aEffectivePriceTickSize)
     {
         spdlog::critical("Invalid relative tick size, internal's '{}' cannot be bigger than exchange's '{}'.",
-                         aInternalTickSize, aExchangeTickSize);
+                         aInternalPriceTickSize, aEffectivePriceTickSize);
         throw std::domain_error{"Invalid relative tick sizes."};
     }
 
-    Decimal previousInternal = applyTickSizeFloor(aFirstRate, aInternalTickSize);
-    Decimal previousExchange = applyTickSizeFloor(aFirstRate + aPriceOffset, aExchangeTickSize);
+    Decimal previousInternal = applyTickSizeFloor(aFirstRate, aInternalPriceTickSize);
+    Decimal previousExchange = applyTickSizeFloor(aFirstRate + aPriceOffset, aEffectivePriceTickSize);
     Ladder result{previousExchange};
 
     // Insert the sequence of `nextExchange` values in the `result` Ladder.
     std::generate_n(std::back_inserter(result), aStopCount-1, [&]()
             {
-                Decimal nextInternal = applyTickSizeFloor(previousInternal * aFactor, aInternalTickSize);
-                Decimal nextExchange = applyTickSizeFloor(nextInternal + aPriceOffset, aExchangeTickSize);
+                Decimal nextInternal = applyTickSizeFloor(previousInternal * aFactor, aInternalPriceTickSize);
+                Decimal nextExchange = applyTickSizeFloor(nextInternal + aPriceOffset, aEffectivePriceTickSize);
                 if (nextExchange <= previousExchange)
                 {
                     spdlog::critical("Two consecutive stops are not strictly incremental: {} then {}.",

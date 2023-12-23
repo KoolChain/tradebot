@@ -15,8 +15,15 @@ using TickSizeFiltered = std::pair<Decimal /*result*/, Decimal /*remainder*/>;
 
 inline Decimal applyTickSizeFloor(Decimal aValue, Decimal aTickSize = gDefaultTickSize)
 {
-    auto count = trunc(aValue/aTickSize);
-    return {aTickSize * count};
+    if(aTickSize == 0)
+    {
+        return aValue;
+    }
+    else
+    {
+        auto count = trunc(aValue/aTickSize);
+        return {aTickSize * count};
+    }
 }
 
 
