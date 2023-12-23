@@ -35,11 +35,11 @@ SCENARIO("Spreader tick size", "[spreaders]")
             auto [spawns, accumulation] = spreader.spreadDown(Base{amount}, ladder.at(1));
 
             REQUIRE(spawns.size() == 1);
-            CHECK(spawns.at(0).base == amount/2);
+            CHECK(spawns.at(0).base == amount);
             CHECK(spawns.at(0).base == accumulation);
 
             auto [filtered, remainder] = computeTickFilter(accumulation, Decimal{1});
-            CHECK(remainder == Decimal{"0.25"});
+            CHECK(remainder == Decimal{"0.5"});
 
 
             WHEN("The spreader is given a tick size of 1.")
@@ -51,11 +51,70 @@ SCENARIO("Spreader tick size", "[spreaders]")
                     auto [spawns, accumulation] = spreader.spreadDown(Base{amount}, ladder.at(1));
 
                     REQUIRE(spawns.size() == 1);
-                    CHECK(spawns.at(0).base == Decimal{500});
+                    CHECK(spawns.at(0).base == Decimal{1000});
                     CHECK(spawns.at(0).base == accumulation);
 
                     auto [filtered, remainder] = computeTickFilter(accumulation, Decimal{1});
                     CHECK(remainder == Decimal{0});
+                }
+            }
+        }
+    }
+}
+
+
+SCENARIO("Spreader at ladder bound", "[spreaders]")
+{
+    GIVEN("A proportion spreader and a 4 stops ladder.")
+    {
+        Ladder ladder{
+            1,
+            2,
+            3,
+            4,
+        };
+
+        ProportionSpreader spreader{
+            ladder,
+            ProportionsMap{
+                {
+                    Decimal{1000},
+                    {
+                        Decimal{"0.5"},
+                        Decimal{"0.5"},
+                    },
+                }
+            },
+        };
+
+        WHEN("It spreads down from the first ladder stop.")
+        {
+            Decimal amount{1000};
+            auto [spawns, accumulation] = spreader.spreadDown(Base{amount}, ladder.at(0));
+
+            THEN("No spawn are generated")
+            {
+                CHECK(spawns.size() == 0);
+                CHECK(accumulation == Decimal{0});
+            }
+        }
+
+        WHEN("It spreads down from the second ladder stop.")
+        {
+            Decimal amount{1000};
+            auto [spawns, accumulation] = spreader.spreadDown(Base{amount}, ladder.at(1));
+
+            THEN("A single spawn is generated.")
+            {
+                REQUIRE(spreader.maxRateToProportions.size() == 1);
+                REQUIRE(spreader.maxRateToProportions.at(0).second.size() >= 2);
+
+                CHECK(spawns.size() == 1);
+
+                THEN("This spawn cumulates all the proportions.")
+                {
+                    REQUIRE(spreader.maxRateToProportions.at(0).second.at(0) < Decimal{1});
+                    CHECK(accumulation == amount);
                 }
             }
         }

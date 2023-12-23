@@ -164,6 +164,9 @@ spawnIntegration(const T_amount aAmount,
 /// \brief Compute a vector of `Spawn` and the corresponding accumulated base amount from a proportions' range.
 /// Can apply a tick size, filtering in `Base` values.
 ///
+/// \attention If there are more proportions than stops left,
+/// remaining proportions are accumulated in the spawn for last stop.
+///
 /// Applies the proportions in the proportions' range to `aAmount`,
 /// assigning the results to the stops in the ladder range.
 template <class T_amount, class T_ladderIt, class T_proportionsIt>
@@ -175,20 +178,36 @@ spawnProportions(const T_amount aAmount,
 {
     std::vector<Spawn> result;
     Decimal accumulation{0};
-    while(aStopBegin != aStopEnd && aProportionsBegin != aProportionsEnd)
+
+    auto makeSpawn = [aAmount, aAmountTickSize](Decimal aProportion, Decimal aRate)
     {
-        Decimal amount = (Decimal)aAmount * (*aProportionsBegin);
-        Spawn spawn{*aStopBegin, T_amount{amount}};
+        Decimal amount = (Decimal)aAmount * aProportion;
+        Spawn spawn{aRate, T_amount{amount}};
         if (aAmountTickSize != 0) // we would expect compilers to optimize that away on default value
         {
             // Always apply the tick size to base value
             // (For the moment binance only allow placing limit orders by giving the base value).
             spawn.base = applyTickSizeFloor(spawn.base, aAmountTickSize);
         }
+        return spawn;
+    };
+
+    while(aStopBegin != aStopEnd && aProportionsBegin != aProportionsEnd)
+    {
+        Spawn spawn = makeSpawn(*aProportionsBegin, *aStopBegin);
         accumulation += spawn.getAmount<T_amount>();
         result.push_back(std::move(spawn));
         ++aStopBegin;
         ++aProportionsBegin;
+    }
+    // If we stopped because there are no more ladder stops, accumulate remaining proportions in the last spawn
+    if(result.size() > 0 && aProportionsBegin != aProportionsEnd)
+    {
+        Spawn & lastSpawn = result.back();
+        Decimal accumulatedProportions = std::accumulate(aProportionsBegin, aProportionsEnd, Decimal{0});
+        Spawn spawn = makeSpawn(accumulatedProportions, lastSpawn.rate/*the rate does not matter*/);
+        lastSpawn.base += spawn.base;
+        accumulation += spawn.getAmount<T_amount>();
     }
     return {result, T_amount{accumulation}};
 }
