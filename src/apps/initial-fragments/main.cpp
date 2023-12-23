@@ -121,6 +121,14 @@ int main(int argc, char * argv[])
                          spawn.rate);
         }
 
+        if (! tradebot::testPrice(filters, spawn.rate))
+        {
+            spdlog::warn("Spawned fragment for {} {} at rate {} does not pass price filters.",
+                         baseAmount,
+                         pair.base,
+                         spawn.rate);
+        }
+
         database.insert(tradebot::Fragment{
             pair.base,
             pair.quote,
