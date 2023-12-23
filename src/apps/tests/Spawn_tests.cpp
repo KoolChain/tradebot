@@ -496,11 +496,16 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
         Decimal{"100000"},
     };
 
-    const std::vector<Decimal> proportions = {
-        Decimal{"0.05"},
-        Decimal{"0.10"},
-        Decimal{"0.20"},
-        Decimal{"0.25"},
+    const ProportionsMap proportions = {
+        {
+            Decimal{1000},
+            {
+                Decimal{"0.05"},
+                Decimal{"0.10"},
+                Decimal{"0.20"},
+                Decimal{"0.25"},
+            },
+        }
     };
 
     GIVEN("A trader with a NaiveDownSpread spawner.")
@@ -571,7 +576,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                     THEN("It does spawn expected fragments, and reports correct taken home.")
                     {
                         // spawned 1 fragment per proportion
-                        CHECK(db.countFragments() == 1 + proportions.size());
+                        CHECK(db.countFragments() == 1 + proportions.at(0).second.size());
                         CHECK(isEqual(db.sumAllFragments(), amount + reboughtBase));
 
                         THEN("The spawned fragments can be obtained from the database.")
@@ -624,7 +629,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                     THEN("It does spawn expected fragments, and reports correct taken home.")
                     {
                         // spawned 1 fragment per proportion
-                        CHECK(db.countFragments() == 1 + proportions.size());
+                        CHECK(db.countFragments() == 1 + proportions.at(0).second.size());
                         CHECK(isEqual(db.sumAllFragments(), amount + reboughtBase));
 
                         THEN("The spawned fragments can be obtained from the database.")
@@ -677,11 +682,16 @@ SCENARIO("Consolidation of counter-fragments.", "[spawn]")
         Decimal{"5"},
     };
 
-    const std::vector<Decimal> proportions = {
-        Decimal{"0.0"},
-        Decimal{"0.25"},
-        Decimal{"0.25"},
-        Decimal{"0.25"},
+    const ProportionsMap proportions = {
+        {
+            Decimal{1000},
+            {
+                Decimal{"0.0"},
+                Decimal{"0.25"},
+                Decimal{"0.25"},
+                Decimal{"0.25"},
+            },
+        }
     };
 
     GIVEN("A trader with a NaiveDownSpread spawner.")

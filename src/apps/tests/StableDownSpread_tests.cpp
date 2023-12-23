@@ -29,10 +29,15 @@ SCENARIO("StableDownSpread from fixed proportions.", "[sdspread]")
             8,
             9,
         };
-
-        std::vector<Decimal> proportions{
-            Decimal{"0.4"},
-            Decimal{"0.6"},
+        
+        trade::ProportionsMap proportions{
+            {
+                Decimal{10000},
+                {
+                    Decimal{"0.4"},
+                    Decimal{"0.6"},
+                }
+            }
         };
 
         Decimal initialSellFactor{"0.4"};
@@ -71,7 +76,7 @@ SCENARIO("StableDownSpread from fixed proportions.", "[sdspread]")
                 THEN("Spawning occurs as expected.")
                 {
 
-                    REQUIRE(buySpawns.size() == proportions.size());
+                    REQUIRE(buySpawns.size() == proportions.at(0).second.size());
                     REQUIRE(takenHomeQuote == amount * executionRate * initialSellFactor);
 
                     Decimal reinvestedQuote = amount * executionRate - takenHomeQuote;
@@ -81,7 +86,7 @@ SCENARIO("StableDownSpread from fixed proportions.", "[sdspread]")
                         INFO("Spawn index is " << id);
                         REQUIRE(buySpawns.at(id).rate == (4 - id));
                         REQUIRE(isEqual(buySpawns.at(id).getAmount<trade::Quote>(),
-                                        reinvestedQuote * proportions.at(id)));
+                                        reinvestedQuote * proportions.at(0).second.at(id)));
                     }
                 }
             }
@@ -96,7 +101,7 @@ SCENARIO("StableDownSpread from fixed proportions.", "[sdspread]")
                 THEN("Spawning occurs as expected.")
                 {
 
-                    REQUIRE(buySpawns.size() == proportions.size());
+                    REQUIRE(buySpawns.size() == proportions.at(0).second.size());
                     REQUIRE(takenHomeQuote == amount * executionRate * initialSellFactor);
 
                     Decimal reinvestedQuote = amount * executionRate - takenHomeQuote;
@@ -106,7 +111,7 @@ SCENARIO("StableDownSpread from fixed proportions.", "[sdspread]")
                         INFO("Spawn index is " << id);
                         REQUIRE(buySpawns.at(id).rate == (4 - id));
                         REQUIRE(isEqual(buySpawns.at(id).getAmount<trade::Quote>(),
-                                        reinvestedQuote * proportions.at(id)));
+                                        reinvestedQuote * proportions.at(0).second.at(id)));
                     }
                 }
             }

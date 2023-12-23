@@ -10,7 +10,7 @@ namespace tradebot {
 namespace spawner {
 
 
-NaiveDownSpread::NaiveDownSpread(trade::Ladder aLadder, std::vector<Decimal> aProportions) :
+NaiveDownSpread::NaiveDownSpread(trade::Ladder aLadder, trade::ProportionsMap aProportions) :
     downSpreader{
         std::move(aLadder),
         std::move(aProportions)

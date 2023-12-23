@@ -4,6 +4,8 @@
 #include "Ladder.h"
 #include "Spawn.h"
 
+#include <spdlog/spdlog.h>
+
 
 namespace ad {
 namespace trade {
@@ -13,6 +15,7 @@ namespace trade {
 /// behind a consistent interface that can be used as template argument.
 /// This is one abstraction allowing for more generic spawners.
 
+using ProportionsMap = std::vector<std::pair<Decimal/*max rate*/, std::vector<Decimal>/*proportions*/>>;
 
 struct ProportionSpreader
 {
@@ -21,10 +24,28 @@ struct ProportionSpreader
     template <class T_amount>
     SpawnResult<T_amount> spreadUp(T_amount aAmount, Decimal aFromRate);
 
+    const std::vector<Decimal> & getProportions(Decimal aFromRate) const;
+
     Ladder ladder;
-    std::vector<Decimal> proportions;
+    ProportionsMap maxRateToProportions;
     Decimal amountTickSize{trade::gDefaultTickSize};
 };
+
+
+inline const std::vector<Decimal> & ProportionSpreader::getProportions(Decimal aFromRate) const
+{
+    for(const auto & [maxRate, proportions] : maxRateToProportions)
+    {
+        if(aFromRate <= maxRate)
+        {
+            return proportions;
+        }
+    }
+    spdlog::error("Rate {} is above the last proportions max rate {}. Using last proportions.",
+                  static_cast<float>(aFromRate),
+                  static_cast<float>(maxRateToProportions.back().first));
+    return maxRateToProportions.back().second;
+}
 
 
 template <class T_amount>
@@ -33,6 +54,7 @@ SpawnResult<T_amount> ProportionSpreader::spreadDown(T_amount aAmount, Decimal a
     // reverseStop will never be ladder.rend(): getStopFor() throws when stop is not found.
     auto reverseStop = getStopFor(ladder.crbegin(), ladder.crend(), aFromRate);
 
+    auto proportions = getProportions(aFromRate);
     return trade::spawnProportions(aAmount,
                                    // +1 because no fragment should be assigned to the current stop.
                                    reverseStop+1, ladder.crend(),

@@ -192,18 +192,29 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile, 
     //
     // spawner::StableDownSpread
     //
-    std::vector<Decimal> proportions;
+    trade::ProportionsMap proportionsMap;
+    Decimal previousMaxRate{0};
     // Copy the values read from the spawnerConfig["spreader"]["proporitions"] in `proportions`.
-    std::transform(spawnerConfig.at("spreader").at("proportions").begin(),
-                   spawnerConfig.at("spreader").at("proportions").end(),
-                   std::back_inserter(proportions),
-                   [](const std::string & aValue){ return Decimal{aValue}; });
+    for(auto & ratedProportions : spawnerConfig.at("spreader").at("proportions").items())
+    {
+        Decimal maxRate = Decimal{ratedProportions.key()};
+        if(maxRate <= previousMaxRate)
+        {
+            throw std::invalid_argument{"Porportions rate must be strictly ascending."};
+        }
+        previousMaxRate = maxRate;
+        proportionsMap.push_back({maxRate, {}});
+        std::transform(ratedProportions.value().begin(),
+                       ratedProportions.value().end(),
+                       std::back_inserter(proportionsMap.back().second),
+                       [](const std::string & aValue){ return Decimal{aValue}; });
+    }
 
     bot.trader.spawner =
         std::make_unique<tradebot::spawner::StableDownSpread<trade::ProportionSpreader>>(
             trade::ProportionSpreader{
                 ladder,
-                proportions,
+                proportionsMap,
                 bot.trader.queryFilters().amount.tickSize,
             },
             Decimal{spawnerConfig.at("takeHomeFactorInitialSell").get<std::string>()},

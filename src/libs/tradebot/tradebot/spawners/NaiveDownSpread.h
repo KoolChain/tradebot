@@ -19,7 +19,7 @@ namespace spawner {
 class NaiveDownSpread : public SpawnerBase
 {
 public:
-    NaiveDownSpread(trade::Ladder aLadder, std::vector<Decimal> aProportions);
+    NaiveDownSpread(trade::Ladder aLadder, trade::ProportionsMap aProportions);
 
     Result
     computeResultingFragments(const Fragment & aFilledFragment,
