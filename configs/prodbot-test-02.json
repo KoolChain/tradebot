@@ -1,0 +1,41 @@
+{
+    "logPath": "./prodbot-logs/",
+
+    "base": "BTC",
+    "quote": "USDT",
+    "amount": "0.5",
+
+    "bot": {
+        "name": "test_02"
+    },
+
+    "initial": {
+        "spawnBeginOffset": 1,
+        "spawnEndOffset": 0
+    },
+
+    "ladder": {
+        "firstStop": "30000",
+        "factor": "1.002",
+        "stopCount": "300",
+        "priceTickSize": "0.01",
+        "priceOffset": "0"
+    },
+
+    "spawner": {
+        "spreader": {
+            "proportions": {
+                "100000": [
+                    "0.2",
+                    "0.2",
+                    "0.2",
+                    "0.2",
+                    "0.2"
+                ]
+            }
+        },
+        "takeHomeFactorInitialSell": "0.1",
+        "takeHomeFactorSubsequentSell": "0.2",
+        "takeHomeFactorSubsequentBuy": "0.2"
+    }
+}
