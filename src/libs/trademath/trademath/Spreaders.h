@@ -69,6 +69,7 @@ SpawnResult<T_amount> ProportionSpreader::spreadUp(T_amount aAmount, Decimal aFr
     // reverseStop will never be ladder.end(): getStopFor() throws when stop is not found.
     auto forwardStop = getStopFor(ladder.cbegin(), ladder.cend(), aFromRate);
 
+    auto proportions = getProportions(aFromRate);
     return trade::spawnProportions(aAmount,
                                    // +1 because no fragment should be assigned to the current stop.
                                    forwardStop+1, ladder.cend(),

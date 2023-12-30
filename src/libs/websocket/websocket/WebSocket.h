@@ -79,7 +79,7 @@ private:
 private:
     struct Impl;
 #if not defined(_MSC_VER)
-    std::experimental::propagate_const<std::unique_ptr<impl>> mImpl;
+    std::experimental::propagate_const<std::unique_ptr<Impl>> mImpl;
 #else
     std::unique_ptr<Impl> mImpl;
 #endif
