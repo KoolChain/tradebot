@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Conan installation and configuration
-RUN pip3 install conan
+RUN pip3 install conan==1.55.0
 RUN conan profile new default --detect && conan profile update settings.compiler.libcxx=libstdc++11 default
 
 # Use the code from the corrent folder
