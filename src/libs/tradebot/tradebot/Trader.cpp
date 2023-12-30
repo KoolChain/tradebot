@@ -238,7 +238,7 @@ void Trader::spawnFragments(const FulfilledOrder & aOrder)
     {
         // Use isEqual to remove rounding errors that would make it just above zero
         // and also discard invalid negative amounts, in case they arise.
-        if (! isEqual(newFragment.amount, 0) && newFragment.amount > 0)
+        if (! isEqual(newFragment.baseAmount, 0) && newFragment.baseAmount > 0)
         {
             database.insert(newFragment);
         }
@@ -247,7 +247,7 @@ void Trader::spawnFragments(const FulfilledOrder & aOrder)
             spdlog::warn("Spawning fragments for order '{}' proposed a fragment with invalid amount {}."
                           " Ignoring it.",
                           aOrder.getIdentity(),
-                          newFragment.amount);
+                          newFragment.baseAmount);
         }
     }
 }
@@ -269,7 +269,7 @@ stats::Balance Trader::assembleBalance()
         std::pair<Decimal, Decimal> accumulators{0, 0};
         for(const auto & fragment : database.getUnassociatedFragments(aSide, pair))
         {
-            trade::Spawn spawn{fragment.targetRate, trade::Base(fragment.amount)};
+            trade::Spawn spawn{fragment.targetRate, trade::Base(fragment.baseAmount)};
             accumulators.first = trade::accumulateAmount<trade::Base>(accumulators.first, spawn);
             accumulators.second = trade::accumulateAmount<trade::Quote>(accumulators.second, spawn);
         }

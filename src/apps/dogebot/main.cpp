@@ -150,8 +150,8 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile, 
     Decimal firstStop{aConfig.at("ladder").at("firstStop").get<std::string>()};
     Decimal factor{aConfig.at("ladder").at("factor").get<std::string>()};
     int stopCount = std::stoi(aConfig.at("ladder").at("stopCount").get<std::string>());
-    Decimal exchangeTickSize{aConfig.at("ladder").at("exchangeTickSize").get<std::string>()};
-    Decimal internalTickSize{aConfig.at("ladder").at("internalTickSize").get<std::string>()};
+    Decimal effectivePriceTickSize{aConfig.at("ladder").at("priceTickSize").get<std::string>()};
+    Decimal internalTickSize{aConfig.at("ladder").value("internalTickSize", "0")};
     Decimal priceOffset{aConfig.at("ladder").at("priceOffset").get<std::string>()};
     const std::string botName =
         aConfig.at("bot").value("name", "productionbot") + '_' + std::to_string(getTimestamp());
@@ -168,7 +168,7 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile, 
     trade::Ladder ladder = trade::makeLadder(firstStop,
                                              factor,
                                              stopCount,
-                                             exchangeTickSize,
+                                             effectivePriceTickSize,
                                              internalTickSize,
                                              priceOffset);
 
@@ -189,20 +189,42 @@ int runProductionBot(int argc, char * argv[], const std::string & aSecretsFile, 
         },
     };
 
+    // Sanity check:
+    tradebot::SymbolFilters filters = bot.trader.exchange.queryFilters(pair);
+    if (effectivePriceTickSize < filters.price.tickSize)
+    {
+        spdlog::critical("Effective price tick size {} is below the exhange price tick size {}.",
+                         effectivePriceTickSize, filters.price.tickSize);
+        throw std::invalid_argument{"The configured price tick size is below exhanges price tick size."};
+    }
+
     //
     // spawner::StableDownSpread
     //
-    std::vector<Decimal> proportions;
-    std::transform(spawnerConfig.at("spreader").at("proportions").begin(),
-                   spawnerConfig.at("spreader").at("proportions").end(),
-                   std::back_inserter(proportions),
-                   [](const std::string & aValue){ return Decimal{aValue}; });
+    trade::ProportionsMap proportionsMap;
+    Decimal previousMaxRate{0};
+    // Copy the values read from the spawnerConfig["spreader"]["proporitions"] in `proportions`.
+    for(auto & ratedProportions : spawnerConfig.at("spreader").at("proportions").items())
+    {
+        Decimal maxRate = Decimal{ratedProportions.key()};
+        if(maxRate <= previousMaxRate)
+        {
+            spdlog::critical("Proportion for rate limit {} coming after rate limit {}.", maxRate, previousMaxRate);
+            throw std::invalid_argument{"Proportions rate must be strictly increasing."};
+        }
+        previousMaxRate = maxRate;
+        proportionsMap.push_back({maxRate, {}});
+        std::transform(ratedProportions.value().begin(),
+                       ratedProportions.value().end(),
+                       std::back_inserter(proportionsMap.back().second),
+                       [](const std::string & aValue){ return Decimal{aValue}; });
+    }
 
     bot.trader.spawner =
         std::make_unique<tradebot::spawner::StableDownSpread<trade::ProportionSpreader>>(
             trade::ProportionSpreader{
                 ladder,
-                proportions,
+                proportionsMap,
                 bot.trader.queryFilters().amount.tickSize,
             },
             Decimal{spawnerConfig.at("takeHomeFactorInitialSell").get<std::string>()},

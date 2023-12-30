@@ -39,7 +39,7 @@ auto initializeStorage(const std::string & aFilename)
 
                        make_column("base", &Fragment::base),
                        make_column("quote", &Fragment::quote),
-                       make_column("amount", &Fragment::amount),
+                       make_column("amount", &Fragment::baseAmount),
                        make_column("target_rate", &Fragment::targetRate),
                        make_column("side", &Fragment::side),
                        make_column("taken_home", &Fragment::takenHome),
@@ -254,7 +254,7 @@ void Database::assignAvailableFragments(const Order & aOrder)
 Decimal Database::sumAllFragments()
 {
     using namespace sqlite_orm;
-    std::unique_ptr<Decimal> result = mImpl->storage.sum(&Fragment::amount);
+    std::unique_ptr<Decimal> result = mImpl->storage.sum(&Fragment::baseAmount);
     if (!result)
     {
         // there are not fragments -> the sum is zero
@@ -268,7 +268,7 @@ Decimal Database::sumFragmentsOfOrder(const Order & aOrder)
 {
     using namespace sqlite_orm;
     std::unique_ptr<Decimal> result =
-        mImpl->storage.sum(&Fragment::amount,
+        mImpl->storage.sum(&Fragment::baseAmount,
                 where(is_equal(&Fragment::composedOrder, aOrder.id)));
     if (!result)
     {

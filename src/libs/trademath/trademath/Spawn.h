@@ -12,7 +12,7 @@ namespace ad {
 namespace trade {
 
 
-// Note: this is a shitshow: these strong typedefs prevent usefull arithmetic between Base(or Quote) and Decimal
+// Note: this is a shitshow, these strong typedefs prevent usefull arithmetic between Base(or Quote) and Decimal
 // but allow dangerous `==` comparison between Base and Quote...
 // We were able to patch the comparison with deletions below.
 // TODO find something better with expected behaviour.
@@ -126,14 +126,14 @@ using SpawnResult = std::pair<std::vector<Spawn>, T_amount/*accumulation*/>;
 /// and apply the proportion to `aAmount` at each interval, assigning the resulting amount to the
 /// interval farthest stop.
 ///
-/// \note For normal iterators, farthest stop is the upper value in the interval,
+/// \note For forward iterators, farthest stop is the upper value in the interval,
 /// while for reverse iterators it the the lower value.
 template <class T_amount, class T_ladderIt, class T_function>
 SpawnResult<T_amount>
 spawnIntegration(const T_amount aAmount,
                  T_ladderIt aStopBegin, const T_ladderIt aStopEnd,
                  T_function aFunction,
-                 Decimal aTickSize = Decimal{0})
+                 Decimal aAmountTickSize = Decimal{0})
 {
     if (std::distance(aStopBegin, aStopEnd) < 1)
     {
@@ -148,11 +148,11 @@ spawnIntegration(const T_amount aAmount,
     {
         Decimal amount = (Decimal)aAmount * abs(aFunction.integrate(*aStopBegin, *nextStop));
         Spawn spawn{*nextStop, T_amount{amount}};
-        if (aTickSize != 0) // we would expect compilers to optimize that away on default value
+        if (aAmountTickSize != 0) // we would expect compilers to optimize that away on default value
         {
             // Always apply the tick size to base value.
-            // (For the moment the libraries only allow placing order by giving the base value).
-            spawn.base = applyTickSize(spawn.base, aTickSize);
+            // (For the moment binance only allow placing limit orders by giving the base value).
+            spawn.base = applyTickSizeFloor(spawn.base, aAmountTickSize);
         }
         accumulation += spawn.getAmount<T_amount>();
         result.push_back(std::move(spawn));
@@ -164,6 +164,9 @@ spawnIntegration(const T_amount aAmount,
 /// \brief Compute a vector of `Spawn` and the corresponding accumulated base amount from a proportions' range.
 /// Can apply a tick size, filtering in `Base` values.
 ///
+/// \attention If there are more proportions than stops left,
+/// remaining proportions are accumulated in the spawn for last stop.
+///
 /// Applies the proportions in the proportions' range to `aAmount`,
 /// assigning the results to the stops in the ladder range.
 template <class T_amount, class T_ladderIt, class T_proportionsIt>
@@ -171,24 +174,40 @@ SpawnResult<T_amount>
 spawnProportions(const T_amount aAmount,
                  T_ladderIt aStopBegin, const T_ladderIt aStopEnd,
                  T_proportionsIt aProportionsBegin, const T_proportionsIt aProportionsEnd,
-                 Decimal aTickSize = Decimal{0})
+                 Decimal aAmountTickSize = Decimal{0})
 {
     std::vector<Spawn> result;
     Decimal accumulation{0};
-    while(aStopBegin != aStopEnd && aProportionsBegin != aProportionsEnd)
+
+    auto makeSpawn = [aAmount, aAmountTickSize](Decimal aProportion, Decimal aRate)
     {
-        Decimal amount = (Decimal)aAmount * (*aProportionsBegin);
-        Spawn spawn{*aStopBegin, T_amount{amount}};
-        if (aTickSize != 0) // we would expect compilers to optimize that away on default value
+        Decimal amount = (Decimal)aAmount * aProportion;
+        Spawn spawn{aRate, T_amount{amount}};
+        if (aAmountTickSize != 0) // we would expect compilers to optimize that away on default value
         {
             // Always apply the tick size to base value
-            // (For the moment the libraries only allow placing order by giving the base value).
-            spawn.base = applyTickSize(spawn.base, aTickSize);
+            // (For the moment binance only allow placing limit orders by giving the base value).
+            spawn.base = applyTickSizeFloor(spawn.base, aAmountTickSize);
         }
+        return spawn;
+    };
+
+    while(aStopBegin != aStopEnd && aProportionsBegin != aProportionsEnd)
+    {
+        Spawn spawn = makeSpawn(*aProportionsBegin, *aStopBegin);
         accumulation += spawn.getAmount<T_amount>();
         result.push_back(std::move(spawn));
         ++aStopBegin;
         ++aProportionsBegin;
+    }
+    // If we stopped because there are no more ladder stops, accumulate remaining proportions in the last spawn
+    if(result.size() > 0 && aProportionsBegin != aProportionsEnd)
+    {
+        Spawn & lastSpawn = result.back();
+        Decimal accumulatedProportions = std::accumulate(aProportionsBegin, aProportionsEnd, Decimal{0});
+        Spawn spawn = makeSpawn(accumulatedProportions, lastSpawn.rate/*the rate does not matter*/);
+        lastSpawn.base += spawn.base;
+        accumulation += spawn.getAmount<T_amount>();
     }
     return {result, T_amount{accumulation}};
 }

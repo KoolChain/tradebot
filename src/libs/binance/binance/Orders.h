@@ -5,6 +5,8 @@
 
 #include <trademath/Decimal.h>
 
+#include <spdlog/spdlog.h>
+
 #include <string>
 
 
@@ -116,7 +118,15 @@ class ClientId
 public:
     explicit ClientId(std::string aId) :
         mId{std::move(aId)}
-    {}
+    {
+        if(mId.size() > gMaxLength)
+        {
+            std::string copy{mId};
+            mId.erase(0, mId.size() - gMaxLength);
+            spdlog::error("Attempt to create a ClientId from {} characters '{}'. Truncacted to '{}'.)",
+                          copy.size(), copy, mId);
+        }
+    }
 
     explicit operator const std::string &() const
     {
@@ -135,6 +145,7 @@ public:
 
 private:
     std::string mId;
+    static constexpr std::string::size_type gMaxLength = 36;
 };
 
 

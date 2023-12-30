@@ -28,7 +28,7 @@ tradebot::Exchange getExchange(const std::string & aSecretsFile)
 void printUsage(const std::string aCommand)
 {
     std::cerr << "Usage: " << aCommand << " secretsfile action args... \n"
-        << "\taction might be: buy, sell, query-order, exchange-info, account-info\n"
+        << "\taction might be: buy, sell, query-order, exchange-info, account-info, filters, average-price\n"
         ;
 }
 
@@ -46,9 +46,9 @@ int main(int argc, char * argv[])
 
     if (argv[2] == std::string{"exchange-info"})
     {
-        if (argc != 3)
+        if (argc != 3 && argc != 5)
         {
-            std::cerr << "Usage: " << argv[0] << " secretsfile exchange-info\n";
+            std::cerr << "Usage: " << argv[0] << " secretsfile exchange-info [base quote]\n";
             return EXIT_FAILURE;
         }
 
@@ -56,7 +56,42 @@ int main(int argc, char * argv[])
 
         tradebot::Exchange exchange{getExchange(secretsFile)};
 
-        std::cout << exchange.getExchangeInformation().dump(4) << '\n';
+        if (argc == 3)
+        {
+            std::cout << exchange.getExchangeInformation().dump(4) << '\n';
+        }
+        else if (argc == 5)
+        {
+            std::cout << exchange.getExchangeInformation(ad::tradebot::Pair{argv[3], argv[4]}).dump(4) << '\n';
+        }
+    }
+    else if (argv[2] == std::string{"filters"})
+    {
+        if (argc != 5)
+        {
+            std::cerr << "Usage: " << argv[0] << " secretsfile filters base quote\n";
+            return EXIT_FAILURE;
+        }
+
+        spdlog::info("Retrieving filters for pair '{}{}'.", argv[3], argv[4]);
+
+        tradebot::Exchange exchange{getExchange(secretsFile)};
+
+        std::cout << exchange.queryFilters(ad::tradebot::Pair{argv[3], argv[4]}) << '\n';
+    }
+    else if (argv[2] == std::string{"average-price"})
+    {
+        if (argc != 5)
+        {
+            std::cerr << "Usage: " << argv[0] << " secretsfile average-price base quote\n";
+            return EXIT_FAILURE;
+        }
+
+        spdlog::info("Retrieving average price for pair '{}{}'.", argv[3], argv[4]);
+
+        tradebot::Exchange exchange{getExchange(secretsFile)};
+
+        std::cout << exchange.getCurrentAveragePrice(ad::tradebot::Pair{argv[3], argv[4]}) << '\n';
     }
     else if (argv[2] == std::string{"buy"}
              || argv[2] == std::string{"sell"})

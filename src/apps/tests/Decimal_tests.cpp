@@ -149,8 +149,8 @@ SCENARIO("Decimal round trip to DB.", "[decimal]")
 
                 THEN("Values are matching exactly.")
                 {
-                    CHECK(retrieved1.amount == amount1);
-                    CHECK(retrieved2.amount == amount2);
+                    CHECK(retrieved1.baseAmount == amount1);
+                    CHECK(retrieved2.baseAmount == amount2);
                 }
             }
 

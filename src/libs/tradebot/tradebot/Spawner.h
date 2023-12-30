@@ -14,7 +14,7 @@ class SpawnerBase
 {
 public:
     /// \brief A list of spawn for fulfilling a fragment, and the taken home
-    /// The taken home is expressed in **quote** whe fulfilling a `Sell` fragment,
+    /// The taken home is expressed in **quote** when fulfilling a `Sell` fragment,
     /// and in **base** when fulfiling a `Buy` fragment.
     using Result = std::pair<std::vector<trade::Spawn>, Decimal /*takenHome*/>;
 
@@ -44,9 +44,10 @@ public:
         switch (aFilledFragment.side)
         {
             case Side::Buy:
-                return {{}, aFilledFragment.amount};
+                return {{}, aFilledFragment.baseAmount};
             case Side::Sell:
-                return {{}, aFilledFragment.amount * aOrder.executionRate};
+                // Taken home value has to be returned in quote for a `Sell`.
+                return {{}, aFilledFragment.baseAmount * aOrder.executionRate};
             default:
                 throw std::domain_error{"Invalid Side enumerator."};
         }

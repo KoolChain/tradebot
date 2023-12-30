@@ -20,8 +20,7 @@ namespace spawner {
 // The buy fragments are distributed down following a discrete sequence of factors.
 // The sum of factors has to be == 1 (the taken home being already removed from the distributed amount).
 //
-// After a `Buy`, spawn sell fragments at the parent's buy rate (thus cycling).
-// TODO define if some is taken home
+// After a `Buy`, spawn sell fragments at the parent's sell rate (thus cycling).
 // It should be made sure that it does not lead to a lowering cycle: the base amount to sell
 // should provide a quote amount at least equal to the quote amount spent during this `Buy`, plus
 // some if some should be taken home after the `Sell`.
@@ -43,7 +42,7 @@ public:
                      Decimal aTakeHomeFactorSubsequentSell,
                      Decimal aTakeHomeFactorSubsequentBuy);
 
-    Decimal tickSize() const;
+    Decimal amountTickSize() const;
 
     Result
     computeResultingFragments(const Fragment & aFilledFragment,
@@ -84,9 +83,9 @@ StableDownSpread<TMP_ARGS>::StableDownSpread(
 
 
 template <TMP_PARAM_LIST>
-Decimal StableDownSpread<TMP_ARGS>::tickSize() const
+Decimal StableDownSpread<TMP_ARGS>::amountTickSize() const
 {
-    return downSpreader.tickSize;
+    return downSpreader.amountTickSize;
 }
 
 
@@ -130,9 +129,9 @@ SpawnerBase::Result
 StableDownSpread<TMP_ARGS>::onFirstSell(const Fragment & aFilledFragment,
                                         const FulfilledOrder & aOrder)
 {
-    Decimal actualQuoteAmount{aFilledFragment.amount * aOrder.executionRate};
+    Decimal actualQuoteAmount{aFilledFragment.baseAmount * aOrder.executionRate};
 
-    // The spreader takes care of applying tick size filter itself, as long as it was
+    // Note: The spreader takes care of applying tick size filter itself, as long as it was
     // constructed with one.
     auto [spawns, totalSpawnedQuote] =
         downSpreader.spreadDown(trade::Quote{actualQuoteAmount * (1-takeHomeFactorInitialSell)},
@@ -149,31 +148,34 @@ StableDownSpread<TMP_ARGS>::onSubsequentBuy(const Fragment & aFilledFragment,
                                             const FulfilledOrder & aOrder,
                                             Database & aDatabase)
 {
-    Order parentOrder = aDatabase.getOrder(aFilledFragment.spawningOrder);
-    Decimal parentSellRate = parentOrder.fragmentsRate;
+    // For a Buy fragment, its parent order is a Sell.
+    Order parentSellOrder = aDatabase.getOrder(aFilledFragment.spawningOrder);
+    // This spawner is stable because it spawns a Sell at the same rate as the parent of the current Buy. 
+    // (i.e., each fragment will ping pong between a fixed buy and a fixed sell rate)
+    Decimal spawnedSellRate = parentSellOrder.fragmentsRate;
 
     // Sanity check
     {
-        if (parentSellRate <= aFilledFragment.targetRate)
+        if (spawnedSellRate <= aFilledFragment.targetRate)
         {
             spdlog::critical("The buy fragment '{}' has an higher price ({}) than its parent order '{}' ().",
                              aFilledFragment.getIdentity(),
                              aFilledFragment.targetRate,
                              aOrder.getIdentity(),
-                             parentSellRate);
+                             spawnedSellRate);
             throw std::logic_error{"The parent order of a buy fragment must have a strictly superior price."};
         }
     }
 
     // The amount of base obtained through the current buy fragment
-    Decimal actualBaseAmount = aFilledFragment.amount;
-    // The quote amount required to buy this fragment's base at the current target rate.
+    Decimal actualBaseAmount = aFilledFragment.baseAmount;
+    // The quote amount required to buy this fragment's base at this fragment's target rate.
     // i.e. How much quote the next sell should provide to be stable.
     Decimal breakEvenQuote = actualBaseAmount * aFilledFragment.targetRate;
 
-    // The minimal amount of base to sell at parents rate
-    // in order to get enough quote to buy breakEvenQuote again (at current rate).
-    Decimal breakEvenBase = breakEvenQuote / parentSellRate;
+    // The minimal amount of base to sell at spawned rate
+    // in order to get enough quote to buy breakEvenQuote again.
+    Decimal breakEvenBase = breakEvenQuote / spawnedSellRate;
 
     Decimal excessBase = actualBaseAmount - breakEvenBase;
     Decimal takenHomeBase = excessBase * takeHomeFactorSubsequentBuy;
@@ -183,11 +185,13 @@ StableDownSpread<TMP_ARGS>::onSubsequentBuy(const Fragment & aFilledFragment,
     //
 
     // estimate of spawned, before filtering
-    trade::Spawn singleSpawn{parentSellRate, trade::Base{actualBaseAmount - takenHomeBase}};
+    trade::Spawn singleSpawn{spawnedSellRate, trade::Base{actualBaseAmount - takenHomeBase}};
     // filter to find the exact amount that will be spawned
-    singleSpawn.base = trade::applyTickSize(singleSpawn.base, tickSize());
+    singleSpawn.base = trade::applyTickSizeCeil(singleSpawn.base, amountTickSize());
     // compute the exact taken home, from exact spawned
     takenHomeBase = actualBaseAmount - singleSpawn.base;
+
+    assert(takenHomeBase >= 0);
 
     return {{singleSpawn}, takenHomeBase};
 }
@@ -199,30 +203,31 @@ StableDownSpread<TMP_ARGS>::onSubsequentSell(const Fragment & aFilledFragment,
                                              const FulfilledOrder & aOrder,
                                              Database & aDatabase)
 {
-    Order parentOrder = aDatabase.getOrder(aFilledFragment.spawningOrder);
-    Decimal parentBuyRate = parentOrder.fragmentsRate;
+    // For a Sell fragment, its parent order is a Buy.
+    Order parentBuyOrder = aDatabase.getOrder(aFilledFragment.spawningOrder);
+    Decimal spawnedBuyRate = parentBuyOrder.fragmentsRate;
 
     // Sanity check
     {
-        if (parentBuyRate >= aFilledFragment.targetRate)
+        if (spawnedBuyRate >= aFilledFragment.targetRate)
         {
             spdlog::critical("The sell fragment '{}' has a lower price ({}) than its parent order '{}' ({}).",
                              aFilledFragment.getIdentity(),
                              aFilledFragment.targetRate,
                              aOrder.getIdentity(),
-                             parentBuyRate);
+                             spawnedBuyRate);
             throw std::logic_error{"The parent order of a sell fragment must have a strictly inferior price."};
         }
     }
 
     // The amount of quote obtained throught the current sell fragment.
-    Decimal actualQuoteAmount = aFilledFragment.amount * aOrder.executionRate;
+    Decimal actualQuoteAmount = aFilledFragment.baseAmount * aOrder.executionRate;
     // How much base the next buy should provide to be stable.
-    Decimal breakEvenBase = aFilledFragment.amount;
+    Decimal breakEvenBase = aFilledFragment.baseAmount;
 
     // The minimal amount of quote to buy base with at parents rate
     // in order to get enough base to sell breakEvenBase again (at current rate).
-    Decimal breakEvenQuote = breakEvenBase * parentBuyRate;
+    Decimal breakEvenQuote = breakEvenBase * spawnedBuyRate;
 
     Decimal excessQuote = actualQuoteAmount - breakEvenQuote;
     Decimal takenHomeQuote = excessQuote * takeHomeFactorSubsequentSell;
@@ -234,8 +239,8 @@ StableDownSpread<TMP_ARGS>::onSubsequentSell(const Fragment & aFilledFragment,
     // The computation occured in quote, but the order will be placed in base
     // so the tick filter has to be applied to the base amount.
     // (Then, the filtered base amount is converted back to quote, to find the exact taken home)
-    trade::Spawn singleSpawn{parentBuyRate, trade::Quote{actualQuoteAmount - takenHomeQuote}};
-    singleSpawn.base = trade::applyTickSize(singleSpawn.base, tickSize());
+    trade::Spawn singleSpawn{spawnedBuyRate, trade::Quote{actualQuoteAmount - takenHomeQuote}};
+    singleSpawn.base = trade::applyTickSizeCeil(singleSpawn.base, amountTickSize());
     takenHomeQuote = actualQuoteAmount - singleSpawn.getAmount<trade::Quote>();
 
     return {{singleSpawn}, takenHomeQuote};

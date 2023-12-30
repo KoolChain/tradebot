@@ -468,11 +468,11 @@ SCENARIO("Not spawning counter-fragments with default NullSpawner.", "[spawn]")
 
                         REQUIRE(fragment_1.takenHome == 0); // Sanity check
                         db.reload(fragment_1);
-                        CHECK(fragment_1.takenHome == fragment_1.amount * executionRate);
+                        CHECK(fragment_1.takenHome == fragment_1.baseAmount * executionRate);
 
                         REQUIRE(fragment_2.takenHome == 0); // Sanity check
                         db.reload(fragment_2);
-                        CHECK(fragment_2.takenHome == fragment_2.amount * executionRate);
+                        CHECK(fragment_2.takenHome == fragment_2.baseAmount * executionRate);
 
                         CHECK(db.sumTakenHome(order) == order.executionQuoteAmount());
                     }
@@ -496,11 +496,16 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
         Decimal{"100000"},
     };
 
-    const std::vector<Decimal> proportions = {
-        Decimal{"0.05"},
-        Decimal{"0.10"},
-        Decimal{"0.20"},
-        Decimal{"0.25"},
+    const ProportionsMap proportions = {
+        {
+            Decimal{1000},
+            {
+                Decimal{"0.05"},
+                Decimal{"0.10"},
+                Decimal{"0.20"},
+                Decimal{"0.25"},
+            },
+        }
     };
 
     GIVEN("A trader with a NaiveDownSpread spawner.")
@@ -571,7 +576,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                     THEN("It does spawn expected fragments, and reports correct taken home.")
                     {
                         // spawned 1 fragment per proportion
-                        CHECK(db.countFragments() == 1 + proportions.size());
+                        CHECK(db.countFragments() == 1 + proportions.at(0).second.size());
                         CHECK(isEqual(db.sumAllFragments(), amount + reboughtBase));
 
                         THEN("The spawned fragments can be obtained from the database.")
@@ -586,7 +591,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                                 CHECK(unassociated.size() == 1);
 
                                 Fragment frag = unassociated.at(0);
-                                CHECK(frag.amount == Decimal{"0.1"}*amount);
+                                CHECK(frag.baseAmount == Decimal{"0.1"}*amount);
                                 CHECK(frag.spawningOrder == order.id);
                             }
                             {
@@ -599,7 +604,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                                 CHECK(unassociated.size() == 1);
 
                                 Fragment frag = unassociated.at(0);
-                                CHECK(frag.amount == Decimal{"0.2"}*amount);
+                                CHECK(frag.baseAmount == Decimal{"0.2"}*amount);
                                 CHECK(frag.spawningOrder == order.id);
                             }
                         }
@@ -624,7 +629,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                     THEN("It does spawn expected fragments, and reports correct taken home.")
                     {
                         // spawned 1 fragment per proportion
-                        CHECK(db.countFragments() == 1 + proportions.size());
+                        CHECK(db.countFragments() == 1 + proportions.at(0).second.size());
                         CHECK(isEqual(db.sumAllFragments(), amount + reboughtBase));
 
                         THEN("The spawned fragments can be obtained from the database.")
@@ -639,7 +644,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                                 CHECK(unassociated.size() == 1);
 
                                 Fragment frag = unassociated.at(0);
-                                CHECK(frag.amount == Decimal{"0.1"}*amount);
+                                CHECK(frag.baseAmount == Decimal{"0.1"}*amount);
                             }
                             {
                                 REQUIRE(ladder.at(1) == Decimal{"0.1"});
@@ -651,7 +656,7 @@ SCENARIO("Spawning counter-fragments with NaiveDownSpread", "[spawn]")
                                 CHECK(unassociated.size() == 1);
 
                                 Fragment frag = unassociated.at(0);
-                                CHECK(frag.amount == Decimal{"0.2"}*amount);
+                                CHECK(frag.baseAmount == Decimal{"0.2"}*amount);
                             }
                         }
 
@@ -677,11 +682,16 @@ SCENARIO("Consolidation of counter-fragments.", "[spawn]")
         Decimal{"5"},
     };
 
-    const std::vector<Decimal> proportions = {
-        Decimal{"0.0"},
-        Decimal{"0.25"},
-        Decimal{"0.25"},
-        Decimal{"0.25"},
+    const ProportionsMap proportions = {
+        {
+            Decimal{1000},
+            {
+                Decimal{"0.0"},
+                Decimal{"0.25"},
+                Decimal{"0.25"},
+                Decimal{"0.25"},
+            },
+        }
     };
 
     GIVEN("A trader with a NaiveDownSpread spawner.")
@@ -791,7 +801,7 @@ SCENARIO("Fix tradebot#1: change in filter price.", "[spawn]")
                     for (std::size_t i = 0; i != exchangeLadder.size(); ++i)
                     {
                         REQUIRE(exchangeLadder.at(i)
-                                == applyTickSize(internalLadder.at(i), exchangeTick));
+                                == applyTickSizeFloor(internalLadder.at(i), exchangeTick));
                     }
                 }
 
@@ -806,7 +816,7 @@ SCENARIO("Fix tradebot#1: change in filter price.", "[spawn]")
                     for (std::size_t i = 0; i != exchangeLadder.size(); ++i)
                     {
                         REQUIRE(exchangeLadder.at(i)
-                                == applyTickSize(internalLadder.at(i), exchangeTick) + offset);
+                                == applyTickSizeFloor(internalLadder.at(i), exchangeTick) + offset);
                     }
                 }
             }
