@@ -128,6 +128,10 @@ exist from the host working directory:
 
 It mounts the corresponding folders at the root of the container.
 
+**Note**: In the host environment, it is possible to create symlinks from a specific file (secret, config)
+to the generic name expected by the container.
+This is convenient so several configs can coexist in the repo.
+
 
 ##### Customization points
 
@@ -160,7 +164,7 @@ in the calling shell if their value should be overriden.
 
 2. Provide the configuration for the services
    * For the Cpp trader, see the existing files in `./configs` for examples.
-     The production config should be placed in `./configs/dogebot.json`.
+     The production config should be placed in (or symlinked to) `./configs/dogebot.json`.
    * For the python exporter, pace a file `./configs/updatesheet.env` with content:
    ```
    SPREADSHEET_ID=some_spreadsheet_id

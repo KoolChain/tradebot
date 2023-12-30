@@ -25,7 +25,7 @@ It should also define the following script function:
 
 ### Authorizations
 
-To access a user's spreadsheet, this program reads tokens from a file (`tokens.json`)
+To access a user's spreadsheet, this program reads tokens from a file (`googlesheet-tokens.json`)
 that can be generated using `authorize.py` script.
 
 **Note**: `authorize.py` must be run from a graphical session, as it will open a web browser
