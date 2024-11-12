@@ -194,7 +194,7 @@ FulfilledOrder fulfill(Order & aOrder,
          && (   (aOrder.side == Side::Sell && aOrder.executionRate < aOrder.fragmentsRate)
              || (aOrder.side == Side::Buy && aOrder.executionRate > aOrder.fragmentsRate)))
     {
-        spdlog::error("{} order '{}' fragment rate is set at {}, but it executed at {}.",
+        spdlog::warn("{} order '{}' fragment rate is set at {}, but it executed at {}.",
                 boost::lexical_cast<std::string>(aOrder.side),
                 aOrder.getIdentity(),
                 aOrder.fragmentsRate,
