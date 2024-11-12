@@ -150,7 +150,7 @@ StableDownSpread<TMP_ARGS>::onSubsequentBuy(const Fragment & aFilledFragment,
 {
     // For a Buy fragment, its parent order is a Sell.
     Order parentSellOrder = aDatabase.getOrder(aFilledFragment.spawningOrder);
-    // This spawner is stable because it spawns a Sell at the same rate as the parent of the current Buy. 
+    // This spawner is stable because it spawns a Sell at the same rate as the parent of the current Buy.
     // (i.e., each fragment will ping pong between a fixed buy and a fixed sell rate)
     Decimal spawnedSellRate = parentSellOrder.fragmentsRate;
 
@@ -240,7 +240,19 @@ StableDownSpread<TMP_ARGS>::onSubsequentSell(const Fragment & aFilledFragment,
     // so the tick filter has to be applied to the base amount.
     // (Then, the filtered base amount is converted back to quote, to find the exact taken home)
     trade::Spawn singleSpawn{spawnedBuyRate, trade::Quote{actualQuoteAmount - takenHomeQuote}};
-    singleSpawn.base = trade::applyTickSizeCeil(singleSpawn.base, amountTickSize());
+    // Note: we initially applied Ceil operation, yet it could lead to negative taken home:
+    // if the taken home was less than the cost of "ceiling" the computed base amount.
+    // Apply Floor instead: since actualQuoteAmount should always be superior
+    // to breakEvenQuote, this should never bring spawn.base below breakEvenBase.
+    singleSpawn.base = trade::applyTickSizeFloor(singleSpawn.base, amountTickSize());
+    if(singleSpawn.base < breakEvenBase)
+    {
+        spdlog::critical("Spawning a fragment to buy back '{}' base, which is below break even '{}'. Actual quote obtained from sell '{}', break even quote '{}'.",
+                         singleSpawn.base,
+                         breakEvenBase,
+                         actualQuoteAmount,
+                         breakEvenQuote);
+    }
     takenHomeQuote = actualQuoteAmount - singleSpawn.getAmount<trade::Quote>();
 
     return {{singleSpawn}, takenHomeQuote};
