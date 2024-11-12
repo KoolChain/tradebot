@@ -1,0 +1,60 @@
+{
+    "logPath": "./prodbot-logs/",
+
+    "base": "DOGE",
+    "quote": "USDT",
+    "amount": "40000",
+
+    "bot": {
+        "name": "prod03_40k"
+    },
+
+    "initial": {
+        "spawnBeginOffset": 1,
+        "spawnEndOffset": 0
+    },
+
+    "ladder": {
+        "firstStop": "0.265",
+        "factor": "1.023",
+        "stopCount": "60",
+        "priceTickSize": "0.0001",
+        "priceOffset": "0.00005"
+    },
+
+    "spawner": {
+        "spreader": {
+            "proportions": {
+                "0.5":
+                [
+                    "0.1",
+                    "0.1",
+                    "0.1",
+                    "0.15",
+                    "0.2",
+                    "0.15",
+                    "0.1",
+                    "0.1"
+                ],
+                "100":
+                [
+                    "0.05",
+                    "0.05",
+                    "0.05",
+                    "0.08",
+                    "0.12",
+                    "0.13",
+                    "0.12",
+                    "0.12",
+                    "0.10",
+                    "0.08",
+                    "0.05",
+                    "0.05"
+                ]
+            }
+        },
+        "takeHomeFactorInitialSell": "0.0",
+        "takeHomeFactorSubsequentSell": "0.35",
+        "takeHomeFactorSubsequentBuy": "0.15"
+    }
+}
